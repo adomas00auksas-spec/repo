@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Website Templates</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0f1115; --card: #171a21; --line: #262a33; --text: #eef0f4; --muted: #8b92a0; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  .wrap { width: min(1200px, 100% - 32px); margin: 0 auto; padding: 64px 0; }
+  h1 { font-size: clamp(32px, 5vw, 52px); margin: 0 0 8px; letter-spacing: -0.03em; }
+  p.sub { color: var(--muted); margin: 0 0 40px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 20px; }
+  a.card { display: block; text-decoration: none; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; transition: transform .2s, border-color .2s; }
+  a.card:hover { transform: translateY(-4px); border-color: #4b5262; }
+  .frame { aspect-ratio: 16 / 10; overflow: hidden; position: relative; background: #000; }
+  .frame iframe { width: 1440px; height: 900px; border: 0; transform: scale(.25); transform-origin: 0 0; pointer-events: none; position: absolute; }
+  .info { padding: 16px 18px; }
+  .info h2 { font-size: 18px; margin: 0 0 4px; }
+  .info span { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Website templates</h1>
+  <p class="sub">Six single-file templates. Open any folder's <code>index.html</code>, edit the text, ship it.</p>
+  <div class="grid" id="grid"></div>
+</div>
+<script>
+  const T = [
+    ['saas', 'Lumen — SaaS landing', 'Clean gradient startup page · pricing toggle, FAQ, count-up stats'],
+    ['portfolio', 'Elena Marsh — Portfolio', 'Editorial serif portfolio · project grid, archive, about'],
+    ['restaurant', 'Ember & Oak — Restaurant', 'Warm, elegant · menu tabs, opening hours, reservation form'],
+    ['agency', 'BLOCK/ — Agency', 'Bold brutalist · marquee, services, case studies'],
+    ['shop', 'Nord Goods — Shop', 'Minimal e-commerce · filters, sorting, working cart drawer'],
+    ['fitness', 'PULSE — Gym', 'Dark neon energy · live class schedule booking, memberships'],
+  ];
+  const grid = document.getElementById('grid');
+  const resize = () => document.querySelectorAll('.frame').forEach(f => f.querySelector('iframe').style.transform = `scale(${f.clientWidth / 1440})`);
+  grid.innerHTML = T.map(([dir, name, desc]) => `
+    <a class="card" href="${dir}/index.html">
+      <div class="frame"><iframe src="${dir}/index.html" loading="lazy" tabindex="-1" title="${name} preview"></iframe></div>
+      <div class="info"><h2>${name}</h2><span>${desc}</span></div>
+    </a>`).join('');
+  addEventListener('resize', resize); resize();
+</script>
+</body>
+</html>

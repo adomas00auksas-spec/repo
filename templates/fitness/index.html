@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PULSE — Strength &amp; Conditioning</title>
+<meta name="description" content="Dark, high-energy gym and fitness studio template with class schedule and memberships.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0d10;
+    --bg-2: #14161b;
+    --bg-3: #1c1f26;
+    --line: #2a2e38;
+    --text: #f2f4f7;
+    --muted: #9aa1ad;
+    --volt: #c6ff00;
+    --heat: #ff3d3d;
+    --cond: "Barlow Condensed", Impact, sans-serif;
+    --body: Barlow, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); line-height: 1.55; font-size: 17px; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { width: min(1220px, 100% - 40px); margin-inline: auto; }
+  h1, h2, h3 { font-family: var(--cond); font-weight: 800; text-transform: uppercase; line-height: .92; margin: 0; letter-spacing: .01em; }
+  .tag { font-family: var(--cond); font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--volt); font-size: 15px; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; font-family: var(--cond); font-weight: 800; text-transform: uppercase; letter-spacing: .06em; font-size: 18px; padding: 14px 30px; background: var(--volt); color: #0c0d10; clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%); transition: filter .2s, transform .15s; border: 0; cursor: pointer; }
+  .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+  .btn.ghost { background: transparent; color: var(--text); box-shadow: inset 0 0 0 2px var(--text); clip-path: none; }
+  section { padding: 110px 0; }
+  .head { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; margin-bottom: 48px; }
+  .head h2 { font-size: clamp(48px, 7vw, 96px); margin-top: 10px; }
+  .head p { color: var(--muted); max-width: 420px; margin: 0; }
+
+  /* Nav */
+  .nav { position: fixed; inset: 0 0 auto; z-index: 40; transition: background .3s; }
+  .nav.solid { background: rgba(12,13,16,.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 76px; }
+  .logo { font-family: var(--cond); font-weight: 800; font-style: italic; font-size: 34px; letter-spacing: .02em; }
+  .logo span { color: var(--volt); }
+  .nav nav { display: flex; gap: 30px; font-weight: 600; text-transform: uppercase; font-size: 14px; letter-spacing: .1em; }
+  .nav nav a:hover { color: var(--volt); }
+
+  /* Hero */
+  .hero { min-height: 100vh; min-height: 100svh; display: grid; align-items: center; position: relative; overflow: hidden; padding: 120px 0 80px;
+    background:
+      radial-gradient(ellipse 50% 70% at 78% 50%, rgba(198,255,0,.16), transparent 70%),
+      radial-gradient(ellipse 40% 50% at 90% 90%, rgba(255,61,61,.18), transparent 70%),
+      var(--bg); }
+  .hero::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 60px 60px; mask-image: radial-gradient(ellipse at 70% 50%, #000, transparent 75%); }
+  .hero-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; position: relative; }
+  .hero h1 { font-size: clamp(64px, 10vw, 150px); margin: 18px 0 24px; }
+  .hero h1 .stroke { color: transparent; -webkit-text-stroke: 2px var(--text); }
+  .hero h1 .volt { color: var(--volt); font-style: italic; }
+  .hero p { color: var(--muted); font-size: 19px; max-width: 500px; margin: 0 0 34px; }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+  .hero-visual { position: relative; aspect-ratio: 4 / 5; }
+  .hero-visual .ring { position: absolute; inset: 6%; border-radius: 50%; border: 2px dashed rgba(198,255,0,.35); animation: rot 30s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  .hero-visual .plate { position: absolute; inset: 18%; border-radius: 50%; background: radial-gradient(circle, #0c0d10 0 16%, #2a2e38 17% 22%, #1a1c22 23% 60%, #2f333d 61% 64%, #16181d 65%); box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 8px #101216; }
+  .hero-visual .plate::after { content: "45"; position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--cond); font-weight: 800; font-size: 54px; color: var(--volt); transform: translateY(-34%); }
+  .live { position: absolute; left: 0; bottom: 10%; background: var(--bg-3); border: 1px solid var(--line); padding: 14px 18px; display: flex; gap: 12px; align-items: center; font-size: 14px; }
+  .live::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--heat); box-shadow: 0 0 0 0 rgba(255,61,61,.6); animation: pulse 1.6s infinite; }
+  @keyframes pulse { to { box-shadow: 0 0 0 12px rgba(255,61,61,0); } }
+  .live b { font-family: var(--cond); font-size: 22px; display: block; line-height: 1; }
+  .hr-card { position: absolute; right: 0; top: 12%; background: var(--bg-3); border: 1px solid var(--line); padding: 14px 18px; font-size: 13px; color: var(--muted); }
+  .hr-card b { color: var(--heat); font-family: var(--cond); font-size: 34px; display: block; line-height: 1; }
+
+  /* Stats strip */
+  .strip { background: var(--volt); color: #0c0d10; }
+  .strip .wrap { display: grid; grid-template-columns: repeat(4, 1fr); }
+  .strip div { padding: 28px 10px; text-align: center; font-weight: 600; text-transform: uppercase; font-size: 13px; letter-spacing: .1em; }
+  .strip b { display: block; font-family: var(--cond); font-weight: 800; font-size: 54px; line-height: 1; letter-spacing: 0; }
+
+  /* Programs */
+  .programs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .program { background: var(--bg-2); border: 1px solid var(--line); padding: 30px 26px; min-height: 340px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; transition: border-color .25s, transform .25s; }
+  .program:hover { border-color: var(--volt); transform: translateY(-4px); }
+  .program::after { content: attr(data-n); position: absolute; right: -6px; bottom: -36px; font-family: var(--cond); font-weight: 800; font-size: 170px; line-height: 1; color: rgba(255,255,255,.04); }
+  .program .ico { width: 54px; height: 54px; display: grid; place-items: center; background: var(--bg-3); color: var(--volt); font-size: 24px; }
+  .program h3 { font-size: 38px; margin: 26px 0 10px; }
+  .program p { color: var(--muted); margin: 0; font-size: 15px; }
+  .program .lvl { font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: var(--volt); font-weight: 600; margin-top: 22px; }
+
+  /* Schedule */
+  .schedule { background: var(--bg-2); }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .days button { background: var(--bg-3); border: 1px solid var(--line); color: var(--muted); font-family: var(--cond); font-weight: 800; font-size: 18px; letter-spacing: .06em; text-transform: uppercase; padding: 10px 20px; cursor: pointer; }
+  .days button[aria-selected="true"] { background: var(--volt); border-color: var(--volt); color: #0c0d10; }
+  .classes { display: grid; gap: 8px; }
+  .class { display: grid; grid-template-columns: 90px 1.3fr 1fr 1fr 130px 120px; gap: 16px; align-items: center; background: var(--bg); border: 1px solid var(--line); padding: 18px 22px; }
+  .class .time { font-family: var(--cond); font-weight: 800; font-size: 26px; }
+  .class h3 { font-size: 26px; }
+  .class span { color: var(--muted); font-size: 15px; }
+  .spots { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+  .spots.low { color: var(--heat); } .spots.ok { color: var(--volt); }
+  .class .btn { font-size: 15px; padding: 10px 18px; justify-content: center; }
+  .class .btn[disabled] { background: var(--bg-3); color: var(--muted); cursor: default; transform: none; filter: none; }
+
+  /* Coaches */
+  .coaches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .coach .pic { aspect-ratio: 3 / 4; position: relative; overflow: hidden; background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,.7)), radial-gradient(circle at 50% 34%, var(--skin) 0 15%, transparent 15.5%), radial-gradient(ellipse at 50% 85%, var(--shirt) 0 40%, transparent 40.5%), linear-gradient(160deg, #20242c, #121419); }
+  .coach .pic::after { content: ""; position: absolute; inset: auto 0 0; height: 4px; background: var(--volt); transform: scaleX(0); transform-origin: left; transition: transform .4s; }
+  .coach:hover .pic::after { transform: scaleX(1); }
+  .coach .pic .name { position: absolute; left: 22px; bottom: 20px; }
+  .coach h3 { font-size: 36px; }
+  .coach small { color: var(--volt); text-transform: uppercase; letter-spacing: .14em; font-weight: 600; font-size: 13px; }
+
+  /* Membership */
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .plan { background: var(--bg-2); border: 1px solid var(--line); padding: 36px 30px; display: flex; flex-direction: column; }
+  .plan.hot { background: linear-gradient(180deg, rgba(198,255,0,.1), var(--bg-2) 60%); border-color: var(--volt); }
+  .plan h3 { font-size: 34px; }
+  .plan .price { font-family: var(--cond); font-weight: 800; font-size: 72px; line-height: 1; margin: 18px 0 4px; }
+  .plan .price small { font-size: 22px; color: var(--muted); }
+  .plan ul { list-style: none; padding: 0; margin: 24px 0 30px; display: grid; gap: 12px; color: var(--muted); }
+  .plan li::before { content: "▸ "; color: var(--volt); }
+  .plan .btn { margin-top: auto; justify-content: center; }
+
+  /* CTA */
+  .cta { position: relative; overflow: hidden; text-align: center; background: var(--heat); color: #0c0d10; }
+  .cta h2 { font-size: clamp(60px, 11vw, 170px); }
+  .cta p { font-size: 20px; font-weight: 600; margin: 18px 0 34px; }
+  .cta .btn { background: #0c0d10; color: var(--volt); }
+  footer { padding: 44px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: center; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 120px); background: var(--volt); color: #0c0d10; font-weight: 600; padding: 12px 22px; transition: transform .3s; z-index: 60; }
+  .toast.show { transform: translate(-50%, 0); }
+
+  @media (max-width: 900px) {
+    .nav nav { display: none; }
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-visual { max-width: 420px; }
+    .strip .wrap { grid-template-columns: 1fr 1fr; }
+    .programs { grid-template-columns: 1fr 1fr; }
+    .coaches, .plans { grid-template-columns: 1fr; }
+    .class { grid-template-columns: 90px 1fr; }
+    .class .coach-name, .class .room { display: none; }
+    .class .spots { grid-column: 1; }
+    .class .btn { grid-column: 2; justify-self: start; }
+  }
+  @media (max-width: 560px) { .programs { grid-template-columns: 1fr; } }
+  @media (prefers-reduced-motion: reduce) { .ring, .live::before { animation: none !important; } * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a href="#" class="logo">PULSE<span>.</span></a>
+    <nav aria-label="Main"><a href="#programs">Programs</a><a href="#schedule">Schedule</a><a href="#coaches">Coaches</a><a href="#join">Membership</a></nav>
+    <a href="#join" class="btn" style="font-size:15px;padding:10px 20px">Free trial</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="tag">Strength · Conditioning · Community</span>
+        <h1>Train <span class="stroke">harder.</span><br>Live <span class="volt">louder.</span></h1>
+        <p>Coach-led classes, serious equipment and a crew that shows up for you. Your first week is on us.</p>
+        <div class="hero-actions"><a href="#join" class="btn">Start free week →</a><a href="#schedule" class="btn ghost">View schedule</a></div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="ring"></div>
+        <div class="plate"></div>
+        <div class="hr-card">Avg. heart rate<b>164 bpm</b></div>
+        <div class="live"><span><b>38 members</b>training right now</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="strip">
+    <div class="wrap">
+      <div><b>24/7</b>Open access</div>
+      <div><b>60+</b>Classes / week</div>
+      <div><b>18</b>Certified coaches</div>
+      <div><b>2.4k</b>Members</div>
+    </div>
+  </div>
+
+  <section id="programs">
+    <div class="wrap">
+      <div class="head"><div><span class="tag">Programs</span><h2>Pick your fight</h2></div><p>Every program is scalable, so beginners and athletes train side by side.</p></div>
+      <div class="programs">
+        <div class="program" data-n="01"><div><div class="ico">▲</div><h3>Strength</h3><p>Barbell basics to powerlifting. Get strong the smart way.</p></div><div class="lvl">All levels</div></div>
+        <div class="program" data-n="02"><div><div class="ico">⚡</div><h3>HIIT</h3><p>45 minutes of intervals that leave nothing in the tank.</p></div><div class="lvl">Intermediate</div></div>
+        <div class="program" data-n="03"><div><div class="ico">◆</div><h3>Boxing</h3><p>Pads, bags and footwork. Cardio that teaches you a skill.</p></div><div class="lvl">All levels</div></div>
+        <div class="program" data-n="04"><div><div class="ico">●</div><h3>Mobility</h3><p>Move better, recover faster and stay injury-free.</p></div><div class="lvl">Beginner friendly</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="schedule" id="schedule">
+    <div class="wrap">
+      <div class="head"><div><span class="tag">Schedule</span><h2>This week</h2></div><p>Book up to 7 days ahead. Cancel free until 2 hours before class.</p></div>
+      <div class="days" role="tablist" id="days"></div>
+      <div class="classes" id="classes"></div>
+    </div>
+  </section>
+
+  <section id="coaches">
+    <div class="wrap">
+      <div class="head"><div><span class="tag">Coaches</span><h2>Meet the crew</h2></div><p>Certified, experienced and annoyingly motivating.</p></div>
+      <div class="coaches">
+        <div class="coach"><div class="pic" style="--skin:#c68b5e;--shirt:#c6ff00"><div class="name"><small>Head of Strength</small><h3>Marcus Hale</h3></div></div></div>
+        <div class="coach"><div class="pic" style="--skin:#f0c9a5;--shirt:#ff3d3d"><div class="name"><small>Boxing Coach</small><h3>Lena Novak</h3></div></div></div>
+        <div class="coach"><div class="pic" style="--skin:#8d5a3b;--shirt:#f2f4f7"><div class="name"><small>HIIT &amp; Mobility</small><h3>Dev Okoro</h3></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="join" style="background:var(--bg-2)">
+    <div class="wrap">
+      <div class="head"><div><span class="tag">Membership</span><h2>No contracts. No excuses.</h2></div><p>All plans include the app, locker rooms and a free first week.</p></div>
+      <div class="plans">
+        <div class="plan"><h3>Open Gym</h3><div class="price">$39<small>/mo</small></div><ul><li>24/7 gym floor access</li><li>Free weights &amp; machines</li><li>Training app</li></ul><a href="#" class="btn ghost">Choose plan</a></div>
+        <div class="plan hot"><span class="tag">Most popular</span><h3>Unlimited</h3><div class="price">$89<small>/mo</small></div><ul><li>Everything in Open Gym</li><li>Unlimited classes</li><li>Monthly body scan</li><li>Bring a friend on Fridays</li></ul><a href="#" class="btn">Start free week</a></div>
+        <div class="plan"><h3>Coached</h3><div class="price">$199<small>/mo</small></div><ul><li>Everything in Unlimited</li><li>4 personal sessions / mo</li><li>Custom nutrition plan</li></ul><a href="#" class="btn ghost">Choose plan</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <div class="wrap">
+      <h2>No more Mondays.</h2>
+      <p>Start today. Your first 7 days are completely free.</p>
+      <a href="#join" class="btn">Claim free week →</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="#" class="logo" style="font-size:26px">PULSE<span>.</span></a>
+    <span>88 Iron Avenue, Austin TX · (512) 555-0199</span>
+    <span>© 2026 Pulse Fitness</span>
+  </div>
+</footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+  const nav = document.getElementById('nav');
+  addEventListener('scroll', () => nav.classList.toggle('solid', scrollY > 40), { passive: true });
+
+  // Weekly schedule (edit this data to change classes)
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const BASE = [
+    ['06:00', 'Strength', 'Marcus Hale', 'Main floor', 20],
+    ['07:30', 'HIIT Burn', 'Dev Okoro', 'Studio A', 24],
+    ['12:15', 'Mobility', 'Dev Okoro', 'Studio B', 16],
+    ['17:30', 'Boxing', 'Lena Novak', 'Ring', 18],
+    ['19:00', 'Strength', 'Marcus Hale', 'Main floor', 20],
+  ];
+  // Deterministic "spots left" so every day looks a bit different
+  const spotsLeft = (d, i, cap) => (d * 7 + i * 5 + 3) % (cap + 1);
+
+  const daysEl = document.getElementById('days');
+  const classesEl = document.getElementById('classes');
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  let active = todayIdx;
+  const booked = new Set();
+
+  function render() {
+    daysEl.innerHTML = DAYS.map((d, i) => `<button role="tab" aria-selected="${i === active}" data-day="${i}">${i === todayIdx ? 'Today' : d}</button>`).join('');
+    classesEl.innerHTML = BASE.map(([time, name, coach, room, cap], i) => {
+      const key = active + '-' + i;
+      const left = spotsLeft(active, i, cap) - (booked.has(key) ? 1 : 0);
+      const full = left <= 0 && !booked.has(key);
+      return `<div class="class">
+        <span class="time">${time}</span><h3>${name}</h3>
+        <span class="coach-name">${coach}</span><span class="room">${room}</span>
+        <span class="spots ${left <= 3 ? 'low' : 'ok'}">${booked.has(key) ? 'Booked ✓' : full ? 'Full' : left + ' spots left'}</span>
+        <button class="btn" data-book="${key}" ${full || booked.has(key) ? 'disabled' : ''}>${booked.has(key) ? 'Booked' : full ? 'Waitlist' : 'Book'}</button>
+      </div>`;
+    }).join('');
+  }
+  daysEl.addEventListener('click', e => { const b = e.target.closest('button'); if (b) { active = +b.dataset.day; render(); } });
+  classesEl.addEventListener('click', e => {
+    const b = e.target.closest('[data-book]'); if (!b || b.disabled) return;
+    booked.add(b.dataset.book); render();
+    const t = document.getElementById('toast'); t.textContent = 'Class booked! See you there 💪'; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
+  });
+  render();
+</script>
+</body>
+</html>

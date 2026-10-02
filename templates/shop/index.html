@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nord Goods — Objects for slow living</title>
+<meta name="description" content="Minimal e-commerce template with product filters and a working cart drawer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f5;
+    --card: #f0ece5;
+    --ink: #1f1e1c;
+    --muted: #77736b;
+    --line: #e4dfd6;
+    --accent: #2f4a3a;
+    --sale: #b5482f;
+    --sans: "DM Sans", system-ui, sans-serif;
+    --serif: "DM Serif Display", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html { overflow-x: clip; }
+  body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.55; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; }
+  .wrap { width: min(1280px, 100% - 40px); margin-inline: auto; }
+
+  .announce { background: var(--accent); color: #f3efe7; text-align: center; font-size: 13px; padding: 9px 12px; letter-spacing: .02em; }
+  header { border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 30; }
+  header .wrap { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 70px; }
+  header nav { display: flex; gap: 26px; font-size: 15px; }
+  header nav a:hover { color: var(--accent); }
+  .logo { font-family: var(--serif); font-size: 28px; letter-spacing: .01em; }
+  .tools { display: flex; justify-content: flex-end; gap: 6px; }
+  .icon-btn { background: none; border: 0; padding: 9px; border-radius: 50%; position: relative; color: var(--ink); }
+  .icon-btn:hover { background: var(--card); }
+  .icon-btn svg { width: 22px; height: 22px; }
+  .count { position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; display: grid; place-items: center; padding: 0 4px; font-weight: 700; transform: scale(0); transition: transform .2s; }
+  .count.show { transform: scale(1); }
+
+  /* Hero */
+  .hero { display: grid; grid-template-columns: 1fr 1fr; min-height: 560px; margin: 24px auto 0; border-radius: 20px; overflow: hidden; background: #e7e1d6; }
+  .hero-copy { padding: 64px; display: flex; flex-direction: column; justify-content: center; }
+  .hero-copy small { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  .hero-copy h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(44px, 5.6vw, 78px); line-height: 1.02; margin: 16px 0 20px; }
+  .hero-copy p { color: #4f4b44; font-size: 18px; max-width: 420px; margin: 0 0 30px; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--ink); color: #fff; border: 0; padding: 15px 28px; border-radius: 999px; font-weight: 500; font-size: 15px; transition: background .2s, transform .15s; }
+  .btn:hover { background: var(--accent); }
+  .btn:active { transform: scale(.97); }
+  .hero-art { position: relative; background: linear-gradient(180deg, #d9cfbf, #cbbfa9); }
+  .hero-art .table { position: absolute; left: 10%; right: 10%; bottom: 18%; height: 14px; background: #8b6a4a; border-radius: 4px; }
+  .hero-art .table::before, .hero-art .table::after { content: ""; position: absolute; top: 14px; width: 12px; height: 120px; background: #7a5b3e; }
+  .hero-art .table::before { left: 12%; } .hero-art .table::after { right: 12%; }
+  .hero-art .vase { position: absolute; left: 24%; bottom: calc(18% + 14px); width: 90px; height: 150px; background: #efe9de; border-radius: 45px 45px 30px 30px / 70px 70px 30px 30px; box-shadow: inset -12px 0 0 rgba(0,0,0,.06); }
+  .hero-art .stem { position: absolute; left: calc(24% + 44px); bottom: calc(18% + 150px); width: 3px; height: 130px; background: #5a6b4a; transform: rotate(-8deg); transform-origin: bottom; }
+  .hero-art .leaf { position: absolute; left: calc(24% + 20px); bottom: calc(18% + 230px); width: 60px; height: 26px; background: #6f8559; border-radius: 0 100% 0 100%; transform: rotate(-20deg); }
+  .hero-art .lamp { position: absolute; right: 22%; bottom: calc(18% + 14px); width: 16px; height: 170px; background: #2f2d2a; }
+  .hero-art .lamp::before { content: ""; position: absolute; top: -10px; left: -52px; width: 120px; height: 70px; border-radius: 60px 60px 6px 6px; background: var(--accent); }
+  .hero-art .lamp::after { content: ""; position: absolute; bottom: 0; left: -30px; width: 76px; height: 10px; border-radius: 6px; background: #2f2d2a; }
+
+  /* Perks */
+  .perks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 36px 0; border-bottom: 1px solid var(--line); }
+  .perks div { display: flex; gap: 12px; align-items: center; font-size: 14px; color: var(--muted); }
+  .perks b { display: block; color: var(--ink); font-size: 15px; }
+  .perks i { font-style: normal; width: 40px; height: 40px; border-radius: 50%; background: var(--card); display: grid; place-items: center; flex: none; }
+
+  /* Products */
+  .shop-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; padding: 64px 0 24px; flex-wrap: wrap; }
+  .shop-head h2 { font-family: var(--serif); font-weight: 400; font-size: 44px; margin: 0; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filters button { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 16px; font-size: 14px; transition: all .15s; }
+  .filters button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  select.sort { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px 20px; padding-bottom: 80px; }
+  .product { display: flex; flex-direction: column; gap: 12px; }
+  .product .img { aspect-ratio: 4 / 5; background: var(--card); border-radius: 14px; position: relative; overflow: hidden; display: grid; place-items: center; }
+  .product .img .art { transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+  .product:hover .img .art { transform: scale(1.06); }
+  .product .badge { position: absolute; top: 12px; left: 12px; background: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+  .product .badge.sale { background: var(--sale); color: #fff; }
+  .product .add { position: absolute; left: 12px; right: 12px; bottom: 12px; opacity: 0; transform: translateY(10px); transition: all .25s; }
+  .product:hover .add, .product .add:focus-visible { opacity: 1; transform: none; }
+  .product h3 { font-size: 16px; font-weight: 500; margin: 0; display: flex; justify-content: space-between; gap: 10px; }
+  .product .meta { font-size: 14px; color: var(--muted); margin-top: -8px; }
+  .product .price s { color: var(--muted); font-weight: 400; margin-right: 6px; }
+  .swatches { display: flex; gap: 6px; }
+  .swatches span { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.12); }
+
+  /* Product art (CSS illustrations; swap for photos) */
+  .mug { width: 110px; height: 120px; background: var(--c, #e9e2d5); border-radius: 8px 8px 30px 30px; position: relative; box-shadow: inset -14px 0 0 rgba(0,0,0,.05); }
+  .mug::after { content: ""; position: absolute; right: -36px; top: 26px; width: 40px; height: 54px; border: 12px solid var(--c, #e9e2d5); border-left: 0; border-radius: 0 30px 30px 0; }
+  .lamp2 { width: 140px; height: 190px; position: relative; }
+  .lamp2::before { content: ""; position: absolute; left: 10px; right: 10px; top: 0; height: 80px; background: var(--c, #2f4a3a); border-radius: 80px 80px 4px 4px; }
+  .lamp2::after { content: ""; position: absolute; left: 64px; top: 80px; width: 10px; height: 100px; background: #2f2d2a; box-shadow: -30px 100px 0 0 #2f2d2a, 30px 100px 0 0 #2f2d2a; }
+  .chair { width: 140px; height: 170px; position: relative; }
+  .chair::before { content: ""; position: absolute; left: 16px; right: 16px; top: 0; height: 90px; background: var(--c, #b48a5e); border-radius: 50px 50px 10px 10px; }
+  .chair::after { content: ""; position: absolute; left: 6px; right: 6px; top: 86px; height: 22px; background: var(--c, #b48a5e); filter: brightness(.88); border-radius: 8px; box-shadow: 10px 64px 0 -6px #6b4f35; }
+  .throw { width: 150px; height: 130px; border-radius: 10px; background: repeating-linear-gradient(90deg, var(--c, #c9b49a) 0 14px, #efe6d8 14px 18px); transform: rotate(-6deg); box-shadow: 8px 10px 0 rgba(0,0,0,.06); }
+  .candle { width: 70px; height: 110px; background: var(--c, #efe7da); border-radius: 6px; position: relative; box-shadow: inset -10px 0 0 rgba(0,0,0,.05); }
+  .candle::before { content: ""; position: absolute; left: 33px; top: -18px; width: 4px; height: 18px; background: #333; }
+  .candle::after { content: ""; position: absolute; left: 26px; top: -44px; width: 18px; height: 28px; background: radial-gradient(circle at 50% 70%, #ffe8a3, #f2a33a 60%, transparent 70%); border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; }
+  .plate { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle, var(--c, #e6ded0) 0 52%, #d5cbb9 53% 56%, var(--c, #e6ded0) 57%); box-shadow: 0 10px 0 rgba(0,0,0,.05); }
+  .vase2 { width: 80px; height: 170px; background: var(--c, #b5482f); border-radius: 30px 30px 40px 40px / 30px 30px 80px 80px; position: relative; }
+  .vase2::before { content: ""; position: absolute; left: 24px; top: -12px; width: 32px; height: 20px; background: var(--c, #b5482f); filter: brightness(.9); border-radius: 4px; }
+  .shelf { width: 160px; height: 120px; border: 10px solid var(--c, #8b6a4a); border-top-width: 12px; border-radius: 4px; position: relative; }
+  .shelf::after { content: ""; position: absolute; left: 0; right: 0; top: 40px; height: 10px; background: var(--c, #8b6a4a); }
+
+  /* Newsletter */
+  .news { background: var(--accent); color: #f3efe7; border-radius: 20px; padding: 64px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; margin-bottom: 80px; }
+  .news h2 { font-family: var(--serif); font-weight: 400; font-size: 42px; margin: 0 0 8px; }
+  .news p { margin: 0; opacity: .8; }
+  .news form { min-width: 0; display: flex; gap: 8px; background: #fff; border-radius: 999px; padding: 6px; }
+  .news input { flex: 1; border: 0; background: none; padding: 0 16px; font: inherit; font-size: 15px; min-width: 0; color: var(--ink); }
+  .news input:focus { outline: none; }
+
+  footer { border-top: 1px solid var(--line); padding: 48px 0 32px; font-size: 14px; color: var(--muted); }
+  .foot { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 30px; }
+  .foot h4 { color: var(--ink); margin: 0 0 12px; font-size: 14px; }
+  .foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+  /* Cart drawer */
+  .scrim { position: fixed; inset: 0; background: rgba(20,18,15,.4); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 60; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(420px, 100%); background: var(--bg); z-index: 70; transform: translateX(100%); transition: transform .35s cubic-bezier(.2,.7,.2,1); display: flex; flex-direction: column; box-shadow: -20px 0 40px rgba(0,0,0,.1); }
+  body.cart-open .scrim { opacity: 1; pointer-events: auto; }
+  body.cart-open .drawer { transform: none; }
+  .drawer-head { display: flex; justify-content: space-between; align-items: center; padding: 22px 24px; border-bottom: 1px solid var(--line); }
+  .drawer-head h3 { margin: 0; font-size: 20px; }
+  .ship-bar { padding: 14px 24px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .ship-bar .track { height: 6px; border-radius: 3px; background: var(--card); margin-top: 8px; overflow: hidden; }
+  .ship-bar .fill { height: 100%; background: var(--accent); transition: width .3s; }
+  .items { flex: 1; overflow-y: auto; padding: 8px 24px; }
+  .item { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .item .thumb { width: 64px; height: 76px; border-radius: 10px; background: var(--card); overflow: hidden; display: grid; place-items: center; }
+  .item .thumb > div { transform: scale(.38); }
+  .item h4 { margin: 0; font-size: 15px; font-weight: 500; }
+  .qty { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; margin-top: 6px; }
+  .qty button { background: none; border: 0; width: 28px; height: 28px; }
+  .qty span { min-width: 20px; text-align: center; font-size: 14px; }
+  .remove { background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; }
+  .empty { text-align: center; color: var(--muted); padding: 60px 0; }
+  .drawer-foot { padding: 20px 24px 26px; border-top: 1px solid var(--line); }
+  .total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-bottom: 14px; }
+  .drawer-foot .btn { width: 100%; }
+
+  .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 120px); background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 999px; font-size: 14px; transition: transform .3s; z-index: 80; }
+  .toast.show { transform: translate(-50%, 0); }
+
+  @media (max-width: 960px) {
+    header nav { display: none; }
+    header .wrap { grid-template-columns: auto 1fr; }
+    .logo { justify-self: start; }
+    .hero, .news { grid-template-columns: minmax(0, 1fr); }
+    .hero-copy { padding: 40px 28px; }
+    .hero-art { min-height: 320px; }
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .perks { grid-template-columns: 1fr 1fr; }
+    .news { padding: 36px 20px; }
+    .news .btn { padding: 12px 18px; }
+    .foot { grid-template-columns: 1fr 1fr; }
+    .product .add { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="announce">Free shipping on orders over $120 · 30-day returns</div>
+<header>
+  <div class="wrap">
+    <nav aria-label="Main"><a href="#shop">Shop</a><a href="#shop">New in</a><a href="#journal">Journal</a></nav>
+    <a href="#" class="logo">Nord Goods</a>
+    <div class="tools">
+      <button class="icon-btn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      <button class="icon-btn" aria-label="Open cart" id="cartBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span class="count" id="count">0</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-copy">
+      <small>Autumn collection 2026</small>
+      <h1>Objects for slow living.</h1>
+      <p>Simple, durable pieces for the home, made in small batches by makers across Scandinavia.</p>
+      <div><a href="#shop" class="btn">Shop the collection →</a></div>
+    </div>
+    <div class="hero-art" aria-hidden="true"><div class="table"></div><div class="vase"></div><div class="stem"></div><div class="leaf"></div><div class="lamp"></div></div>
+  </section>
+
+  <div class="perks">
+    <div><i>✦</i><span><b>Made to last</b>10-year guarantee</span></div>
+    <div><i>↺</i><span><b>Easy returns</b>Free for 30 days</span></div>
+    <div><i>⛟</i><span><b>Fast delivery</b>2–4 working days</span></div>
+    <div><i>♻</i><span><b>Low impact</b>Plastic-free packaging</span></div>
+  </div>
+
+  <section id="shop">
+    <div class="shop-head">
+      <h2>Shop all</h2>
+      <div class="filters" role="group" aria-label="Filter products" id="filters">
+        <button aria-pressed="true" data-cat="all">All</button>
+        <button aria-pressed="false" data-cat="kitchen">Kitchen</button>
+        <button aria-pressed="false" data-cat="living">Living</button>
+        <button aria-pressed="false" data-cat="lighting">Lighting</button>
+      </div>
+      <select class="sort" id="sort" aria-label="Sort products">
+        <option value="featured">Featured</option>
+        <option value="low">Price: low to high</option>
+        <option value="high">Price: high to low</option>
+      </select>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="news" id="journal">
+    <div><h2>Letters from the studio</h2><p>New pieces, maker stories and the occasional discount. Once a month, never spam.</p></div>
+    <form id="newsForm"><input type="email" required placeholder="Your email address" aria-label="Email address"><button class="btn" type="submit">Subscribe</button></form>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div><a href="#" class="logo">Nord Goods</a><p style="max-width:280px">Objects for slow living. Designed in Copenhagen, made across the Nordics.</p></div>
+      <div><h4>Shop</h4><ul><li><a href="#shop">Kitchen</a></li><li><a href="#shop">Living</a></li><li><a href="#shop">Lighting</a></li></ul></div>
+      <div><h4>Help</h4><ul><li><a href="#">Shipping</a></li><li><a href="#">Returns</a></li><li><a href="#">Contact</a></li></ul></div>
+      <div><h4>About</h4><ul><li><a href="#">Our makers</a></li><li><a href="#">Journal</a></li><li><a href="#">Stockists</a></li></ul></div>
+    </div>
+    <p style="margin-top:40px">© 2026 Nord Goods ApS</p>
+  </div>
+</footer>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" aria-label="Shopping cart" id="drawer">
+  <div class="drawer-head"><h3>Your cart</h3><button class="icon-btn" aria-label="Close cart" id="closeCart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="ship-bar"><span id="shipText"></span><div class="track"><div class="fill" id="shipFill"></div></div></div>
+  <div class="items" id="items"></div>
+  <div class="drawer-foot"><div class="total"><span>Subtotal</span><span id="total">$0</span></div><button class="btn" id="checkout">Checkout</button></div>
+</aside>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+  const PRODUCTS = [
+    { id: 1, name: 'Stoneware Mug', cat: 'kitchen', price: 28, art: 'mug', color: '#e9e2d5', colors: ['#e9e2d5', '#2f4a3a', '#b5482f'], badge: 'Bestseller' },
+    { id: 2, name: 'Arc Table Lamp', cat: 'lighting', price: 189, art: 'lamp2', color: '#2f4a3a', colors: ['#2f4a3a', '#c9b49a'] },
+    { id: 3, name: 'Oak Lounge Chair', cat: 'living', price: 640, art: 'chair', color: '#b48a5e', colors: ['#b48a5e', '#3b3a36'] },
+    { id: 4, name: 'Wool Throw', cat: 'living', price: 96, was: 120, art: 'throw', color: '#c9b49a', colors: ['#c9b49a', '#8fa08a'], badge: 'Sale' },
+    { id: 5, name: 'Beeswax Candle', cat: 'lighting', price: 24, art: 'candle', color: '#efe7da', colors: ['#efe7da'] },
+    { id: 6, name: 'Dinner Plate Set', cat: 'kitchen', price: 72, art: 'plate', color: '#e6ded0', colors: ['#e6ded0', '#cdd5d0'], badge: 'New' },
+    { id: 7, name: 'Terracotta Vase', cat: 'living', price: 58, art: 'vase2', color: '#b5482f', colors: ['#b5482f', '#efe9de'] },
+    { id: 8, name: 'Wall Shelf', cat: 'living', price: 145, art: 'shelf', color: '#8b6a4a', colors: ['#8b6a4a', '#2f2d2a'] },
+  ];
+  const FREE_SHIP = 120;
+  const $ = id => document.getElementById(id);
+  const money = n => '$' + n.toFixed(n % 1 ? 2 : 0);
+
+  // Cart is remembered per browser (falls back to memory if storage is blocked)
+  let cart = {};
+  try { cart = JSON.parse(localStorage.getItem('nord-cart') || '{}'); } catch (e) { cart = {}; }
+  const save = () => { try { localStorage.setItem('nord-cart', JSON.stringify(cart)); } catch (e) {} };
+
+  let filter = 'all', sort = 'featured';
+  function renderGrid() {
+    let list = PRODUCTS.filter(p => filter === 'all' || p.cat === filter);
+    if (sort === 'low') list = [...list].sort((a, b) => a.price - b.price);
+    if (sort === 'high') list = [...list].sort((a, b) => b.price - a.price);
+    $('grid').innerHTML = list.map(p => `
+      <article class="product">
+        <div class="img">
+          ${p.badge ? `<span class="badge ${p.badge === 'Sale' ? 'sale' : ''}">${p.badge}</span>` : ''}
+          <div class="art ${p.art}" style="--c:${p.color}"></div>
+          <button class="btn add" data-add="${p.id}">Add to cart</button>
+        </div>
+        <h3><span>${p.name}</span><span class="price">${p.was ? `<s>${money(p.was)}</s>` : ''}${money(p.price)}</span></h3>
+        <div class="meta">${p.cat[0].toUpperCase() + p.cat.slice(1)}</div>
+        <div class="swatches">${p.colors.map(c => `<span style="background:${c}"></span>`).join('')}</div>
+      </article>`).join('');
+  }
+
+  function renderCart() {
+    const entries = Object.entries(cart).filter(([, q]) => q > 0);
+    const count = entries.reduce((n, [, q]) => n + q, 0);
+    const total = entries.reduce((s, [id, q]) => s + PRODUCTS.find(p => p.id == id).price * q, 0);
+    $('count').textContent = count;
+    $('count').classList.toggle('show', count > 0);
+    $('total').textContent = money(total);
+    const left = FREE_SHIP - total;
+    $('shipText').textContent = left > 0 ? `You're ${money(left)} away from free shipping` : 'You get free shipping!';
+    $('shipFill').style.width = Math.min(100, total / FREE_SHIP * 100) + '%';
+    $('items').innerHTML = entries.length ? entries.map(([id, q]) => {
+      const p = PRODUCTS.find(x => x.id == id);
+      return `<div class="item">
+        <div class="thumb"><div class="${p.art}" style="--c:${p.color}"></div></div>
+        <div><h4>${p.name}</h4><div class="qty"><button data-dec="${id}" aria-label="Decrease">−</button><span>${q}</span><button data-inc="${id}" aria-label="Increase">+</button></div></div>
+        <div style="text-align:right"><b>${money(p.price * q)}</b><br><button class="remove" data-rm="${id}">Remove</button></div>
+      </div>`;
+    }).join('') : '<p class="empty">Your cart is empty.</p>';
+    $('checkout').disabled = !entries.length;
+    save();
+  }
+
+  const toast = msg => { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); };
+  const openCart = open => document.body.classList.toggle('cart-open', open);
+
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-add],[data-inc],[data-dec],[data-rm]');
+    if (!t) return;
+    if (t.dataset.add) { cart[t.dataset.add] = (cart[t.dataset.add] || 0) + 1; toast(PRODUCTS.find(p => p.id == t.dataset.add).name + ' added to cart'); }
+    if (t.dataset.inc) cart[t.dataset.inc]++;
+    if (t.dataset.dec) cart[t.dataset.dec] = Math.max(0, cart[t.dataset.dec] - 1);
+    if (t.dataset.rm) delete cart[t.dataset.rm];
+    renderCart();
+  });
+  $('filters').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    filter = b.dataset.cat;
+    $('filters').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    renderGrid();
+  });
+  $('sort').addEventListener('change', e => { sort = e.target.value; renderGrid(); });
+  $('cartBtn').addEventListener('click', () => openCart(true));
+  $('closeCart').addEventListener('click', () => openCart(false));
+  $('scrim').addEventListener('click', () => openCart(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') openCart(false); });
+  $('checkout').addEventListener('click', () => toast('Connect your checkout (e.g. Stripe or Shopify) here'));
+  $('newsForm').addEventListener('submit', e => { e.preventDefault(); toast('Thanks for subscribing!'); e.target.reset(); });
+
+  renderGrid();
+  renderCart();
+</script>
+</body>
+</html>
