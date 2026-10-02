@@ -94,7 +94,7 @@
   .tag { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ember); border: 1px solid var(--ember); padding: 1px 6px; margin-left: 6px; vertical-align: middle; font-family: var(--sans); }
 
   /* Gallery */
-  .gallery { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 220px; gap: 14px; }
+  .gallery { display: grid; grid-auto-flow: dense; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 220px; gap: 14px; }
   .gallery div { border-radius: 6px; }
   .g1 { grid-row: span 2; background: radial-gradient(circle at 40% 45%, #e9c48a 0 20%, #9c5a2c 21% 30%, transparent 31%), #2f4237; }
   .g2 { background: linear-gradient(135deg, #c8642d, #e9a45c); }
@@ -218,7 +218,7 @@
 
   <section>
     <div class="wrap gallery" aria-label="Gallery">
-      <div class="g1"></div><div class="g2"></div><div class="g3"></div><div class="g4"></div><div class="g5"></div><div class="g6"></div>
+      <div class="g1"></div><div class="g2"></div><div class="g3"></div><div class="g4"></div><div class="g5"></div>
     </div>
   </section>
 

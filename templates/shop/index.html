@@ -91,12 +91,12 @@
   /* Product art (CSS illustrations; swap for photos) */
   .mug { width: 110px; height: 120px; background: var(--c, #e9e2d5); border-radius: 8px 8px 30px 30px; position: relative; box-shadow: inset -14px 0 0 rgba(0,0,0,.05); }
   .mug::after { content: ""; position: absolute; right: -36px; top: 26px; width: 40px; height: 54px; border: 12px solid var(--c, #e9e2d5); border-left: 0; border-radius: 0 30px 30px 0; }
-  .lamp2 { width: 140px; height: 190px; position: relative; }
+  .lamp2 { width: 140px; height: 190px; position: relative; background: linear-gradient(#2f2d2a, #2f2d2a) center bottom / 76px 10px no-repeat; }
   .lamp2::before { content: ""; position: absolute; left: 10px; right: 10px; top: 0; height: 80px; background: var(--c, #2f4a3a); border-radius: 80px 80px 4px 4px; }
-  .lamp2::after { content: ""; position: absolute; left: 64px; top: 80px; width: 10px; height: 100px; background: #2f2d2a; box-shadow: -30px 100px 0 0 #2f2d2a, 30px 100px 0 0 #2f2d2a; }
-  .chair { width: 140px; height: 170px; position: relative; }
+  .lamp2::after { content: ""; position: absolute; left: 65px; top: 80px; width: 10px; height: 100px; background: #2f2d2a; }
+  .chair { width: 140px; height: 170px; position: relative; background: linear-gradient(#6b4f35, #6b4f35) 18px 106px / 8px 64px no-repeat, linear-gradient(#6b4f35, #6b4f35) 114px 106px / 8px 64px no-repeat; }
   .chair::before { content: ""; position: absolute; left: 16px; right: 16px; top: 0; height: 90px; background: var(--c, #b48a5e); border-radius: 50px 50px 10px 10px; }
-  .chair::after { content: ""; position: absolute; left: 6px; right: 6px; top: 86px; height: 22px; background: var(--c, #b48a5e); filter: brightness(.88); border-radius: 8px; box-shadow: 10px 64px 0 -6px #6b4f35; }
+  .chair::after { content: ""; position: absolute; left: 6px; right: 6px; top: 86px; height: 22px; background: var(--c, #b48a5e); filter: brightness(.88); border-radius: 8px; }
   .throw { width: 150px; height: 130px; border-radius: 10px; background: repeating-linear-gradient(90deg, var(--c, #c9b49a) 0 14px, #efe6d8 14px 18px); transform: rotate(-6deg); box-shadow: 8px 10px 0 rgba(0,0,0,.06); }
   .candle { width: 70px; height: 110px; background: var(--c, #efe7da); border-radius: 6px; position: relative; box-shadow: inset -10px 0 0 rgba(0,0,0,.05); }
   .candle::before { content: ""; position: absolute; left: 33px; top: -18px; width: 4px; height: 18px; background: #333; }
@@ -122,9 +122,9 @@
 
   /* Cart drawer */
   .scrim { position: fixed; inset: 0; background: rgba(20,18,15,.4); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 60; }
-  .drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(420px, 100%); background: var(--bg); z-index: 70; transform: translateX(100%); transition: transform .35s cubic-bezier(.2,.7,.2,1); display: flex; flex-direction: column; box-shadow: -20px 0 40px rgba(0,0,0,.1); }
+  .drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(420px, 100%); background: var(--bg); z-index: 70; transform: translateX(100%); visibility: hidden; transition: transform .35s cubic-bezier(.2,.7,.2,1), visibility 0s .35s; display: flex; flex-direction: column; }
   body.cart-open .scrim { opacity: 1; pointer-events: auto; }
-  body.cart-open .drawer { transform: none; }
+  body.cart-open .drawer { transform: none; visibility: visible; transition-delay: 0s; box-shadow: -20px 0 40px rgba(0,0,0,.1); }
   .drawer-head { display: flex; justify-content: space-between; align-items: center; padding: 22px 24px; border-bottom: 1px solid var(--line); }
   .drawer-head h3 { margin: 0; font-size: 20px; }
   .ship-bar { padding: 14px 24px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); }
@@ -144,8 +144,8 @@
   .total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-bottom: 14px; }
   .drawer-foot .btn { width: 100%; }
 
-  .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 120px); background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 999px; font-size: 14px; transition: transform .3s; z-index: 80; }
-  .toast.show { transform: translate(-50%, 0); }
+  .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 120px); opacity: 0; background: var(--ink); color: #fff; padding: 12px 20px; border-radius: 999px; font-size: 14px; transition: transform .3s; z-index: 80; }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
   @media (max-width: 960px) {
     header nav { display: none; }
