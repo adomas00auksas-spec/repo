@@ -6400,6 +6400,7 @@ requestAnimationFrame(loop);
       if(G.season!==x.lastSeason){x.lastSeason=G.season;const h=composeHaiku();x.haiku.push(h);if(x.haiku.length>80)x.haiku.shift();lines.push(`You write in your journal: "${h.lines.join(' / ')}"`);}
       // weekly bounties
       if(!x.week||G.totalDays>=x.week.end){const unfinished=x.week&&x.week.goals.some(g=>!g.done);newWeek();lines.push(unfinished?'A new week. Last week’s bounties expired; fresh ones are posted (K).':'A new week, and new bounties are posted (K).');}
+      rivalDay(lines);letterDay(lines);
       // ledger
       x.ledger.push({d:G.totalDays,m:Math.round(G.money),r:Math.round(G.rep),o:Math.round(G.mood)});if(x.ledger.length>240)x.ledger.shift();
     }catch(e){console.warn('expansion day hook',e);}
@@ -6452,9 +6453,71 @@ requestAnimationFrame(loop);
     checkDeeds();
   }
 
+  /* ---------- goshuin: a stamp book of shrines and temples ---------- */
+  const _enterPlace=enterPlace;
+  enterPlace=function(pl){
+    const r=_enterPlace.apply(this,arguments);
+    try{
+      if(G&&pl&&(pl.type==='shrine'||pl.type==='temple')){
+        const x=X();x.stamps=x.stamps||{};const key=(G.city||'edo')+':'+pl.id;
+        if(!x.stamps[key]){x.stamps[key]={name:pl.name,k:pl.kanji||'印',city:G.city,day:G.totalDays,season:G.season,year:G.year};
+          G.mood=clamp(G.mood+4,0,100);toast('印','Goshuin received',`A brushed seal from ${pl.name} for your stamp book.`);}
+      }
+    }catch(e){}
+    return r;
+  };
+  const stampsN=()=>Object.keys((X()||{}).stamps||{}).length;
+  DEEDS.push(
+    D('stamp3','印','Pilgrim','Collect three shrine or temple seals.',()=>ratio(stampsN(),3),400),
+    D('stamp10','朱','The red book','Collect ten shrine or temple seals.',()=>ratio(stampsN(),10),2500),
+  );
+
+  /* ---------- the rival: someone in your trade who keeps pace ---------- */
+  const RIVAL_NAMES={m:['Gonbei','Kanzō','Tatsugorō','Hanbei','Sakuzō','Ichirō','Mataemon','Jūbei'],f:['Okane','Osen','Ochō','Otsuru','Omitsu','Oren','Kikuno','Osayo']};
+  function playerPower(){return Math.round((G.tier||0)*120+G.rep*2+Math.max(0,Math.log10(Math.max(1,G.money)))*40+Object.values(G.skills||{}).reduce((a,v)=>a+v,0)*.6);}
+  function rival(){
+    const x=X();
+    if(!x.rival){const sex=Math.random()<.5?'m':'f';x.rival={name:pick(RIVAL_NAMES[sex]),sex,power:Math.max(40,playerPower()*(.95+Math.random()*.2)),news:[],beaten:false,rank:G.rank};}
+    return x.rival;
+  }
+  const RIVAL_UP=['was praised by an important customer','took on a new apprentice','was invited to a lord’s banquet','bought a finer kimono and walks the street like a peacock','won a wager at the bathhouse','is said to have a patron now'];
+  const RIVAL_DOWN=['lost money at dice','fell ill for a week','quarrelled with the landlord','was scolded by the ward headman','spoiled a large order'];
+  function rivalDay(lines){
+    const rv=rival();const me=playerPower();
+    // the rival keeps pace with you: drifts toward your prestige times their own ambition
+    rv.bias=rv.bias||(1+Math.random()*.15);
+    const target=Math.max(40,me*rv.bias);rv.power+=(target-rv.power)*.03+(Math.random()-.5)*2;
+    if(Math.random()<.12){const up=Math.random()<.6;let t=pick(up?RIVAL_UP:RIVAL_DOWN);if(rv.news[0]&&rv.news[0].t.includes(t))t=pick(up?RIVAL_UP:RIVAL_DOWN);rv.power*=up?1.03:.95;
+      const line=`Gossip: your rival ${rv.name} ${t}.`;rv.news.unshift({d:G.totalDays,t:line});rv.news=rv.news.slice(0,12);if(Math.random()<.5)lines.push(line);}
+    if(!rv.beaten&&me>rv.power*1.25&&G.totalDays>14){rv.beaten=true;lines.push(`The ward agrees: you have left ${rv.name} far behind. They bow a little lower when you pass.`);G.rep=clamp(G.rep+5,0,100);}
+  }
+  DEEDS.push(D('rival','競','Outshone','Leave your rival far behind.',()=>{const rv=X().rival;return rv&&rv.beaten?1:0;},2000));
+
+  /* ---------- letters from family and old friends ---------- */
+  const LETTER_FROM=f=>({father:'your father',mother:'your mother',brother:'your brother',sister:'your sister',son:'your son',daughter:'your daughter',parent:'your parent'})[f.rel]||'a relative';
+  const LETTERS=[
+    ['The rains came early this year. Do you eat properly? Here is a little something.','money',200],
+    ['I saw a heron at the river and thought of you. Come home when you can.',null],
+    ['The plum tree you planted as a child bloomed again. We dried some leaves for your tea.','tea',2],
+    ['Your old friend from the lane married at last! Everyone asked after you.',null],
+    ['I am sending rice from this year’s harvest. Do not let anyone cheat you in the city.','rice',3],
+    ['Remember to visit the family grave at Obon. The ancestors notice who comes.',null],
+    ['A peddler sold me a charm against bad luck. I am sending it on to you.','charm',1],
+  ];
+  function letterDay(lines){
+    if(Math.random()>.07)return;
+    const kin=(G.fam||[]).filter(f=>f.alive&&!f.spouse&&!['wife','husband'].includes(f.rel)&&!(f.child&&f.age<12));
+    const from=kin.length?pick(kin):null;const who=from?`${LETTER_FROM(from)} ${from.given}`:'an old friend from your home province';
+    const [text,item,n]=pick(LETTERS);const x=X();x.letters=x.letters||[];
+    let gift='';if(item==='money'){G.money+=n;gift=` (${n} mon enclosed)`;}else if(item&&ITEMS[item]){give(item,n);gift=` (${n} ${ITEMS[item].name||item} enclosed)`;}
+    x.letters.unshift({d:G.totalDays,season:G.season,year:G.year,who,text,gift});x.letters=x.letters.slice(0,30);
+    G.mood=clamp(G.mood+4,0,100);
+    lines.push(`A letter arrives from ${who}: "${text}"${gift}`);
+  }
+
   /* ---------- the hub panel ---------- */
   let TAB='deeds';
-  const TABS=[['deeds','Deeds'],['week','Bounties'],['fortune','Fortune'],['haiku','Haiku'],['album','Album'],['ledger','Ledger']];
+  const TABS=[['deeds','Deeds'],['week','Bounties'],['rival','Rival'],['fortune','Fortune'],['haiku','Haiku'],['letters','Letters'],['stamps','Seals'],['album','Album'],['ledger','Ledger']];
   function deedsTab(){
     const x=X();const got=DEEDS.filter(d=>x.deeds[d.id]).length;const L=legacy();const ever=Object.keys(L.deeds||{}).length;
     let h=`<div class="xp-sum"><div><b>${got}/${DEEDS.length}</b>this life</div><div><b>${ever}/${DEEDS.length}</b>across all lives</div><div><b>${fmt(DEEDS.filter(d=>x.deeds[d.id]).reduce((a,d)=>a+d.reward,0))}</b>mon earned from deeds</div></div><div class="xp-grid">`;
@@ -6506,9 +6569,29 @@ requestAnimationFrame(loop);
     const best=Object.entries(G.skills||{}).sort((a,b)=>b[1]-a[1])[0];if(best)rows.splice(2,0,['Best skill',`${best[0]} ${Math.round(best[1])}`]);
     return`<div class="xp-ledger">${chart}</div><table class="xp-table">${rows.map(([a,b])=>`<tr><td>${esc(String(a))}</td><td>${esc(String(b))}</td></tr>`).join('')}</table>`;
   }
+  function rivalTab(){
+    const rv=rival();const me=playerPower();const top=Math.max(me,rv.power,1);
+    const bar=(n,v,c)=>`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13.5px"><b>${esc(n)}</b><span>${fmt(Math.round(v))}</span></div><div class="xp-bar" style="height:10px"><i style="width:${Math.round(v/top*100)}%;background:${c}"></i></div></div>`;
+    let h=`<p style="margin:0 0 6px;font-size:13.5px">Every street has someone in your line of work who seems to be one step ahead. Yours is <b>${esc(rv.name)}</b>. Prestige counts your rank, standing, skills and purse.</p>`;
+    h+=bar(G.given+' (you)',me,'var(--moss)')+bar(rv.name,rv.power,'var(--beni)');
+    h+=`<p style="font-size:13px;color:var(--ink-soft)">${rv.beaten?`You have left ${esc(rv.name)} far behind. They still try.`:me>=rv.power?'You are ahead, for now. Get 25% ahead and the whole ward will notice.':'They are ahead. Work, study and earn to close the gap.'}</p>`;
+    if(rv.news.length)h+=`<h4 style="margin:12px 0 6px">Recent gossip</h4>`+rv.news.map(n=>`<p style="margin:0 0 6px;font-size:13px">${esc(n.t)} <small style="color:var(--ink-soft)">(day ${n.d})</small></p>`).join('');
+    return h;
+  }
+  function lettersTab(){
+    const L=(X().letters)||[];
+    if(!L.length)return'<p>No letters yet. Family and old friends write now and then, and sometimes send a little something.</p>';
+    return L.map(l=>`<div class="xp-haiku" style="font-size:15px;border-left-color:var(--indigo)">${esc(l.text)}<small>From ${esc(l.who)}, ${SEASONS[l.season]} of year ${l.year}${esc(l.gift)}</small></div>`).join('');
+  }
+  function stampsTab(){
+    const st=Object.values((X().stamps)||{});
+    let h=`<div class="xp-sum"><div><b>${st.length}</b>seals collected</div></div><p style="font-size:13px;color:var(--ink-soft);margin:0 0 12px">Enter any shrine or temple, in any city, to receive its goshuin seal.</p>`;
+    if(!st.length)return h+'<p>Your stamp book is still blank.</p>';
+    return h+`<div class="xp-grid">${st.map(s=>`<div class="xp-deed"><div class="k" style="background:#a8432e;border-radius:4px">${esc(s.k)}</div><div><h4>${esc(s.name)}</h4><p>${esc((CITY[s.city]||{name:''}).name)}, ${SEASONS[s.season]} of year ${s.year}</p></div></div>`).join('')}</div>`;
+  }
   function openHub(tab){
     if(!G)return;if(tab)TAB=tab;X();checkDeeds();checkBounties();
-    const body={deeds:deedsTab,week:weekTab,fortune:fortuneTab,haiku:haikuTab,album:albumTab,ledger:ledgerTab}[TAB]();
+    const body={deeds:deedsTab,week:weekTab,rival:rivalTab,fortune:fortuneTab,haiku:haikuTab,letters:lettersTab,stamps:stampsTab,album:albumTab,ledger:ledgerTab}[TAB]();
     openModal(`<div class="mhead"><div class="kanji">功</div><div><h2>Deeds &amp; journal</h2><p>Your accomplishments, bounties, fortunes and poems. Press K anytime, P to make a print.</p></div></div>
       <div class="mbody"><div class="xp-tabs">${TABS.map(([k,n])=>`<button class="chip${TAB===k?' on':''}" data-xtab="${k}">${n}</button>`).join('')}<button class="chip" data-xphoto>絵 Make a print</button></div>${body}</div>
       <div class="mfoot"><button class="btn ghost" data-close>Close</button></div>`,'xp');
