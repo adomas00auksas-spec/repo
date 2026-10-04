@@ -6155,6 +6155,402 @@ buildEdo();
 goTitle();
 requestAnimationFrame(loop);
 
+/* =====================================================================
+   EXPANSION: deeds, weekly bounties, omikuji, haiku journal, collection
+   album, life ledger and ukiyo-e photo mode. Self-contained: it only
+   wraps a few global functions and keeps its data in G.xp.
+   ===================================================================== */
+(function(){
+  const LEGACY_KEY='ukiyo-legacy';
+
+  /* ---------- styles ---------- */
+  const css=document.createElement('style');
+  css.textContent=`
+  .xp-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+  .xp-sum{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+  .xp-sum div{background:var(--paper2);border-radius:6px;padding:8px 12px;font-size:12.5px;color:var(--ink-soft)}
+  .xp-sum b{display:block;font-family:var(--serif);font-size:20px;color:var(--ink)}
+  .xp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:8px}
+  .xp-deed{border:1px solid var(--tan);border-radius:6px;padding:10px 11px;background:#fbf5ea;display:grid;grid-template-columns:34px 1fr;gap:9px;align-items:start}
+  .xp-deed .k{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--serif);font-weight:800;font-size:17px;background:var(--wood-d);color:var(--paper)}
+  .xp-deed h4{margin:0;font-size:13.5px;line-height:1.25}
+  .xp-deed p{margin:2px 0 0;font-size:11.5px;color:var(--ink-soft);line-height:1.35}
+  .xp-deed.locked{opacity:.62;background:transparent}
+  .xp-deed.locked .k{background:var(--paper2);color:var(--ink-soft)}
+  .xp-deed.secret h4{font-style:italic}
+  .xp-bar{height:4px;border-radius:2px;background:var(--paper2);margin-top:6px;overflow:hidden}
+  .xp-bar i{display:block;height:100%;background:var(--moss)}
+  .xp-bounty{border:1px solid var(--tan);border-radius:6px;padding:12px 14px;margin-bottom:8px;background:#fbf5ea}
+  .xp-bounty.done{border-color:var(--moss);background:#eef0dc}
+  .xp-bounty h4{margin:0 0 2px;font-size:15px;display:flex;justify-content:space-between;gap:8px}
+  .xp-bounty small{color:var(--ink-soft)}
+  .xp-haiku{font-family:var(--serif);font-size:18px;line-height:1.6;padding:14px 18px;border-left:3px solid var(--beni);background:#fbf5ea;margin-bottom:10px;border-radius:0 6px 6px 0}
+  .xp-haiku small{display:block;font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);margin-top:6px}
+  .xp-album{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px}
+  .xp-album div{aspect-ratio:1;border:1px solid var(--tan);border-radius:5px;display:grid;place-items:center;background:#fbf5ea;position:relative}
+  .xp-album div.no{background:transparent;border-style:dashed}
+  .xp-album img{width:64%;height:64%}
+  .xp-album div.no img{filter:brightness(0) opacity(.18)}
+  .xp-album span{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:9.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}
+  .xp-cities{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
+  .xp-cities span{padding:4px 10px;border-radius:12px;font-size:12.5px;background:var(--paper2);color:var(--ink-soft)}
+  .xp-cities span.on{background:var(--indigo);color:var(--paper)}
+  .xp-ledger svg{width:100%;height:140px;background:#fbf5ea;border:1px solid var(--tan);border-radius:6px}
+  .xp-table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:12px}
+  .xp-table td{padding:6px 4px;border-bottom:1px dashed rgba(139,101,68,.3)}
+  .xp-table td:last-child{text-align:right;font-weight:700}
+  .xp-photo img{width:100%;border-radius:4px;box-shadow:0 6px 20px rgba(60,40,25,.3);display:block}
+  .xp-omi{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;padding:14px 16px;background:#fbf5ea;border:1px solid var(--tan);border-radius:6px;margin-bottom:12px}
+  .xp-omi .big{writing-mode:vertical-rl;font-family:var(--serif);font-weight:800;font-size:30px;color:var(--beni);border:2px solid var(--beni);padding:8px 4px;border-radius:3px;background:#fff8ec}
+  .xp-omi ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--ink-soft)}
+  #xpFlash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:30;transition:opacity .5s}
+  `;
+  document.head.appendChild(css);
+  const flash=document.createElement('div');flash.id='xpFlash';document.body.appendChild(flash);
+
+  /* ---------- data helpers ---------- */
+  function X(){
+    if(!G)return null;
+    if(!G.xp)G.xp={deeds:{},photos:0,haiku:[],ledger:[],fortune:null,week:null,weeksDone:0,seen:{},startYear:G.year,lastSeason:G.season,greatFortunes:0,peakMoney:G.money};
+    const x=G.xp;
+    Object.keys(G.items||{}).forEach(k=>{if(G.items[k]>0)x.seen[k]=1;});
+    return x;
+  }
+  function legacy(){try{return JSON.parse(localStorage.getItem(LEGACY_KEY)||'{}');}catch(e){return{};}}
+  function saveLegacy(L){try{localStorage.setItem(LEGACY_KEY,JSON.stringify(L));}catch(e){}}
+  const S=k=>(G.stats&&G.stats[k])||0;
+  const SK=k=>(G.skills&&G.skills[k])||0;
+  const childrenN=()=>(G.fam||[]).filter(f=>f.alive&&f.child).length;
+  const citiesN=()=>Object.keys(G.visitedCities||{}).length;
+  const seenN=()=>Object.keys(X().seen).length;
+  const itemCount=()=>Object.keys(ITEMS).length;
+
+  /* ---------- deeds ---------- */
+  // [id, kanji, name, description, progress fn (0..1), reward mon, secret?]
+  const D=(id,k,name,desc,prog,reward,secret)=>({id,k,name,desc,prog,reward:reward||0,secret:!!secret});
+  const ratio=(v,n)=>Math.min(1,v/n);
+  const DEEDS=[
+    D('week','七','A week in the world','Live through your first seven days.',()=>ratio(G.totalDays,7),100),
+    D('year','年','The wheel turns','Live a full year from the day you began.',()=>ratio(G.year-X().startYear,1),400),
+    D('decade','十','Ten winters','Live ten years in this life.',()=>ratio(G.year-X().startYear,10),3000),
+    D('mon1','銭','A heavy purse','Hold 10,000 mon at once.',()=>ratio(G.money,10000),0),
+    D('mon2','金','Merchant prince','Hold 100,000 mon at once.',()=>ratio(G.money,100000),0),
+    D('mon3','富','Richer than a daimyo','Hold 1,000,000 mon at once.',()=>ratio(G.money,1000000),0),
+    D('debt','借','Living on credit','Fall into debt. It happens to the best of us.',()=>G.money<0?1:0,0,true),
+    D('q1','巻','A helping hand','Complete your first quest.',()=>ratio(S('quests'),1),150),
+    D('q10','書','Known in the ward','Complete ten quests.',()=>ratio(S('quests'),10),1000),
+    D('q30','誉','A name in the broadsheets','Complete thirty quests.',()=>ratio(S('quests'),30),4000),
+    D('win1','刀','First blood','Win a fight.',()=>ratio(S('won'),1),200),
+    D('win10','武','Steel and nerve','Win ten fights.',()=>ratio(S('won'),10),1200),
+    D('win50','剣','Sword saint','Win fifty fights.',()=>ratio(S('won'),50),6000),
+    D('fish10','魚','A line in the water','Catch ten fish.',()=>ratio(S('fishTotal'),10),200),
+    D('fish100','鯛','Master of the tides','Catch a hundred fish.',()=>ratio(S('fishTotal'),100),2000),
+    D('sold','売','Open for business','Sell fifty goods.',()=>ratio(S('sold'),50),800),
+    D('served','茶','The warmest welcome','Serve fifty customers or guests.',()=>ratio(S('served'),50),800),
+    D('treated','医','The healer of the ward','Treat ten patients.',()=>ratio(S('treated'),10),800),
+    D('harvest','稲','Golden fields','Bring in ten harvests.',()=>ratio(S('harvest'),10),800),
+    D('lessons','学','Student of the way','Attend twenty lessons.',()=>ratio(S('lessons'),20),600),
+    D('bouts','力','In the ring','Fight five sumo bouts.',()=>ratio(S('bouts'),5),500),
+    D('runs','走','Swift feet','Complete ten courier runs.',()=>ratio(S('runs'),10),500),
+    D('prints','版','Woodblock fame','Make ten prints.',()=>ratio(S('prints'),10),500),
+    D('banquets','宴','The life of the party','Attend five banquets.',()=>ratio(S('banquets'),5),500),
+    D('adept','巧','Adept','Raise any skill to 50.',()=>ratio(Math.max(...Object.values(G.skills||{0:0})),50),800),
+    D('master','極','Master of the way','Raise any skill to 90.',()=>ratio(Math.max(...Object.values(G.skills||{0:0})),90),5000),
+    D('polymath','博','Many paths, one heart','Raise five different skills to 30.',()=>ratio(Object.values(G.skills||{}).filter(v=>v>=30).length,5),2000),
+    D('travel3','旅','Traveller','Visit three cities.',()=>ratio(citiesN(),3),600),
+    D('travelAll','国','All under heaven','Visit every city in Japan.',()=>ratio(citiesN(),Object.keys(CITY).length),8000),
+    D('rep60','評','Respected','Reach 60 standing.',()=>ratio(G.rep,60),500),
+    D('rep95','名','A household name','Reach 95 standing.',()=>ratio(G.rep,95),3000),
+    D('tier2','階','Climbing the ladder','Rise two steps in your trade.',()=>ratio(G.tier||0,2),800),
+    D('tier4','頂','Near the summit','Rise four steps in your trade.',()=>ratio(G.tier||0,4),3000),
+    D('home1','家','A better roof','Improve your home.',()=>ratio(G.homeLevel||0,1),400),
+    D('land','地','Landholder','Own property.',()=>ratio(Object.keys(G.props||{}).length,1),1000),
+    D('kids3','子','A full house','Have three living children.',()=>ratio(childrenN(),3),1000),
+    D('gen2','継','The house endures','Continue your family into a second generation.',()=>ratio(G.generation||1,2),2000),
+    D('gen4','代','A great lineage','Reach the fourth generation of your house.',()=>ratio(G.generation||1,4),8000),
+    D('elder','翁','Silver hair','Live to 70.',()=>ratio(G.ageY,70),1500),
+    D('cat','猫','Adopted by a cat','Let the neighbourhood cat move in.',()=>G.cat&&G.cat.home?1:0,300,true),
+    D('crime','罪','On the wrong side','Be caught committing a crime.',()=>(G.crime&&G.crime.n)?1:0,0,true),
+    D('collect20','集','Collector','Own twenty different kinds of item.',()=>ratio(seenN(),20),600),
+    D('collectAll','蔵','The great storehouse','Own every kind of item at least once.',()=>ratio(seenN(),itemCount()),6000),
+    D('haiku4','句','Poet of four seasons','Write four seasonal haiku.',()=>ratio(X().haiku.length,4),400),
+    D('haiku12','詩','A life in verse','Write twelve seasonal haiku.',()=>ratio(X().haiku.length,12),1500),
+    D('photo5','絵','Ukiyo-e artist','Make five prints in photo mode (press P).',()=>ratio(X().photos,5),300),
+    D('daikichi','吉','Heaven smiles','Draw a Great Blessing fortune.',()=>ratio(X().greatFortunes,1),500),
+    D('weeks5','賞','Bounty hunter','Complete five weekly bounties.',()=>ratio(X().weeksDone,5),1500),
+  ];
+
+  function checkDeeds(){
+    const x=X();if(!x)return;
+    x.peakMoney=Math.max(x.peakMoney||0,G.money);
+    const L=legacy();L.deeds=L.deeds||{};let changed=false;
+    for(const d of DEEDS){
+      if(x.deeds[d.id])continue;
+      let p=0;try{p=d.prog();}catch(e){p=0;}
+      if(p>=1){
+        x.deeds[d.id]=G.totalDays;
+        if(d.reward)G.money+=d.reward;
+        G.rep=clamp(G.rep+1,0,100);
+        toast(d.k,'Deed: '+d.name,d.desc+(d.reward?` +${fmt(d.reward)} mon`:''));
+        try{chron(`${G.given} earned the deed "${d.name}".`,'deed');}catch(e){}
+        if(!L.deeds[d.id]){L.deeds[d.id]=1;changed=true;}
+      }
+    }
+    if(changed)saveLegacy(L);
+  }
+
+  /* ---------- weekly bounties ---------- */
+  const POOL=[
+    {k:'won',n:2,t:'Win {n} fights'},{k:'fishTotal',n:6,t:'Catch {n} fish'},{k:'sold',n:8,t:'Sell {n} goods'},
+    {k:'served',n:8,t:'Serve {n} customers'},{k:'treated',n:3,t:'Treat {n} patients'},{k:'harvest',n:2,t:'Bring in {n} harvests'},
+    {k:'lessons',n:3,t:'Attend {n} lessons'},{k:'runs',n:3,t:'Finish {n} courier runs'},{k:'bouts',n:2,t:'Fight {n} sumo bouts'},
+    {k:'prints',n:2,t:'Make {n} prints'},{k:'banquets',n:1,t:'Attend {n} banquet'},
+  ];
+  function newWeek(){
+    const x=X();
+    // Favour activities this player actually does, so bounties fit their trade
+    const done=POOL.filter(p=>S(p.k)>0);
+    const pool=(done.length>=1?done:POOL).slice().sort(()=>Math.random()-.5);
+    const extra=POOL.filter(p=>!pool.includes(p)).sort(()=>Math.random()-.5);
+    const picks=[...pool,...extra].slice(0,1);
+    const goals=[
+      {k:'money',n:Math.max(500,Math.round((G.money>0?G.money:1000)*.25/100)*100),t:'Earn {n} mon (net)',base:G.money},
+      {k:'quests',n:1,t:'Complete {n} quest',base:S('quests')},
+      ...picks.map(p=>({k:p.k,n:p.n,t:p.t,base:S(p.k)})),
+    ].map(g=>Object.assign(g,{done:false,reward:300+Math.round(Math.random()*4)*100}));
+    x.week={start:G.totalDays,end:G.totalDays+7,goals};
+  }
+  function bountyProgress(g){return g.k==='money'?G.money-g.base:S(g.k)-g.base;}
+  function checkBounties(){
+    const x=X();if(!x)return;
+    if(!x.week)newWeek();
+    for(const g of x.week.goals){
+      if(g.done)continue;
+      if(bountyProgress(g)>=g.n){
+        g.done=true;G.money+=g.reward;G.mood=clamp(G.mood+5,0,100);
+        toast('賞','Bounty complete',g.t.replace('{n}',fmt(g.n))+` +${fmt(g.reward)} mon`);
+        if(x.week.goals.every(q=>q.done)){x.weeksDone++;G.money+=1000;toast('賞','All bounties this week!','+1,000 mon bonus');}
+      }
+    }
+  }
+
+  /* ---------- omikuji ---------- */
+  const FORTUNES=[
+    {jp:'大吉',en:'Great blessing',w:8,mood:10,luck:.15},
+    {jp:'中吉',en:'Middle blessing',w:16,mood:6,luck:.08},
+    {jp:'小吉',en:'Small blessing',w:24,mood:3,luck:.04},
+    {jp:'吉',en:'Blessing',w:22,mood:2,luck:.02},
+    {jp:'末吉',en:'Future blessing',w:16,mood:0,luck:0},
+    {jp:'凶',en:'Curse',w:11,mood:-4,luck:-.04},
+    {jp:'大凶',en:'Great curse',w:3,mood:-8,luck:-.08},
+  ];
+  const OMEN={
+    good:['Travel: favourable, especially to the west.','Business: a patient hand will be rewarded.','Lost things: found where you least expect.','Love: an old acquaintance thinks of you.','Health: rest well and all is well.','Study: the brush moves easily today.','Waiting person: arrives before dusk.'],
+    bad:['Travel: delay your journey.','Business: count your change twice.','Lost things: will not return.','Quarrels: hold your tongue today.','Health: mind the stairs.','Gambling: walk past the dice.'],
+  };
+  function drawFortune(){
+    const total=FORTUNES.reduce((a,f)=>a+f.w,0);let r=Math.random()*total,f=FORTUNES[0];
+    for(const o of FORTUNES){r-=o.w;if(r<=0){f=o;break;}}
+    const bad=f.mood<0;const pool=bad?OMEN.bad:OMEN.good;
+    const omens=pool.slice().sort(()=>Math.random()-.5).slice(0,2);
+    return{jp:f.jp,en:f.en,mood:f.mood,luck:f.luck,omens,day:G.totalDays};
+  }
+
+  /* ---------- haiku ---------- */
+  const KIGO=[
+    ['Cherry petals fall','Plum blossoms open','Spring rain on the roof','A warbler’s first song'],
+    ['Cicadas shrilling','Summer heat lingers','Evening cool at last','Rain on the rice fields'],
+    ['Red maple leaves fall','The harvest moon climbs','Crickets in the dusk','Cold wind through the reeds'],
+    ['First snow on the eaves','Frost on the well rope','Charcoal glowing red','The year’s last bell tolls'],
+  ];
+  const GROUP={
+    craft:['artisan','carpenter','swordsmith','printer'],sword:['samurai','ronin','ashigaru','onmitsu','okappiki','hikeshi'],
+    trade:['merchant','innkeeper','teamaster','geisha','performer','kago','courier','sumo'],land:['farmer','fisher'],
+    spirit:['monk','physician'],rule:['daimyo','shogun'],
+  };
+  const MIDDLE={
+    craft:['my hands still smell of cedar','the chisel learns my patience'],
+    sword:['my blade rests beside the lamp','the drum calls us to the gate'],
+    trade:['coins counted, the abacus','a guest bows at the threshold'],
+    land:['mud to the knees in the field','the net comes up with silver'],
+    spirit:['incense smoke and quiet prayer','I grind herbs for the sick child'],
+    rule:['the castle bell counts my debts','a thousand bow, none speak true'],
+    any:['the long road behind my house','old friends gone, new faces come'],
+  };
+  const LAST=['ah, this floating world','and still I am here','the kettle sings on','a crow, then nothing','the lantern burns low','one more day is mine'];
+  function composeHaiku(){
+    const g=Object.keys(GROUP).find(k=>GROUP[k].includes(G.rank))||'any';
+    let mids=[...MIDDLE[g],...MIDDLE.any];
+    if(childrenN())mids.push('my children laugh in the lane');
+    return{lines:[pick(KIGO[G.season]),pick(mids),pick(LAST)],season:G.season,year:G.year,city:G.city,who:G.given,age:G.ageY};
+  }
+
+  /* ---------- hooks into the day ---------- */
+  const _sleep=sleepNewDay;
+  sleepNewDay=function(wake,rested=true){
+    const lines=_sleep(wake,rested);
+    try{
+      const x=X();
+      // fortune for the new day
+      const f=drawFortune();x.fortune=f;
+      G.mood=clamp(G.mood+f.mood,0,100);G.luck+=f.luck;
+      if(f.jp==='大吉')x.greatFortunes++;
+      lines.push(`Omikuji: ${f.jp} (${f.en}). ${f.omens[0]}`);
+      // a haiku when the season turns
+      if(G.season!==x.lastSeason){x.lastSeason=G.season;const h=composeHaiku();x.haiku.push(h);if(x.haiku.length>80)x.haiku.shift();lines.push(`You write in your journal: "${h.lines.join(' / ')}"`);}
+      // weekly bounties
+      if(!x.week||G.totalDays>=x.week.end){const unfinished=x.week&&x.week.goals.some(g=>!g.done);newWeek();lines.push(unfinished?'A new week. Last week’s bounties expired; fresh ones are posted (K).':'A new week, and new bounties are posted (K).');}
+      // ledger
+      x.ledger.push({d:G.totalDays,m:Math.round(G.money),r:Math.round(G.rep),o:Math.round(G.mood)});if(x.ledger.length>240)x.ledger.shift();
+    }catch(e){console.warn('expansion day hook',e);}
+    return lines;
+  };
+  const _give=give;
+  give=function(k,n=1){_give(k,n);try{if(G&&G.xp&&n>0)G.xp.seen[k]=1;}catch(e){}};
+
+  /* ---------- photo mode ---------- */
+  let NO_MINI=false;
+  const _drawMinimap=drawMinimap;
+  drawMinimap=function(c){if(NO_MINI)return;return _drawMinimap(c);};
+  function photo(){
+    if(!G)return;
+    const src=document.getElementById('world');
+    // re-draw the scene once without the minimap so the print is clean
+    NO_MINI=true;try{render();}catch(e){}NO_MINI=false;
+    const W=1400,pad=60,innerW=W-pad*2,innerH=Math.round(innerW*src.height/src.width),H=innerH+pad*2+70;
+    const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+    g.fillStyle='#efe2c4';g.fillRect(0,0,W,H);
+    try{g.filter='sepia(.3) saturate(.9) contrast(1.06)';}catch(e){}
+    g.drawImage(src,pad,pad,innerW,innerH);g.filter='none';
+    // paper grain
+    for(let i=0;i<9000;i++){g.fillStyle=`rgba(${Math.random()<.5?'80,55,30':'255,250,235'},${Math.random()*.07})`;g.fillRect(Math.random()*W,Math.random()*H,2,2);}
+    // frame
+    g.strokeStyle='#3b2b1f';g.lineWidth=6;g.strokeRect(pad-3,pad-3,innerW+6,innerH+6);
+    g.lineWidth=1.5;g.strokeRect(pad-14,pad-14,innerW+28,innerH+28);
+    // title cartouche (vertical, top right)
+    const city=CITY[G.city]||{name:'Edo',jp:'江戸'};const season=['春','夏','秋','冬'][G.season];
+    const cw=70,ch=260,cx=pad+innerW-cw-24,cy=pad+24;
+    g.fillStyle='#f6ecd6';g.fillRect(cx,cy,cw,ch);g.strokeStyle='#3b2b1f';g.lineWidth=2;g.strokeRect(cx,cy,cw,ch);g.strokeRect(cx+5,cy+5,cw-10,ch-10);
+    g.fillStyle='#3b2b1f';g.font=`800 34px ${SERIF||'serif'}`;g.textAlign='center';
+    const title=(city.jp||'江戸')+season;[...title].forEach((ch2,i)=>g.fillText(ch2,cx+cw/2,cy+52+i*44));
+    // red seal
+    const sx=pad+innerW-110,sy=pad+innerH-110;g.fillStyle='#a8432e';g.fillRect(sx,sy,80,80);
+    g.fillStyle='#f6ecd6';g.font=`800 30px ${SERIF||'serif'}`;g.fillText('浮',sx+40,sy+36);g.fillText('世',sx+40,sy+70);
+    // caption
+    g.fillStyle='#3b2b1f';g.textAlign='left';g.font=`700 26px ${SERIF||'serif'}`;
+    g.fillText(`${G.given} ${G.family||''}`.trim()+`, ${(RANKS[G.rank]||{name:''}).name}`,pad,H-44);
+    g.textAlign='right';g.font=`500 20px ${SERIF||'serif'}`;
+    g.fillText(`${SEASONS[G.season]}, day ${G.day} of ${G.story?G.story.era:''} ${G.year} · ${city.name}`,W-pad,H-44);
+    let url='';try{url=c.toDataURL('image/png');}catch(e){toast('絵','Photo failed','This browser blocked the capture.');return;}
+    X().photos++;
+    flash.style.transition='none';flash.style.opacity='.85';requestAnimationFrame(()=>{flash.style.transition='opacity .6s';flash.style.opacity='0';});
+    const name=`ukiyo-${(G.given||'print').replace(/\s+/g,'')}-${G.year}-${G.season}-${G.day}.png`;
+    openModal(`<div class="mhead"><div class="kanji">絵</div><div><h2>A woodblock print</h2><p>Your moment in the floating world, printed on washi.</p></div></div>
+      <div class="mbody xp-photo"><img src="${url}" alt="Ukiyo-e print of the current scene"></div>
+      <div class="mfoot"><a class="btn" href="${url}" download="${name}" style="text-decoration:none">Save print</a><button class="btn ghost" data-close>Close</button></div>`,'xp');
+    $('#mcard').querySelector('[data-close]').onclick=closeModal;
+    checkDeeds();
+  }
+
+  /* ---------- the hub panel ---------- */
+  let TAB='deeds';
+  const TABS=[['deeds','Deeds'],['week','Bounties'],['fortune','Fortune'],['haiku','Haiku'],['album','Album'],['ledger','Ledger']];
+  function deedsTab(){
+    const x=X();const got=DEEDS.filter(d=>x.deeds[d.id]).length;const L=legacy();const ever=Object.keys(L.deeds||{}).length;
+    let h=`<div class="xp-sum"><div><b>${got}/${DEEDS.length}</b>this life</div><div><b>${ever}/${DEEDS.length}</b>across all lives</div><div><b>${fmt(DEEDS.filter(d=>x.deeds[d.id]).reduce((a,d)=>a+d.reward,0))}</b>mon earned from deeds</div></div><div class="xp-grid">`;
+    const sorted=DEEDS.slice().sort((a,b)=>(x.deeds[b.id]?1:0)-(x.deeds[a.id]?1:0));
+    for(const d of sorted){
+      const done=!!x.deeds[d.id];let p=0;try{p=Math.max(0,Math.min(1,d.prog()));}catch(e){}
+      const hide=d.secret&&!done;
+      h+=`<div class="xp-deed ${done?'':'locked'} ${hide?'secret':''}"><div class="k">${hide?'?':d.k}</div><div><h4>${esc(hide?'A hidden deed':d.name)}</h4><p>${esc(hide?'Live a little and you may find it.':d.desc)}${d.reward&&!hide?` <b>${fmt(d.reward)} mon</b>`:''}</p>${done||hide?'':`<div class="xp-bar"><i style="width:${Math.round(p*100)}%"></i></div>`}</div></div>`;
+    }
+    return h+'</div>';
+  }
+  function weekTab(){
+    const x=X();if(!x.week)newWeek();const left=Math.max(0,x.week.end-G.totalDays);
+    let h=`<div class="xp-sum"><div><b>${left}</b>days left this week</div><div><b>${x.weeksDone}</b>full weeks completed</div></div>`;
+    for(const g of x.week.goals){const p=Math.max(0,Math.min(g.n,bountyProgress(g)));
+      h+=`<div class="xp-bounty ${g.done?'done':''}"><h4><span>${esc(g.t.replace('{n}',fmt(g.n)))}</span><span>${g.done?'✓ Done':fmt(g.reward)+' mon'}</span></h4><small>${g.done?'Reward claimed.':`${fmt(p)} / ${fmt(g.n)}`}</small>${g.done?'':`<div class="xp-bar"><i style="width:${Math.round(p/g.n*100)}%"></i></div>`}</div>`;}
+    return h+'<p style="font-size:12.5px;color:var(--ink-soft)">Finish all three in one week for a 1,000 mon bonus. Bounties favour the work you already do.</p>';
+  }
+  function fortuneTab(){
+    const f=X().fortune;
+    if(!f)return'<p>You have not drawn a fortune yet. A new slip is drawn every morning when you wake.</p>';
+    return`<div class="xp-omi"><div class="big">${f.jp}</div><div><h3 style="margin:0;font-family:var(--serif)">${esc(f.en)}</h3><p style="margin:4px 0 0;font-size:13px;color:var(--ink-soft)">Drawn this morning. Mood ${f.mood>=0?'+':''}${f.mood}${f.luck?`, luck ${f.luck>0?'+':''}${Math.round(f.luck*100)}% today`:''}.</p><ul>${f.omens.map(o=>`<li>${esc(o)}</li>`).join('')}</ul></div></div><p style="font-size:12.5px;color:var(--ink-soft)">${f.mood<0?'A bad slip? Tie it to the pine at the shrine and leave the bad luck behind. Tomorrow brings another.':'Keep a good slip close. It will not last past tomorrow morning.'}</p>`;
+  }
+  function haikuTab(){
+    const hs=X().haiku.slice().reverse();
+    if(!hs.length)return'<p>Your journal is empty. When the season turns, you will write a haiku about your life.</p>';
+    return hs.map(h=>`<div class="xp-haiku">${h.lines.map(esc).join('<br>')}<small>${esc(h.who)}, ${SEASONS[h.season]} of year ${h.year}, ${esc((CITY[h.city]||{name:''}).name)}, age ${h.age}</small></div>`).join('');
+  }
+  function albumTab(){
+    const x=X();const keys=Object.keys(ITEMS);const have=keys.filter(k=>x.seen[k]).length;
+    const cities=Object.entries(CITY);
+    let h=`<div class="xp-sum"><div><b>${have}/${keys.length}</b>kinds of item</div><div><b>${citiesN()}/${cities.length}</b>cities visited</div><div><b>${Object.keys(G.visited||{}).length}</b>places entered</div></div>`;
+    h+=`<h4 style="margin:4px 0">Cities</h4><div class="xp-cities">${cities.map(([k,c])=>`<span class="${G.visitedCities&&G.visitedCities[k]?'on':''}">${esc(c.jp||'')} ${esc(c.name)}</span>`).join('')}</div>`;
+    h+=`<h4 style="margin:4px 0 8px">Belongings</h4><div class="xp-album">${keys.map(k=>{const it=ITEMS[k]||{};const on=!!x.seen[k];let src='';try{src=iconURL(k);}catch(e){}return`<div class="${on?'':'no'}" title="${esc(on?(it.name||k):'Not yet found')}">${src?`<img src="${src}" alt="">`:''}<span>${esc(on?(it.name||k):'?')}</span></div>`;}).join('')}</div>`;
+    return h;
+  }
+  function ledgerTab(){
+    const x=X();const L=x.ledger;
+    let chart='<p style="font-size:13px;color:var(--ink-soft)">Your ledger fills in as the days pass.</p>';
+    if(L.length>1){
+      const W=600,H=140,m=L.map(e=>e.m),lo=Math.min(0,...m),hi=Math.max(1,...m);
+      const px=i=>i/(L.length-1)*(W-20)+10,py=v=>H-10-(v-lo)/(hi-lo)*(H-30);
+      const line=L.map((e,i)=>`${i?'L':'M'}${px(i).toFixed(1)},${py(e.m).toFixed(1)}`).join('');
+      const rep=L.map((e,i)=>`${i?'L':'M'}${px(i).toFixed(1)},${(H-10-e.r/100*(H-30)).toFixed(1)}`).join('');
+      chart=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Money and standing over time">${lo<0?`<line x1="0" x2="${W}" y1="${py(0)}" y2="${py(0)}" stroke="#a8432e" stroke-dasharray="4 4" stroke-width="1"/>`:''}<path d="${rep}" fill="none" stroke="#34506b" stroke-width="2" opacity=".55"/><path d="${line}" fill="none" stroke="#7c7f4e" stroke-width="2.5"/></svg>
+      <p style="font-size:12px;color:var(--ink-soft);margin:6px 0 0"><span style="color:#7c7f4e">━</span> Money (${fmt(lo)} to ${fmt(hi)} mon) &nbsp; <span style="color:#34506b">━</span> Standing &nbsp; over the last ${L.length} days</p>`;
+    }
+    const rows=[['Days lived in this life',G.totalDays],['Generation',G.generation||1],['Most money held',fmt(x.peakMoney||G.money)+' mon'],['Quests completed',S('quests')],['Fights won',`${S('won')} of ${S('battles')}`],['Fish caught',S('fishTotal')],['Goods sold',S('sold')],['Patients treated',S('treated')],['Harvests',S('harvest')],['Prints made in photo mode',x.photos],['Great Blessings drawn',x.greatFortunes]];
+    const best=Object.entries(G.skills||{}).sort((a,b)=>b[1]-a[1])[0];if(best)rows.splice(2,0,['Best skill',`${best[0]} ${Math.round(best[1])}`]);
+    return`<div class="xp-ledger">${chart}</div><table class="xp-table">${rows.map(([a,b])=>`<tr><td>${esc(String(a))}</td><td>${esc(String(b))}</td></tr>`).join('')}</table>`;
+  }
+  function openHub(tab){
+    if(!G)return;if(tab)TAB=tab;X();checkDeeds();checkBounties();
+    const body={deeds:deedsTab,week:weekTab,fortune:fortuneTab,haiku:haikuTab,album:albumTab,ledger:ledgerTab}[TAB]();
+    openModal(`<div class="mhead"><div class="kanji">功</div><div><h2>Deeds &amp; journal</h2><p>Your accomplishments, bounties, fortunes and poems. Press K anytime, P to make a print.</p></div></div>
+      <div class="mbody"><div class="xp-tabs">${TABS.map(([k,n])=>`<button class="chip${TAB===k?' on':''}" data-xtab="${k}">${n}</button>`).join('')}<button class="chip" data-xphoto>絵 Make a print</button></div>${body}</div>
+      <div class="mfoot"><button class="btn ghost" data-close>Close</button></div>`,'xp');
+    const card=$('#mcard');
+    card.querySelectorAll('[data-xtab]').forEach(b=>b.onclick=()=>openHub(b.dataset.xtab));
+    card.querySelector('[data-xphoto]').onclick=()=>{closeModal();setTimeout(photo,60);};
+    card.querySelector('[data-close]').onclick=closeModal;
+  }
+
+  /* ---------- menu button, keys and timers ---------- */
+  const menu=document.querySelector('#hud .menu');
+  if(menu){
+    const b=document.createElement('button');b.className='mbtn';b.id='bDeeds';b.setAttribute('aria-label','Deeds and journal');b.innerHTML='功<span>Deeds</span>';
+    b.onclick=()=>{if(!G||modalOpen())return;openHub();};
+    const last=menu.querySelector('[data-open="menu"]');menu.insertBefore(b,last||null);
+  }
+  addEventListener('keydown',e=>{
+    if(screen!=='game'||!G||e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+    const k=e.key.toLowerCase();
+    if(modalOpen()){if(MODAL_KIND==='xp'&&k==='k')closeModal();return;}
+    if(k==='k')openHub();
+    if(k==='p')photo();
+  });
+  setInterval(()=>{try{if(screen==='game'&&G){X();checkDeeds();checkBounties();}}catch(e){console.warn('expansion tick',e);}},2000);
+
+  /* ---------- title screen: show the legacy across lives ---------- */
+  function showLegacy(){
+    try{
+      const L=legacy();const n=Object.keys(L.deeds||{}).length;let el=document.getElementById('xpLegacy');
+      if(!el){el=document.createElement('div');el.id='xpLegacy';el.style.cssText='margin-top:12px;font-size:12.5px;color:var(--beni);font-weight:700';document.querySelector('#title .foot').after(el);}
+      el.textContent=n?`Legacy: ${n} of ${DEEDS.length} deeds earned across all your lives.`:'';
+      const foot=document.querySelector('#title .foot');if(foot&&!/K opens/.test(foot.textContent))foot.textContent+=' K opens your deeds and journal, P makes a woodblock print.';
+    }catch(e){}
+  }
+  const _goTitle=goTitle;
+  goTitle=function(){_goTitle();showLegacy();};
+  showLegacy();
+
+  window.UKX={openHub,photo,checkDeeds,DEEDS};
+})();
+
+
 /* ---------- autosave: never lose a life to a closed tab ---------- */
 (function(){
   const autosave=()=>{try{if(screen==='game'&&G)saveGame(true);}catch(e){}};
