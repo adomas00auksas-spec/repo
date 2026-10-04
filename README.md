@@ -1,3 +1,6 @@
+> Also in this repo: **[Lietuva · Lietuvos gyvenimas](lietuva/README.md)**, a browser
+> Lithuania life simulator (open `lietuva/index.html`).
+
 # PC Builder Simulator (Roblox)
 
 Collect randomly dropping PC parts, assemble them into gaming PCs and chase the
