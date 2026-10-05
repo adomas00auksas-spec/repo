@@ -85,7 +85,7 @@ function spawnHwyCar(px,py){let best=null,bd=1e9;
   ENT.cars.push({type:'car',ai:'hwy',hw:hi,seg:clamp(i+dir,0,h.pts.length-1),hdir:dir,model:m,color:pick(PAINTS),x:p[0]*TS,y:p[1]*TS,ang:Math.atan2(nx[1]-p[1],nx[0]-p[0]),vx:0,vy:0,sp:rnd(230,320),hp:100})}
 
 /* ---------- vehicles ---------- */
-function carStats(c){const m=CARS[c.model];const t=c.tune||{};let max=m.max*(1+.08*(t.eng||0)),acc=m.acc*(1+.08*(t.eng||0))*(t.turbo?1.35:1),grip=m.grip*(t.drift?.82:1)*(WINTER&&m.kind!=='bike'?.72:1);return{max,acc,grip,steer:t.drift?3.2:2.7,m}}
+function carStats(c){const m=CARS[c.model];const t=c.tune||{};let max=m.max*(1+.08*(t.eng||0)),acc=m.acc*(1+.08*(t.eng||0))*(t.turbo?1.35:1),grip=m.grip*(t.drift?.82:1)*(WINTER&&m.kind!=='bike'?.72:1)*(G&&G.weather==='Lietus'?.88:1);return{max,acc,grip,steer:t.drift?3.2:2.7,m}}
 function updatePlayerCar(c,dt){
   const st=carStats(c),up=keys.has('KeyW')||keys.has('ArrowUp'),dn=keys.has('KeyS')||keys.has('ArrowDown'),lf=keys.has('KeyA')||keys.has('ArrowLeft'),rt=keys.has('KeyD')||keys.has('ArrowRight'),hb=keys.has('Space');
   const fx=Math.cos(c.ang),fy=Math.sin(c.ang),rx=-fy,ry=fx;let vF=c.vx*fx+c.vy*fy,vR=c.vx*rx+c.vy*ry;
@@ -162,6 +162,7 @@ function carCollisions(){const cs=ENT.cars;for(let i=0;i<cs.length;i++)for(let j
 /* ---------- peds ---------- */
 function updatePed(e,dt){
   if(e.kind==='crew'){updateCrew(e,dt);return}
+  if(e.kind==='dog'){updateDog(e,dt);return}
   if(e.enemyFac&&!(e.ko>0)&&!e.angry&&brawlUpdate(e,dt))return;
   if(e.ko>0){e.ko-=dt;if(e.ko<=0){if(e.kind==='police'||Math.random()<.5){e.ko=0;e.hp=e.maxhp*.5;e.state='flee';e.t=4}else e.dead=true}return}
   e.cd-=dt;e.talk-=dt;const pd=dist(e.x,e.y,P.x,P.y),pin=!!P.inCar;
@@ -209,7 +210,7 @@ const CAP={};const capNeed=d=>CITIES[d.ci].districts[0]===d.name&&d.di===0?8:6;
 const BUST={t:0};
 function playerPunch(){if(P.inCar||P.punchCd>0)return;P.punchCd=.38;P.punchT=.18;SND.whoosh();
   const D=[[1,0],[0,1],[-1,0],[0,-1]][P.dir];let hit=false;const PEDS=SCENE?SCENE.peds:ENT.peds;
-  for(const e of PEDS){if(e.ko>0||e.kind==='crew')continue;const dx=e.x-P.x,dy=e.y-P.y,d=Math.hypot(dx,dy);if(d>34)continue;if(d>4&&(dx*D[0]+dy*D[1])/d<.2)continue;
+  for(const e of PEDS){if(e.ko>0||e.kind==='crew'||e.kind==='dog'||e.pet)continue;const dx=e.x-P.x,dy=e.y-P.y,d=Math.hypot(dx,dy);if(d>34)continue;if(d>4&&(dx*D[0]+dy*D[1])/d<.2)continue;
     if(P.age<13){e.x+=D[0]*14;e.y+=D[1]*14;bubble(e,pick(['Ei!','Nustok!','Mama!']));hit=true;continue}
     const dmg=(10+P.fight*1.6+(P.gear.bat&&P.age>=16?12:0))*(P.parent==='army'?1.15:1);e.hp-=dmg;hit=true;e.x+=D[0]*10;e.y+=D[1]*10;
     fxBurst(e.x,e.y-20,'#fff');

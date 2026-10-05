@@ -63,6 +63,7 @@ function render(){
   if(running&&P&&!P.inCar)D.push({y:P.y,p:1});
   D.sort((a,b)=>a.y-b.y);const night=running&&G?nightLevel()>.25:false;
   for(const o of D){if(o.b)drawBuilding(ctx,o.b,night);else if(o.t)drawTree(ctx,o.t);else if(o.d){if(o.d.k==='tag')drawTag(o.d);else drawDecor(ctx,o.d)}
+    else if(o.e&&o.e.pet){drawPet(o.e)}
     else if(o.e){const e=o.e;drawPerson(ctx,e.x,e.y,e.lk,e.dir,e.anim,{ko:e.ko>0,punch:e.punch>0,badge:e.kind==='gang'||e.kind==='school'||e.kind==='crew'?(e.hostile?'#FF3B2F':FACTIONS[e.fac].color):e.kind==='police'?'#2F6BFF':null})}
     else if(o.c){drawCar(ctx,o.c);if(o.c===(P&&P.inCar)&&CARS[o.c.model].kind==='bike')drawPerson(ctx,o.c.x,o.c.y+4,playerLook(),dirFromAng(o.c.ang),0,{})}
     else if(o.p){drawPerson(ctx,P.x,P.y,playerLook(),P.dir,P.anim,{punch:P.punchT>0,item:P.gear.bat&&P.age>=16?'bat':null});

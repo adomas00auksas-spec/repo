@@ -1112,7 +1112,7 @@ function spawnHwyCar(px,py){let best=null,bd=1e9;
   ENT.cars.push({type:'car',ai:'hwy',hw:hi,seg:clamp(i+dir,0,h.pts.length-1),hdir:dir,model:m,color:pick(PAINTS),x:p[0]*TS,y:p[1]*TS,ang:Math.atan2(nx[1]-p[1],nx[0]-p[0]),vx:0,vy:0,sp:rnd(230,320),hp:100})}
 
 /* ---------- vehicles ---------- */
-function carStats(c){const m=CARS[c.model];const t=c.tune||{};let max=m.max*(1+.08*(t.eng||0)),acc=m.acc*(1+.08*(t.eng||0))*(t.turbo?1.35:1),grip=m.grip*(t.drift?.82:1)*(WINTER&&m.kind!=='bike'?.72:1);return{max,acc,grip,steer:t.drift?3.2:2.7,m}}
+function carStats(c){const m=CARS[c.model];const t=c.tune||{};let max=m.max*(1+.08*(t.eng||0)),acc=m.acc*(1+.08*(t.eng||0))*(t.turbo?1.35:1),grip=m.grip*(t.drift?.82:1)*(WINTER&&m.kind!=='bike'?.72:1)*(G&&G.weather==='Lietus'?.88:1);return{max,acc,grip,steer:t.drift?3.2:2.7,m}}
 function updatePlayerCar(c,dt){
   const st=carStats(c),up=keys.has('KeyW')||keys.has('ArrowUp'),dn=keys.has('KeyS')||keys.has('ArrowDown'),lf=keys.has('KeyA')||keys.has('ArrowLeft'),rt=keys.has('KeyD')||keys.has('ArrowRight'),hb=keys.has('Space');
   const fx=Math.cos(c.ang),fy=Math.sin(c.ang),rx=-fy,ry=fx;let vF=c.vx*fx+c.vy*fy,vR=c.vx*rx+c.vy*ry;
@@ -1189,6 +1189,7 @@ function carCollisions(){const cs=ENT.cars;for(let i=0;i<cs.length;i++)for(let j
 /* ---------- peds ---------- */
 function updatePed(e,dt){
   if(e.kind==='crew'){updateCrew(e,dt);return}
+  if(e.kind==='dog'){updateDog(e,dt);return}
   if(e.enemyFac&&!(e.ko>0)&&!e.angry&&brawlUpdate(e,dt))return;
   if(e.ko>0){e.ko-=dt;if(e.ko<=0){if(e.kind==='police'||Math.random()<.5){e.ko=0;e.hp=e.maxhp*.5;e.state='flee';e.t=4}else e.dead=true}return}
   e.cd-=dt;e.talk-=dt;const pd=dist(e.x,e.y,P.x,P.y),pin=!!P.inCar;
@@ -1236,7 +1237,7 @@ const CAP={};const capNeed=d=>CITIES[d.ci].districts[0]===d.name&&d.di===0?8:6;
 const BUST={t:0};
 function playerPunch(){if(P.inCar||P.punchCd>0)return;P.punchCd=.38;P.punchT=.18;SND.whoosh();
   const D=[[1,0],[0,1],[-1,0],[0,-1]][P.dir];let hit=false;const PEDS=SCENE?SCENE.peds:ENT.peds;
-  for(const e of PEDS){if(e.ko>0||e.kind==='crew')continue;const dx=e.x-P.x,dy=e.y-P.y,d=Math.hypot(dx,dy);if(d>34)continue;if(d>4&&(dx*D[0]+dy*D[1])/d<.2)continue;
+  for(const e of PEDS){if(e.ko>0||e.kind==='crew'||e.kind==='dog'||e.pet)continue;const dx=e.x-P.x,dy=e.y-P.y,d=Math.hypot(dx,dy);if(d>34)continue;if(d>4&&(dx*D[0]+dy*D[1])/d<.2)continue;
     if(P.age<13){e.x+=D[0]*14;e.y+=D[1]*14;bubble(e,pick(['Ei!','Nustok!','Mama!']));hit=true;continue}
     const dmg=(10+P.fight*1.6+(P.gear.bat&&P.age>=16?12:0))*(P.parent==='army'?1.15:1);e.hp-=dmg;hit=true;e.x+=D[0]*10;e.y+=D[1]*10;
     fxBurst(e.x,e.y-20,'#fff');
@@ -1555,6 +1556,7 @@ function poiMenu(p){
     if(p.kind==='shop'){const b=has('bottle');h+=act('Taromatas',`Return empty bottles, 10 ct each. You have ${b}.`,`Priduoti (${eur(b*.1)})`,()=>{const n=has('bottle');if(!n)return;give('bottle',-n);P.money+=n*.1;P.stats.bottles=(P.stats.bottles||0)+n;SND.coin();G.flags.tara=true;
       const M=G.mission;if(M&&M.type==='bottles'){M.pay=1;missionDone(`${n} bottles`)}log(`Taromatas: ${n} × €0.10`,'good');poiMenu(p)},!b)}
     const fishIds=Object.keys(P.inv).filter(k=>ITEMS[k]&&ITEMS[k].fish&&P.inv[k]>0);if(p.kind==='market'&&fishIds.length){const tot=fishIds.reduce((a,k)=>a+ITEMS[k].sell*P.inv[k],0);h+=act('Parduoti žuvį',`Sell your catch: ${fishIds.map(k=>ITEMS[k].n+' ×'+P.inv[k]).join(', ')}.`,eur(tot),()=>{fishIds.forEach(k=>give(k,-P.inv[k]));P.money+=tot;SND.coin();poiMenu(p)})}
+    if(p.kind==='market'&&!P.dog)h+=act('Šuniukas iš prieglaudos','A volunteer from the animal shelter has puppies that need a home. Free, just love it.','Priglausti',()=>{adoptDog();poiMenu(p)});
     if(p.kind==='market'&&has('amber'))h+=act('Parduoti gintarą',`Sell amber, €15 a piece. You have ${has('amber')}.`,'Parduoti',()=>{const n=has('amber');give('amber',-n);P.money+=n*15;SND.coin();poiMenu(p)});
     sh.items.forEach(id=>{const it=ITEMS[id];const pr=price(it.price,'food');const too=it.min&&P.age<it.min;
       h+=act(`${it.ic} ${it.n}`,`${it.en}${too?` · age ${it.min}+`:''}`,eur(pr).replace('€','€ ')+(pr%1?'':''),()=>{if(pay(pr)){give(id,1);G.flags.bought=true;log(`Bought: ${it.n}`)}poiMenu(p)},too)});
@@ -1748,7 +1750,7 @@ function findPrompt(){
   const c=nearestCar(40);if(c&&!best)return{key:'F',text:c.owned!==undefined?`Sėsti · ${CARS[c.model].name}`:CARS[c.model].kind==='bike'?'Sėsti ant dviračio':P.age<16?'Per jaunas vairuoti':'Pavogti automobilį · steal',car:c};
   return best}
 function poiPrompt(p){if(G&&HOURS[p.kind]&&!isOpen(p.kind))return (p.kind==='school'?p.name:{shop:'Parduotuvė',cafe:'Kavinė',bar:'Baras',market:'Turgus',office:'Verslo centras',gym:'Sporto klubas',garage:'Autoservisas',bus:'Autobusų stotis'}[p.kind]||p.name)+' · uždaryta';const m={fuel:'Degalinė',home:'Namai',shop:'Parduotuvė',kebab:'Kebabinė',cafe:'Kavinė',bus:'Autobusų stotis',garage:'Autoservisas',police:'Policija',hospital:'Ligoninė',gym:'Sporto klubas',market:'Turgus',office:'Verslo centras',bar:'Baras',school:p.name,hq:p.name,ferry:p.name,landmark:p.name};return m[p.kind]||p.name}
-function talkTo(e){if(e.talk>0)return;e.talk=4;let line;
+function talkTo(e){if(e.talk>0)return;e.talk=4;let line;if(e.kind==='dog'){bubble(e,pick(['Au!','*vizgina uodegą*']));setMood(3);log(`You pet ${e.name}. Good dog. Geras šuo.`,'good');return}
   if(e.kind==='gang'){line=pick(TALK_GANG);const f=FACTIONS[e.fac];if(!P.faction&&P.age>=f.minAge){const hq=POIS.find(p=>p.hq===e.fac);if(hq){G.way={x:hq.x,y:hq.y,label:hq.name};log(`„Nori būti savas? Ateik į būstinę.“ <i>Want in? Come to HQ.</i> (waypoint set)`,'amb')}}}
   else if(e.kind==='police')line=['Laba diena. Viskas gerai?','Good afternoon. Everything OK?'];
   else if(e.kind==='school')line=e.fac===P.faction?['Labas! Eime į kiemą.','Hi! Let\'s go to the yard.']:['Ko čia atėjai?','What are you doing here?'];
@@ -1823,7 +1825,7 @@ function newLife(){const ai=AGES.findIndex(a=>a.a===CR.age),cls=CLASSES.find(c=>
     look:{skin:CR.skin,hair:CR.hair,outfit:CR.outfit,color:CR.color,cap:CR.cap},money:cls.money[ai],hp:100,maxHp:100+(CR.parent==='army'?25:0),energy:90,food:70,mood:60,heat:0,fight:CR.age>=16?3:CR.age>=13?2:1,
     faction:null,rep:{},school:'sch_'+CR.city+sch,inv:{kibinas:1},gear:{bat:false},cars:[],home:hp.id,homeB:b.id,visited:{},landmarks:{},stats:{},goals:{},
     x:hp.x,y:hp.y+18,dir:1,anim:0,punchCd:0,punchT:0,inv_t:0,hitFlash:0,bm:ri(0,11),bd:ri(1,28)};
-  P.hp=P.maxHp;
+  P.hp=P.maxHp;if(Math.random()<.6){const f=Math.random()<.5,age=Math.random()<.5?Math.max(4,P.age-ri(2,5)):P.age+ri(2,4);P.sib={f,age,name:(f?'Sesė ':'Brolis ')+pick(f?NAMES.f:NAMES.m)}}
   if(CR.parent==='gangster'){const gf=Object.keys(FACTIONS).find(k=>FACTIONS[k].city===CR.city&&FACTIONS[k].type==='gang')||'gopai';P.rep[gf]=40;P.dadGang=gf}
   G={v:1,time:{day:0,min:7*60,doy:243,dow:2},weather:'Giedra',qi:0,flags:{},mission:null,events:[],news:[],hist:[],skipped:0,attended:false,way:null};
   chron(`Born into a ${cls.en.toLowerCase()} family in ${c.name}.`);
@@ -1838,7 +1840,7 @@ function loadLife(s){s.owners.forEach((o,i)=>{if(DISTRICTS[i])DISTRICTS[i].owner
   (s.decor||[]).forEach(d=>DECOR.push(d));spawnStartVehicles();startGame(false)}
 function startGame(isNew){refreshOverlay();$('#title').classList.add('hidden');$('#creator').classList.add('hidden');$('#hud').classList.remove('hidden');
   if(matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
-  running=true;WINTER=null;seasonCheck();setTimeout(syncCrew,50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
+  running=true;WINTER=null;seasonCheck();setTimeout(()=>{syncCrew();syncDog()},50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
   if(isNew){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls);const sch=FACTIONS[P.school];
     const intro={6:`Tomorrow is your first day at ${sch.name}. Mum already bought the flowers for the teacher. Today the yard is yours: bottles to collect, a taromatas that pays 10 cents each, and an ice cream van somewhere.`,
       13:`Rugsėjo 1-oji. A new school year at ${sch.name}. The older kids say the ${FACTIONS[pick(Object.keys(FACTIONS).filter(k=>FACTIONS[k].city===P.city&&FACTIONS[k].type==='school'&&k!==P.school))||P.school].short} crowd are planning something. ${P.city==='vilnius'?'And everyone cool hangs out at the White Bridge.':''}`,
@@ -1913,11 +1915,13 @@ function tplHome(p){const cls=P.cls,big={low:[10,8],mid:[13,9],upper:[15,10],ric
     R.add(s,'pool',2,8,3,2,{act:()=>{skipHours(1);setMood(8);log('A game of pool at home. You won (it\'s your table).','good')},label:'Biliardas · pool'});
     R.add(s,'plant',11,2);R.add(s,'plant',1,10);R.add(s,'bed',14,2,3,2,{col:'#6B4FA0',act:homeSleep,label:'Lova · sleep'});R.add(s,'desk',13,5,2,1,{pc:true,act:homePC,label:'Kompiuteris · computer'});
     R.add(s,'wardrobe',17,5,1,2,{act:openWardrobe,label:'Spinta · wardrobe'});R.zone(s,13,8,5,3,'tile');R.add(s,'bath',16,8,2,1);R.add(s,'toilet',13,10,1,1,{solid:true});R.add(s,'sink',14,8,1,1);
-    R.ped(s,'pet',9,9,{pet:'dog',name:'Reksas',lines:[line('Au au!','Woof!')],lk:{skin:'#B07A45',hair:'#B07A45',outfit:'#B07A45',scale:1}});
+    if(!P.dog)R.ped(s,'pet',9,9,{pet:'dog',name:'Reksas',lines:[line('Au au!','Woof!')],lk:{skin:'#B07A45',hair:'#B07A45',outfit:'#B07A45',scale:1}});
   }
+  if(P.dog){let dx=Math.floor(w/2)+2,dy=h-3;for(let k=0;k<30&&(s.solid[dy*w+dx]||s.grid[dy*w+dx]);k++){dx=ri(1,w-2);dy=ri(2,h-2)}R.ped(s,'pet',dx,dy,{pet:'dog',name:P.dog.name,lines:[line('Au!','Woof!'),line('*vizgina uodegą*','*wags tail*')],lk:{skin:P.dog.col,hair:P.dog.col,outfit:P.dog.col,scale:1}})}
   // family or pet
   if(P.age<24){const mum=R.ped(s,'staff',Math.floor(w/2)-1,h-3,{name:P.parent==='army'||P.parent==='gangster'||P.parent==='mech'?'Tėtis':'Mama',lk:staffLook(pick(['#7A3B3B','#3E5F7A','#6B7F4A','#5E4B5B'])),lines:[...(PARENT_LINES[P.parent]||[]),...PARENT_GEN],act:familyTalk});mum.lk.female=mum.name==='Mama';mum.lk.hair=pick(['#8A5A32','#4A2F1E','#C9A15D'])}
-  else if(cls!=='rich')R.ped(s,'pet',Math.floor(w/2)+1,h-3,{pet:'cat',name:'Murkė',lines:[line('Miau.','Meow.'),line('Murrr…','Purr…')],lk:{skin:'#6E6E6E',hair:'#6E6E6E',outfit:'#6E6E6E',scale:1}});
+  if(P.age<24&&P.sib)R.ped(s,'staff',2,h-3,{name:P.sib.name,lk:Object.assign(randomLook(P.sib.age<13?'kid':'civ'),{female:P.sib.f,scale:P.sib.age<13?.74:.92}),lines:P.sib.age<P.age?[line('Ar galiu su tavim?','Can I come with you?'),line('Aš pasakysiu mamai!','I\'m telling mum!'),line('Pažaisim?','Wanna play?')]:[line('Neliesk mano daiktų.','Don\'t touch my stuff.'),line('Paskolink penkis eurus?','Lend me five euros?'),line('Ar matei mano kroksus?','Have you seen my headphones?')]});
+  else if(cls!=='rich'&&!P.dog)R.ped(s,'pet',Math.floor(w/2)+1,h-3,{pet:'cat',name:'Murkė',lines:[line('Miau.','Meow.'),line('Murrr…','Purr…')],lk:{skin:'#6E6E6E',hair:'#6E6E6E',outfit:'#6E6E6E',scale:1}});
   return s}
 function tplShop(p){const s=mkRoom(15,11,{floor:'shop',wall:'#E9EDE6',title:p.name,sub:'Parduotuvė'});
   R.add(s,'fridgeShop',1,2,4,1);R.add(s,'fridgeShop',6,2,4,1);R.add(s,'fridgeShop',11,2,3,1);
@@ -1985,7 +1989,7 @@ function tplOffice(p){const s=mkRoom(16,10,{floor:'grey',wall:'#DCE3E6',title:p.
   R.wallV(s,11,2,8,[5]);R.deco(s,'window',2,1,3);R.deco(s,'window',7,1,3);R.deco(s,'window',13,1,2);
   [[2,3],[5,3],[8,3],[2,6],[5,6]].forEach(([x,y],i)=>R.add(s,'desk',x,y,2,1,{pc:true,act:i===0?()=>poiMenu(p):null,label:i===0?'Tavo stalas · your desk':null}));
   R.add(s,'cooler',9,6,1,1,{act:()=>{setMood(2);log(pick(['„Girdėjai, kad Jonas išeina?“','„Penktadienį komandos formavimas…“','„Kas suvalgė mano jogurtą?“']),'amb')},label:'Vandens aparatas · gossip'});
-  R.add(s,'desk',13,3,2,1,{pc:true});R.ped(s,'staff',14,2,{name:'Viršininkas',lk:staffLook('#2A3140',{female:false}),lines:[line('Ataskaita bus iki penktadienio?','Report by Friday?'),line('Mes – viena šeima.','We are one family.')],act:()=>poiMenu(p)});
+  R.add(s,'desk',13,3,2,1,{pc:true});R.add(s,'desk',13,6,2,1,{pc:true,act:openRealEstate,label:'NT agentūra · buy a home or move'});R.ped(s,'staff',14,7,{name:'NT agentė',lk:staffLook('#B5332B',{female:true}),lines:[line('Puikus butas, tik reikia remonto!','Lovely flat, just needs renovating!')],act:openRealEstate});R.ped(s,'staff',14,2,{name:'Viršininkas',lk:staffLook('#2A3140',{female:false}),lines:[line('Ataskaita bus iki penktadienio?','Report by Friday?'),line('Mes – viena šeima.','We are one family.')],act:()=>poiMenu(p)});
   R.ped(s,'civ',6,2,{lines:[line('Dar tik antradienis…','It\'s only Tuesday…')]});return s}
 function tplBus(p){const s=mkRoom(15,9,{floor:'tile',wall:'#C9D4DC',title:p.name,sub:'Autobusų stotis'});
   R.add(s,'ticket',5,2,4,1,{act:()=>openBus(p),label:'Kasa · buy a ticket'});R.deco(s,'depboard',10,1,4,{act:()=>openBus(p),label:'Išvykimai · departures'});
@@ -2059,7 +2063,7 @@ function enterScene(s,p){s.poi=p;s.ret={x:p.x,y:p.y+20};SCENE=s;ENT.bubbles=[];P
   if(!G.flags.intHint){G.flags.intHint=true;log('Inside: walk up to furniture or people and press <b>E</b> when a prompt shows. Walk out through the door at the bottom.','amb')}
   if(s.raid)toast('!!',`Būstinės reidas`,`${FACTIONS[s.raid].short} will not let you walk out. Knock them all out.`);
   $('#speedo').classList.add('hidden');PROMPT=null;showPrompt();updateZone()}
-function leaveScene(silent,keepPos){if(!SCENE)return;const r=SCENE.ret;SCENE=null;ENT.bubbles=[];if(!keepPos){P.x=r.x;P.y=r.y;P.dir=1}keys.clear();if(!silent){fadeScreen();SND.door()}updateZone();PROMPT=null;showPrompt();crewList().forEach(e=>{e.x=P.x+rnd(-24,24);e.y=P.y+rnd(6,26)})}
+function leaveScene(silent,keepPos){if(!SCENE)return;const r=SCENE.ret;SCENE=null;ENT.bubbles=[];if(!keepPos){P.x=r.x;P.y=r.y;P.dir=1}keys.clear();if(!silent){fadeScreen();SND.door()}updateZone();PROMPT=null;showPrompt();crewList().forEach(e=>{e.x=P.x+rnd(-24,24);e.y=P.y+rnd(6,26)});ENT.peds.forEach(e=>{if(e.kind==='dog'){e.x=P.x+16;e.y=P.y+10}})}
 
 /* ---------- interior update ---------- */
 function iSolid(px,py){const s=SCENE,x=Math.floor(px/TS),y=Math.floor(py/TS);if(x<0||x>=s.w||y<0)return true;if(y>=s.h)return x!==s.door;const i=y*s.w+x;return s.grid[i]===1||s.solid[i]===1}
@@ -2460,6 +2464,30 @@ function meetTick(){const h=G.time.min/60,night=h>=22||h<3;POIS.forEach(p=>{if(!
     if(!P.faction||FACTIONS[P.faction].league!=='auto')log(`Naktinis susitikimas: ${f.name} are meeting at ${p.name}.`,'amb')}
   if((!night||!near)&&p.meetOn){p.meetOn=false;ENT.cars=ENT.cars.filter(c=>c.meetCar!==p.id||c===P.inCar);ENT.peds=ENT.peds.filter(e=>e.meetPed!==p.id)}})}
 
+/* ---------- your dog ---------- */
+const DOG_COLS=['#B07A45','#2B2420','#E8E1D2','#8C6A3C','#5A5A5A'];
+function adoptDog(){if(P.dog){log(`${P.dog.name} is already waiting for you.`);return}const name=pick(['Reksas','Margis','Sargis','Pifas','Bimas','Žiužis','Laika','Brisius']);P.dog={name,col:pick(DOG_COLS)};
+  toast('🐕',`Naujas draugas: ${name}`,'Your dog follows you everywhere and barks bullies away.');chron(`Adopted a dog called ${name}.`);setMood(20);syncDog()}
+function syncDog(){if(SCENE)return;const have=ENT.peds.find(e=>e.kind==='dog');if(!P.dog){if(have)have.dead=true;return}if(have)return;
+  spawnPed('civ',P.x+20,P.y+10,null,{kind:'dog',pet:'dog',keep:true,name:P.dog.name,lk:{skin:P.dog.col,hair:P.dog.col,outfit:P.dog.col,scale:1},hp:999})}
+function updateDog(e,dt){if(P.inCar){e.ride=true;e.x=P.inCar.x;e.y=P.inCar.y;return}if(e.ride){e.ride=false;e.x=P.x+18;e.y=P.y+8}
+  e.bark=(e.bark||0)-dt;const foe=ENT.peds.find(o=>o.hostile&&!(o.ko>0)&&o.kind!=='police'&&dist(o.x,o.y,e.x,e.y)<5*TS);
+  if(foe&&e.bark<=0){e.bark=3;bubble(e,'Au au au!');SND.tone(330,.12,'square',.06);if(foe.kind==='school'||Math.random()<.4){foe.state='flee';foe.t=3;foe.angry=false;foe.attacker=false}}
+  const d=dist(e.x,e.y,P.x,P.y);let vx=0,vy=0;if(d>8*TS){e.x=P.x+10;e.y=P.y+10}else if(d>40){const a=Math.atan2(P.y-e.y,P.x-e.x),s=d>120?190:120;vx=Math.cos(a)*s;vy=Math.sin(a)*s}
+  if(vx||vy){e.anim+=dt*14;e.dir=Math.abs(vx)>Math.abs(vy)?(vx>0?0:2):(vy>0?1:3);moveCircle(e,vx*dt,vy*dt,6,SOLID_FOOT)}}
+
+/* ---------- real estate (NT agentūra) ---------- */
+const HOME_PRICE={low:0,mid:28000,upper:85000,rich:240000};
+function openRealEstate(){const order=['low','mid','upper','rich'];const cur=order.indexOf(P.cls);let h=mHead('NT','NT agentūra','Real estate agent · buy a home or move town')+'<div class="mbody">';
+  if(P.age<18)h+='<p class="note">„Atsiprašau, bet sutartis pasirašo tik pilnamečiai.“ You must be 18 to buy a home.</p>';
+  order.forEach((k,i)=>{if(i<cur)return;const c=CLASSES.find(x=>x.id===k);const pr=i===cur?0:HOME_PRICE[k];
+    CITIES.forEach(city=>{if(i===cur&&city.id===P.city)return;const cost=i===cur?Math.round(2000+HOME_PRICE[k]*.05):pr;
+      h+=act(`${c.home} · ${city.name}`,`${i===cur?'Move to another town, same kind of home.':c.en+' home.'} ${city.blurb.split('.')[0]}.`,eur(cost),()=>{if(P.age<18)return;if(!pay(cost))return;moveHome(city.id,k)},P.age<18)})});
+  openModal(h+`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Uždaryti</button></div>`,true)}
+function moveHome(cityId,cls){const old=POIS.find(q=>q.id===P.home);if(old){if(old.b)old.b.poi=null;POIS.splice(POIS.indexOf(old),1)}
+  const c=cityById(cityId);const b=chooseHome(cityId,cls);const hp=addPOI(c,'home','Namai',b,{});hp.id='home_'+Date.now();P.home=hp.id;P.homeB=b.id;P.city=cityId;P.cls=cls;
+  G.way={x:hp.x,y:hp.y,label:'Nauji namai'};closeModal();toast('⌂','Nauji namai',`${CLASSES.find(x=>x.id===cls).home} in ${c.name}. Waypoint set.`);chron(`Moved into a ${CLASSES.find(x=>x.id===cls).home.toLowerCase()} in ${c.name}.`);SND.fanfare();saveGame(true)}
+
 /* =====================================================================
    MAIN LOOP
    ===================================================================== */
@@ -2524,6 +2552,7 @@ function render(){
   if(running&&P&&!P.inCar)D.push({y:P.y,p:1});
   D.sort((a,b)=>a.y-b.y);const night=running&&G?nightLevel()>.25:false;
   for(const o of D){if(o.b)drawBuilding(ctx,o.b,night);else if(o.t)drawTree(ctx,o.t);else if(o.d){if(o.d.k==='tag')drawTag(o.d);else drawDecor(ctx,o.d)}
+    else if(o.e&&o.e.pet){drawPet(o.e)}
     else if(o.e){const e=o.e;drawPerson(ctx,e.x,e.y,e.lk,e.dir,e.anim,{ko:e.ko>0,punch:e.punch>0,badge:e.kind==='gang'||e.kind==='school'||e.kind==='crew'?(e.hostile?'#FF3B2F':FACTIONS[e.fac].color):e.kind==='police'?'#2F6BFF':null})}
     else if(o.c){drawCar(ctx,o.c);if(o.c===(P&&P.inCar)&&CARS[o.c.model].kind==='bike')drawPerson(ctx,o.c.x,o.c.y+4,playerLook(),dirFromAng(o.c.ang),0,{})}
     else if(o.p){drawPerson(ctx,P.x,P.y,playerLook(),P.dir,P.anim,{punch:P.punchT>0,item:P.gear.bat&&P.age>=16?'bat':null});

@@ -233,3 +233,27 @@ function meetTick(){const h=G.time.min/60,night=h>=22||h<3;POIS.forEach(p=>{if(!
     for(let k=0;k<6;k++){const t=randomTileNear(p.x,p.y,1,6,t=>t===T.LOT);if(t){const e=spawnPed('civ',t[0]*TS+16,t[1]*TS+16,null,{meetPed:p.id,lines:[line('Kokia čia mašina, E46?','What is that, an E46?')]});e.lk.vest=f.color;e.idle=true}}
     if(!P.faction||FACTIONS[P.faction].league!=='auto')log(`Naktinis susitikimas: ${f.name} are meeting at ${p.name}.`,'amb')}
   if((!night||!near)&&p.meetOn){p.meetOn=false;ENT.cars=ENT.cars.filter(c=>c.meetCar!==p.id||c===P.inCar);ENT.peds=ENT.peds.filter(e=>e.meetPed!==p.id)}})}
+
+/* ---------- your dog ---------- */
+const DOG_COLS=['#B07A45','#2B2420','#E8E1D2','#8C6A3C','#5A5A5A'];
+function adoptDog(){if(P.dog){log(`${P.dog.name} is already waiting for you.`);return}const name=pick(['Reksas','Margis','Sargis','Pifas','Bimas','Žiužis','Laika','Brisius']);P.dog={name,col:pick(DOG_COLS)};
+  toast('🐕',`Naujas draugas: ${name}`,'Your dog follows you everywhere and barks bullies away.');chron(`Adopted a dog called ${name}.`);setMood(20);syncDog()}
+function syncDog(){if(SCENE)return;const have=ENT.peds.find(e=>e.kind==='dog');if(!P.dog){if(have)have.dead=true;return}if(have)return;
+  spawnPed('civ',P.x+20,P.y+10,null,{kind:'dog',pet:'dog',keep:true,name:P.dog.name,lk:{skin:P.dog.col,hair:P.dog.col,outfit:P.dog.col,scale:1},hp:999})}
+function updateDog(e,dt){if(P.inCar){e.ride=true;e.x=P.inCar.x;e.y=P.inCar.y;return}if(e.ride){e.ride=false;e.x=P.x+18;e.y=P.y+8}
+  e.bark=(e.bark||0)-dt;const foe=ENT.peds.find(o=>o.hostile&&!(o.ko>0)&&o.kind!=='police'&&dist(o.x,o.y,e.x,e.y)<5*TS);
+  if(foe&&e.bark<=0){e.bark=3;bubble(e,'Au au au!');SND.tone(330,.12,'square',.06);if(foe.kind==='school'||Math.random()<.4){foe.state='flee';foe.t=3;foe.angry=false;foe.attacker=false}}
+  const d=dist(e.x,e.y,P.x,P.y);let vx=0,vy=0;if(d>8*TS){e.x=P.x+10;e.y=P.y+10}else if(d>40){const a=Math.atan2(P.y-e.y,P.x-e.x),s=d>120?190:120;vx=Math.cos(a)*s;vy=Math.sin(a)*s}
+  if(vx||vy){e.anim+=dt*14;e.dir=Math.abs(vx)>Math.abs(vy)?(vx>0?0:2):(vy>0?1:3);moveCircle(e,vx*dt,vy*dt,6,SOLID_FOOT)}}
+
+/* ---------- real estate (NT agentūra) ---------- */
+const HOME_PRICE={low:0,mid:28000,upper:85000,rich:240000};
+function openRealEstate(){const order=['low','mid','upper','rich'];const cur=order.indexOf(P.cls);let h=mHead('NT','NT agentūra','Real estate agent · buy a home or move town')+'<div class="mbody">';
+  if(P.age<18)h+='<p class="note">„Atsiprašau, bet sutartis pasirašo tik pilnamečiai.“ You must be 18 to buy a home.</p>';
+  order.forEach((k,i)=>{if(i<cur)return;const c=CLASSES.find(x=>x.id===k);const pr=i===cur?0:HOME_PRICE[k];
+    CITIES.forEach(city=>{if(i===cur&&city.id===P.city)return;const cost=i===cur?Math.round(2000+HOME_PRICE[k]*.05):pr;
+      h+=act(`${c.home} · ${city.name}`,`${i===cur?'Move to another town, same kind of home.':c.en+' home.'} ${city.blurb.split('.')[0]}.`,eur(cost),()=>{if(P.age<18)return;if(!pay(cost))return;moveHome(city.id,k)},P.age<18)})});
+  openModal(h+`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Uždaryti</button></div>`,true)}
+function moveHome(cityId,cls){const old=POIS.find(q=>q.id===P.home);if(old){if(old.b)old.b.poi=null;POIS.splice(POIS.indexOf(old),1)}
+  const c=cityById(cityId);const b=chooseHome(cityId,cls);const hp=addPOI(c,'home','Namai',b,{});hp.id='home_'+Date.now();P.home=hp.id;P.homeB=b.id;P.city=cityId;P.cls=cls;
+  G.way={x:hp.x,y:hp.y,label:'Nauji namai'};closeModal();toast('⌂','Nauji namai',`${CLASSES.find(x=>x.id===cls).home} in ${c.name}. Waypoint set.`);chron(`Moved into a ${CLASSES.find(x=>x.id===cls).home.toLowerCase()} in ${c.name}.`);SND.fanfare();saveGame(true)}

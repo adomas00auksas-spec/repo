@@ -80,6 +80,12 @@ Hiding indoors makes the police lose interest faster (except inside the police s
 - **Fishing:** buy a rod (meškerė) at a market, stand by water and press E. Real Baltic and freshwater fish (stinta, lydeka, unguris…).
 - **Clothes:** sunglasses, gold chain, Žalgiris jersey at the mall.
 - **Winter:** from December, snow, frozen lakes and icy roads.
+- **Opening hours:** shops 7–23, cafés, bars, markets, schools and offices keep their hours. Kebab shops and petrol stations never close.
+- **Road trips:** petrol stations on every A-highway (hot dogs, coffee, car wash). Police roadblocks at four stars.
+- **Living city:** rival gangs brawl in the streets, car clubs hold neon night meets at their spots, city buses in traffic.
+- **Family and pets:** brothers and sisters at home; adopt a puppy from the shelter at any market. Your dog follows you and barks bullies away.
+- **Real estate:** buy a bigger home or move to another town through the agent in any business centre.
+- Quiet folk background tune (menu to toggle), rain makes roads slippery.
 - Mouse wheel or +/− to zoom.
 
 ## Editing the game

@@ -62,11 +62,13 @@ function tplHome(p){const cls=P.cls,big={low:[10,8],mid:[13,9],upper:[15,10],ric
     R.add(s,'pool',2,8,3,2,{act:()=>{skipHours(1);setMood(8);log('A game of pool at home. You won (it\'s your table).','good')},label:'Biliardas · pool'});
     R.add(s,'plant',11,2);R.add(s,'plant',1,10);R.add(s,'bed',14,2,3,2,{col:'#6B4FA0',act:homeSleep,label:'Lova · sleep'});R.add(s,'desk',13,5,2,1,{pc:true,act:homePC,label:'Kompiuteris · computer'});
     R.add(s,'wardrobe',17,5,1,2,{act:openWardrobe,label:'Spinta · wardrobe'});R.zone(s,13,8,5,3,'tile');R.add(s,'bath',16,8,2,1);R.add(s,'toilet',13,10,1,1,{solid:true});R.add(s,'sink',14,8,1,1);
-    R.ped(s,'pet',9,9,{pet:'dog',name:'Reksas',lines:[line('Au au!','Woof!')],lk:{skin:'#B07A45',hair:'#B07A45',outfit:'#B07A45',scale:1}});
+    if(!P.dog)R.ped(s,'pet',9,9,{pet:'dog',name:'Reksas',lines:[line('Au au!','Woof!')],lk:{skin:'#B07A45',hair:'#B07A45',outfit:'#B07A45',scale:1}});
   }
+  if(P.dog){let dx=Math.floor(w/2)+2,dy=h-3;for(let k=0;k<30&&(s.solid[dy*w+dx]||s.grid[dy*w+dx]);k++){dx=ri(1,w-2);dy=ri(2,h-2)}R.ped(s,'pet',dx,dy,{pet:'dog',name:P.dog.name,lines:[line('Au!','Woof!'),line('*vizgina uodegą*','*wags tail*')],lk:{skin:P.dog.col,hair:P.dog.col,outfit:P.dog.col,scale:1}})}
   // family or pet
   if(P.age<24){const mum=R.ped(s,'staff',Math.floor(w/2)-1,h-3,{name:P.parent==='army'||P.parent==='gangster'||P.parent==='mech'?'Tėtis':'Mama',lk:staffLook(pick(['#7A3B3B','#3E5F7A','#6B7F4A','#5E4B5B'])),lines:[...(PARENT_LINES[P.parent]||[]),...PARENT_GEN],act:familyTalk});mum.lk.female=mum.name==='Mama';mum.lk.hair=pick(['#8A5A32','#4A2F1E','#C9A15D'])}
-  else if(cls!=='rich')R.ped(s,'pet',Math.floor(w/2)+1,h-3,{pet:'cat',name:'Murkė',lines:[line('Miau.','Meow.'),line('Murrr…','Purr…')],lk:{skin:'#6E6E6E',hair:'#6E6E6E',outfit:'#6E6E6E',scale:1}});
+  if(P.age<24&&P.sib)R.ped(s,'staff',2,h-3,{name:P.sib.name,lk:Object.assign(randomLook(P.sib.age<13?'kid':'civ'),{female:P.sib.f,scale:P.sib.age<13?.74:.92}),lines:P.sib.age<P.age?[line('Ar galiu su tavim?','Can I come with you?'),line('Aš pasakysiu mamai!','I\'m telling mum!'),line('Pažaisim?','Wanna play?')]:[line('Neliesk mano daiktų.','Don\'t touch my stuff.'),line('Paskolink penkis eurus?','Lend me five euros?'),line('Ar matei mano kroksus?','Have you seen my headphones?')]});
+  else if(cls!=='rich'&&!P.dog)R.ped(s,'pet',Math.floor(w/2)+1,h-3,{pet:'cat',name:'Murkė',lines:[line('Miau.','Meow.'),line('Murrr…','Purr…')],lk:{skin:'#6E6E6E',hair:'#6E6E6E',outfit:'#6E6E6E',scale:1}});
   return s}
 function tplShop(p){const s=mkRoom(15,11,{floor:'shop',wall:'#E9EDE6',title:p.name,sub:'Parduotuvė'});
   R.add(s,'fridgeShop',1,2,4,1);R.add(s,'fridgeShop',6,2,4,1);R.add(s,'fridgeShop',11,2,3,1);
@@ -134,7 +136,7 @@ function tplOffice(p){const s=mkRoom(16,10,{floor:'grey',wall:'#DCE3E6',title:p.
   R.wallV(s,11,2,8,[5]);R.deco(s,'window',2,1,3);R.deco(s,'window',7,1,3);R.deco(s,'window',13,1,2);
   [[2,3],[5,3],[8,3],[2,6],[5,6]].forEach(([x,y],i)=>R.add(s,'desk',x,y,2,1,{pc:true,act:i===0?()=>poiMenu(p):null,label:i===0?'Tavo stalas · your desk':null}));
   R.add(s,'cooler',9,6,1,1,{act:()=>{setMood(2);log(pick(['„Girdėjai, kad Jonas išeina?“','„Penktadienį komandos formavimas…“','„Kas suvalgė mano jogurtą?“']),'amb')},label:'Vandens aparatas · gossip'});
-  R.add(s,'desk',13,3,2,1,{pc:true});R.ped(s,'staff',14,2,{name:'Viršininkas',lk:staffLook('#2A3140',{female:false}),lines:[line('Ataskaita bus iki penktadienio?','Report by Friday?'),line('Mes – viena šeima.','We are one family.')],act:()=>poiMenu(p)});
+  R.add(s,'desk',13,3,2,1,{pc:true});R.add(s,'desk',13,6,2,1,{pc:true,act:openRealEstate,label:'NT agentūra · buy a home or move'});R.ped(s,'staff',14,7,{name:'NT agentė',lk:staffLook('#B5332B',{female:true}),lines:[line('Puikus butas, tik reikia remonto!','Lovely flat, just needs renovating!')],act:openRealEstate});R.ped(s,'staff',14,2,{name:'Viršininkas',lk:staffLook('#2A3140',{female:false}),lines:[line('Ataskaita bus iki penktadienio?','Report by Friday?'),line('Mes – viena šeima.','We are one family.')],act:()=>poiMenu(p)});
   R.ped(s,'civ',6,2,{lines:[line('Dar tik antradienis…','It\'s only Tuesday…')]});return s}
 function tplBus(p){const s=mkRoom(15,9,{floor:'tile',wall:'#C9D4DC',title:p.name,sub:'Autobusų stotis'});
   R.add(s,'ticket',5,2,4,1,{act:()=>openBus(p),label:'Kasa · buy a ticket'});R.deco(s,'depboard',10,1,4,{act:()=>openBus(p),label:'Išvykimai · departures'});
@@ -208,7 +210,7 @@ function enterScene(s,p){s.poi=p;s.ret={x:p.x,y:p.y+20};SCENE=s;ENT.bubbles=[];P
   if(!G.flags.intHint){G.flags.intHint=true;log('Inside: walk up to furniture or people and press <b>E</b> when a prompt shows. Walk out through the door at the bottom.','amb')}
   if(s.raid)toast('!!',`Būstinės reidas`,`${FACTIONS[s.raid].short} will not let you walk out. Knock them all out.`);
   $('#speedo').classList.add('hidden');PROMPT=null;showPrompt();updateZone()}
-function leaveScene(silent,keepPos){if(!SCENE)return;const r=SCENE.ret;SCENE=null;ENT.bubbles=[];if(!keepPos){P.x=r.x;P.y=r.y;P.dir=1}keys.clear();if(!silent){fadeScreen();SND.door()}updateZone();PROMPT=null;showPrompt();crewList().forEach(e=>{e.x=P.x+rnd(-24,24);e.y=P.y+rnd(6,26)})}
+function leaveScene(silent,keepPos){if(!SCENE)return;const r=SCENE.ret;SCENE=null;ENT.bubbles=[];if(!keepPos){P.x=r.x;P.y=r.y;P.dir=1}keys.clear();if(!silent){fadeScreen();SND.door()}updateZone();PROMPT=null;showPrompt();crewList().forEach(e=>{e.x=P.x+rnd(-24,24);e.y=P.y+rnd(6,26)});ENT.peds.forEach(e=>{if(e.kind==='dog'){e.x=P.x+16;e.y=P.y+10}})}
 
 /* ---------- interior update ---------- */
 function iSolid(px,py){const s=SCENE,x=Math.floor(px/TS),y=Math.floor(py/TS);if(x<0||x>=s.w||y<0)return true;if(y>=s.h)return x!==s.door;const i=y*s.w+x;return s.grid[i]===1||s.solid[i]===1}

@@ -26,6 +26,7 @@ function poiMenu(p){
     if(p.kind==='shop'){const b=has('bottle');h+=act('Taromatas',`Return empty bottles, 10 ct each. You have ${b}.`,`Priduoti (${eur(b*.1)})`,()=>{const n=has('bottle');if(!n)return;give('bottle',-n);P.money+=n*.1;P.stats.bottles=(P.stats.bottles||0)+n;SND.coin();G.flags.tara=true;
       const M=G.mission;if(M&&M.type==='bottles'){M.pay=1;missionDone(`${n} bottles`)}log(`Taromatas: ${n} × €0.10`,'good');poiMenu(p)},!b)}
     const fishIds=Object.keys(P.inv).filter(k=>ITEMS[k]&&ITEMS[k].fish&&P.inv[k]>0);if(p.kind==='market'&&fishIds.length){const tot=fishIds.reduce((a,k)=>a+ITEMS[k].sell*P.inv[k],0);h+=act('Parduoti žuvį',`Sell your catch: ${fishIds.map(k=>ITEMS[k].n+' ×'+P.inv[k]).join(', ')}.`,eur(tot),()=>{fishIds.forEach(k=>give(k,-P.inv[k]));P.money+=tot;SND.coin();poiMenu(p)})}
+    if(p.kind==='market'&&!P.dog)h+=act('Šuniukas iš prieglaudos','A volunteer from the animal shelter has puppies that need a home. Free, just love it.','Priglausti',()=>{adoptDog();poiMenu(p)});
     if(p.kind==='market'&&has('amber'))h+=act('Parduoti gintarą',`Sell amber, €15 a piece. You have ${has('amber')}.`,'Parduoti',()=>{const n=has('amber');give('amber',-n);P.money+=n*15;SND.coin();poiMenu(p)});
     sh.items.forEach(id=>{const it=ITEMS[id];const pr=price(it.price,'food');const too=it.min&&P.age<it.min;
       h+=act(`${it.ic} ${it.n}`,`${it.en}${too?` · age ${it.min}+`:''}`,eur(pr).replace('€','€ ')+(pr%1?'':''),()=>{if(pay(pr)){give(id,1);G.flags.bought=true;log(`Bought: ${it.n}`)}poiMenu(p)},too)});
@@ -219,7 +220,7 @@ function findPrompt(){
   const c=nearestCar(40);if(c&&!best)return{key:'F',text:c.owned!==undefined?`Sėsti · ${CARS[c.model].name}`:CARS[c.model].kind==='bike'?'Sėsti ant dviračio':P.age<16?'Per jaunas vairuoti':'Pavogti automobilį · steal',car:c};
   return best}
 function poiPrompt(p){if(G&&HOURS[p.kind]&&!isOpen(p.kind))return (p.kind==='school'?p.name:{shop:'Parduotuvė',cafe:'Kavinė',bar:'Baras',market:'Turgus',office:'Verslo centras',gym:'Sporto klubas',garage:'Autoservisas',bus:'Autobusų stotis'}[p.kind]||p.name)+' · uždaryta';const m={fuel:'Degalinė',home:'Namai',shop:'Parduotuvė',kebab:'Kebabinė',cafe:'Kavinė',bus:'Autobusų stotis',garage:'Autoservisas',police:'Policija',hospital:'Ligoninė',gym:'Sporto klubas',market:'Turgus',office:'Verslo centras',bar:'Baras',school:p.name,hq:p.name,ferry:p.name,landmark:p.name};return m[p.kind]||p.name}
-function talkTo(e){if(e.talk>0)return;e.talk=4;let line;
+function talkTo(e){if(e.talk>0)return;e.talk=4;let line;if(e.kind==='dog'){bubble(e,pick(['Au!','*vizgina uodegą*']));setMood(3);log(`You pet ${e.name}. Good dog. Geras šuo.`,'good');return}
   if(e.kind==='gang'){line=pick(TALK_GANG);const f=FACTIONS[e.fac];if(!P.faction&&P.age>=f.minAge){const hq=POIS.find(p=>p.hq===e.fac);if(hq){G.way={x:hq.x,y:hq.y,label:hq.name};log(`„Nori būti savas? Ateik į būstinę.“ <i>Want in? Come to HQ.</i> (waypoint set)`,'amb')}}}
   else if(e.kind==='police')line=['Laba diena. Viskas gerai?','Good afternoon. Everything OK?'];
   else if(e.kind==='school')line=e.fac===P.faction?['Labas! Eime į kiemą.','Hi! Let\'s go to the yard.']:['Ko čia atėjai?','What are you doing here?'];
@@ -294,7 +295,7 @@ function newLife(){const ai=AGES.findIndex(a=>a.a===CR.age),cls=CLASSES.find(c=>
     look:{skin:CR.skin,hair:CR.hair,outfit:CR.outfit,color:CR.color,cap:CR.cap},money:cls.money[ai],hp:100,maxHp:100+(CR.parent==='army'?25:0),energy:90,food:70,mood:60,heat:0,fight:CR.age>=16?3:CR.age>=13?2:1,
     faction:null,rep:{},school:'sch_'+CR.city+sch,inv:{kibinas:1},gear:{bat:false},cars:[],home:hp.id,homeB:b.id,visited:{},landmarks:{},stats:{},goals:{},
     x:hp.x,y:hp.y+18,dir:1,anim:0,punchCd:0,punchT:0,inv_t:0,hitFlash:0,bm:ri(0,11),bd:ri(1,28)};
-  P.hp=P.maxHp;
+  P.hp=P.maxHp;if(Math.random()<.6){const f=Math.random()<.5,age=Math.random()<.5?Math.max(4,P.age-ri(2,5)):P.age+ri(2,4);P.sib={f,age,name:(f?'Sesė ':'Brolis ')+pick(f?NAMES.f:NAMES.m)}}
   if(CR.parent==='gangster'){const gf=Object.keys(FACTIONS).find(k=>FACTIONS[k].city===CR.city&&FACTIONS[k].type==='gang')||'gopai';P.rep[gf]=40;P.dadGang=gf}
   G={v:1,time:{day:0,min:7*60,doy:243,dow:2},weather:'Giedra',qi:0,flags:{},mission:null,events:[],news:[],hist:[],skipped:0,attended:false,way:null};
   chron(`Born into a ${cls.en.toLowerCase()} family in ${c.name}.`);
@@ -309,7 +310,7 @@ function loadLife(s){s.owners.forEach((o,i)=>{if(DISTRICTS[i])DISTRICTS[i].owner
   (s.decor||[]).forEach(d=>DECOR.push(d));spawnStartVehicles();startGame(false)}
 function startGame(isNew){refreshOverlay();$('#title').classList.add('hidden');$('#creator').classList.add('hidden');$('#hud').classList.remove('hidden');
   if(matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
-  running=true;WINTER=null;seasonCheck();setTimeout(syncCrew,50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
+  running=true;WINTER=null;seasonCheck();setTimeout(()=>{syncCrew();syncDog()},50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
   if(isNew){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls);const sch=FACTIONS[P.school];
     const intro={6:`Tomorrow is your first day at ${sch.name}. Mum already bought the flowers for the teacher. Today the yard is yours: bottles to collect, a taromatas that pays 10 cents each, and an ice cream van somewhere.`,
       13:`Rugsėjo 1-oji. A new school year at ${sch.name}. The older kids say the ${FACTIONS[pick(Object.keys(FACTIONS).filter(k=>FACTIONS[k].city===P.city&&FACTIONS[k].type==='school'&&k!==P.school))||P.school].short} crowd are planning something. ${P.city==='vilnius'?'And everyone cool hangs out at the White Bridge.':''}`,
