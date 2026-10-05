@@ -6637,7 +6637,7 @@ requestAnimationFrame(loop);
   }
   function settingsTab(){
     const opt=(k,label)=>`<label style="display:flex;gap:10px;align-items:center;margin:10px 0;font-size:14px"><input type="checkbox" data-xset="${k}" ${SET[k]?'checked':''}> ${label}</label>`;
-    return`<h4 style="margin:0 0 6px">Interface size</h4><div class="xp-tabs">${[[.85,'Small'],[1,'Normal'],[1.15,'Large'],[1.3,'Huge']].map(([v,n])=>`<button class="chip${SET.scale===v?' on':''}" data-xscale="${v}">${n}</button>`).join('')}</div>${opt('fireflies','Fireflies on summer nights')}${opt('calls','Street vendors calling out')}
+    return`<h4 style="margin:0 0 6px">Interface size</h4><div class="xp-tabs">${[[.85,'Small'],[1,'Normal'],[1.15,'Large'],[1.3,'Huge']].map(([v,n])=>`<button class="chip${SET.scale===v?' on':''}" data-xscale="${v}">${n}</button>`).join('')}</div><h4 style="margin:14px 0 6px">Soundtrack</h4><div class="xp-tabs">${[['new','New: composed tracks'],['classic','Classic']].map(([v,n])=>`<button class="chip${SET.soundtrack===v?' on':''}" data-xsound="${v}">${n}</button>`).join('')}</div><div class="xp-tabs">${[[.5,'Music quiet'],[1,'Music normal'],[1.5,'Music loud']].map(([v,n])=>`<button class="chip${SET.musicVol===v?' on':''}" data-xvol="${v}">${n}</button>`).join('')}</div><p style="font-size:13px;color:var(--ink-soft);margin:0 0 6px">♪ Now playing: <b>${esc(nowPlaying())}</b>${SND.musicOn&&SND.on?'':' (music is off: use the 音 Sound button)'}</p>${opt('fireflies','Fireflies on summer nights')}${opt('calls','Street vendors calling out')}
     <h4 style="margin:16px 0 6px">Keys</h4><table class="xp-table">${[['WASD / arrows','Walk'],['E or Space','Enter, talk, act'],['Q','Quests'],['M','Map'],['C','Your character'],['I','Belongings'],['J','Goals'],['K','Deeds & journal'],['P','Make a woodblock print'],['1 to 6','Use hotbar item'],['?','This list'],['Esc','Menu / close']].map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table>`;
   }
 
@@ -6883,6 +6883,118 @@ requestAnimationFrame(loop);
     $('#mcard').querySelectorAll('[data-tea]').forEach(b=>b.onclick=()=>{const i=+b.dataset.tea;if(i===t.next){t.next++;renderTea('Correct. Your movements are calm and unhurried.');}else{t.mistakes++;renderTea('Not yet. Your guest politely looks away.');}});
   }
 
+  /* =====================================================================
+     SOUNDTRACK: composed and arranged tracks for every mood.
+     16-step sequencer, chord progressions, written melodies with
+     variations, sections that build and drop. Plays through the game's
+     own music bus, so the Sound button and music toggle still work.
+     ===================================================================== */
+  const _musicTickClassic=musicTick;
+  const SC={minp:[0,3,5,7,10],yo:[0,2,5,7,9],in:[0,1,5,7,8],ritsu:[0,2,5,7,10],maj:[0,2,4,7,9]};
+  const CH={m9:[0,3,7,10,14],maj9:[0,4,7,11,14],sus:[0,5,7,10,14],m7:[0,3,7,10],q:[0,5,10,15],add9:[0,4,7,14],m11:[0,3,7,10,17],five:[0,7,12]};
+  // melody motifs: [step, scale degree, length in steps] over 2 bars (32 steps)
+  const MOT={
+    lofiA:[[0,4,3],[4,3,2],[6,2,2],[8,0,6],[16,2,2],[18,3,2],[20,4,4],[26,6,2],[28,5,4]],
+    lofiB:[[0,7,4],[6,6,2],[8,4,4],[14,3,2],[16,2,6],[24,0,2],[26,1,2],[28,2,4]],
+    lofiC:[[2,4,2],[4,5,2],[6,4,2],[8,2,8],[18,0,2],[20,2,2],[22,3,2],[24,4,8]],
+    shakuA:[[0,4,12],[14,3,2],[16,2,14]],shakuB:[[0,7,10],[12,6,4],[16,4,16]],
+    nightA:[[0,0,2],[4,2,2],[8,4,4],[14,3,2],[16,5,4],[24,4,8]],
+    fueA:[[0,7,2],[2,9,2],[4,7,2],[6,5,2],[8,4,4],[12,5,2],[14,7,2],[16,9,4],[20,8,2],[22,7,2],[24,5,8]],
+    fueB:[[0,5,2],[2,7,2],[4,9,4],[8,10,2],[10,9,2],[12,7,4],[16,5,2],[18,4,2],[20,2,4],[24,4,8]],
+    riff:[[0,0,1],[2,0,1],[3,2,1],[4,3,2],[7,0,1],[8,4,2],[10,3,1],[11,2,1],[12,0,2],[14,1,2]],
+    roadA:[[0,2,2],[2,4,2],[4,5,4],[8,4,2],[10,2,2],[12,0,4],[16,2,2],[18,4,2],[20,7,6],[28,5,4]],
+  };
+  const SONG={
+    title:{name:'Ukiyo (Main Theme)',bpm:68,root:62,scale:'minp',prog:[[0,'m9'],[-4,'maj9'],[-7,'m11'],[-2,'sus']],pad:.13,arp:.3,lead:'shaku',mot:['shakuA','shakuB'],leadV:.22},
+    day:{name:'Edo Lo-fi: Morning in Kanda',bpm:82,swing:.58,root:62,scale:'minp',prog:[[0,'m9'],[-4,'maj9'],[-7,'m9'],[-5,'sus']],pad:.05,bass:.16,drums:'lofi',crackle:true,lead:'koto',mot:['lofiA','lofiB','lofiC'],leadV:.2,stab:.08},
+    inside:{name:'Edo Lo-fi: Tea and Tatami',bpm:76,swing:.6,root:64,scale:'minp',prog:[[0,'m7'],[5,'maj9'],[3,'m9'],[-2,'sus']],pad:.05,bass:.13,drums:'soft',crackle:true,lead:'koto',mot:['lofiC','lofiA'],leadV:.16},
+    night:{name:'Lanterns Under the Willow',bpm:62,root:57,scale:'in',prog:[[0,'m9'],[1,'maj9'],[0,'m11'],[-4,'maj9']],pad:.14,arp:.22,lead:'shaku',mot:['nightA','shakuA'],leadV:.22,chirp:true},
+    festival:{name:'Matsuri!',bpm:124,root:67,scale:'yo',prog:[[0,'add9'],[5,'add9'],[7,'sus'],[0,'add9']],pad:.03,drums:'matsuri',lead:'fue',mot:['fueA','fueB'],leadV:.11,bass:.1},
+    battle:{name:'Steel at Dusk',bpm:138,root:52,scale:'in',prog:[[0,'five'],[1,'five'],[0,'five'],[-2,'five']],pad:.05,drums:'battle',lead:'sham',mot:['riff'],leadV:.2,bass:.18,loopLead:true},
+    road:{name:'The Tōkaidō Road',bpm:100,swing:.55,root:60,scale:'ritsu',prog:[[0,'sus'],[-2,'maj9'],[5,'add9'],[0,'sus']],pad:.04,bass:.14,drums:'road',lead:'fue',mot:['roadA','fueB'],leadV:.1},
+    sacred:{name:'Incense and Stone',bpm:56,root:60,scale:'ritsu',prog:[[0,'q'],[-2,'q'],[5,'q'],[0,'q']],pad:.14,arp:.18,lead:'shaku',mot:['shakuB','shakuA'],leadV:.22,bell:true},
+    sad:{name:'Ashes on the River',bpm:54,root:55,scale:'in',prog:[[0,'m9'],[-4,'maj9'],[1,'maj9'],[0,'m11']],pad:.13,arp:.22,lead:'koto',mot:['nightA'],leadV:.26},
+  };
+  const DRUMS={ // 16 steps: k=kick s=snare h=hat (value = velocity)
+    lofi:{k:[1,0,0,0,0,0,0,.7,0,0,.9,0,0,0,0,0],s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,.25],h:[.5,0,.3,0,.5,0,.3,.2,.5,0,.3,0,.5,0,.3,.3]},
+    soft:{k:[.8,0,0,0,0,0,0,0,0,0,.6,0,0,0,0,0],s:[0,0,0,0,.5,0,0,0,0,0,0,0,.5,0,0,0],h:[.3,0,.2,0,.3,0,.2,0,.3,0,.2,0,.3,0,.2,0],rim:true},
+    road:{k:[1,0,0,0,0,0,.5,0,1,0,0,0,0,0,0,0],s:[0,0,0,0,.8,0,0,0,0,0,0,0,.8,0,0,0],h:[.4,.2,.4,.2,.4,.2,.4,.2,.4,.2,.4,.2,.4,.2,.4,.2]},
+    matsuri:{t:[1,0,0,0,.6,0,.6,0,1,0,0,0,.6,0,1,0],ka:[0,0,.6,0,0,0,0,0,0,0,.6,0,0,0,0,0],shime:[.5,.25,.4,.25,.5,.25,.4,.25,.5,.25,.4,.25,.5,.25,.4,.25],chappa:[0,0,.5,0,0,0,.5,0,0,0,.5,0,0,0,.5,0]},
+    battle:{t:[1,0,.4,0,.8,0,.4,.4,1,0,.4,0,.8,.4,.6,.6],shime:[.5,.4,.5,.4,.5,.4,.5,.4,.5,.4,.5,.4,.5,.4,.5,.4],ka:[0,0,0,0,.7,0,0,0,0,0,0,0,.7,0,0,.5]},
+  };
+  // instruments
+  const out=()=>SND.mus;
+  function kick(t,v){tone({f:120,type:'sine',t,a:.002,d:.32,v:.55*v,dest:out(),bend:.35});noiseHit({t,d:.02,v:.12*v,type:'lowpass',f:900,dest:out()});}
+  function snare(t,v){noiseHit({t,d:.16,v:.2*v,type:'bandpass',f:1900,q:.7,dest:out()});tone({f:190,type:'triangle',t,a:.001,d:.09,v:.12*v,dest:out()});}
+  function hat(t,v){noiseHit({t,d:.035,v:.07*v,type:'highpass',f:7500,dest:out()});}
+  function rim(t,v){tone({f:1700,type:'square',t,a:.001,d:.025,v:.03*v,dest:out(),lp:3000});}
+  function ka(t,v){noiseHit({t,d:.05,v:.18*v,type:'bandpass',f:2400,q:4,dest:out()});tone({f:900,type:'square',t,a:.001,d:.03,v:.03*v,dest:out(),lp:2000});}
+  function shime(t,v){tone({f:330,type:'sine',t,a:.001,d:.07,v:.12*v,dest:out(),bend:.8});noiseHit({t,d:.03,v:.08*v,f:1800,q:2,dest:out()});}
+  function chappa(t,v){noiseHit({t,d:.12,v:.08*v,type:'highpass',f:5000,dest:out()});tone({f:3400,type:'square',t,a:.001,d:.1,v:.012*v,dest:out(),lp:6000});}
+  function bassN(m,t,d,v){tone({f:NOTE(m),type:'sine',t,a:.01,d,v,dest:out()});tone({f:NOTE(m),type:'triangle',t,a:.01,d:d*.6,v:v*.35,dest:out(),lp:500});}
+  function padChord(notes,t,d,v){notes.forEach((m,i)=>{[-6,6].forEach(c=>{const f=NOTE(m)*Math.pow(2,c/1200);tone({f,type:i?'triangle':'sine',t,a:d*.35,d:d*.9,v:v/notes.length*1.4,dest:out(),lp:1300});});});}
+  function koto2(m,t,v){tone({f:NOTE(m)*1.01,type:'triangle',t,a:.003,d:1.4,v,dest:out(),lp:2800,bend:.995});tone({f:NOTE(m)*3,type:'sine',t,a:.002,d:.25,v:v*.18,dest:out()});noiseHit({t,d:.03,v:v*.35,f:3200,q:1.5,dest:out()});}
+  function lead(kind,m,t,dur,v){
+    if(kind==='koto')koto2(m,t,v);
+    else if(kind==='shaku')shaku(m,t,Math.max(.6,dur),v);
+    else if(kind==='fue')fue(m,t,Math.max(.12,dur*.9),v);
+    else if(kind==='sham')shamisen(m,t,v);
+  }
+  function chirp(t){const f=4200+Math.random()*900;for(let i=0;i<3;i++)tone({f,type:'sine',t:t+i*.06,a:.002,d:.03,v:.012,dest:out()});}
+
+  const SEQ={mood:null,step:0,bar:0,next:0,motif:null,motIx:0,phrase:0,trans:0};
+  function songFor(m){return SONG[m]||SONG.day;}
+  musicTick=function(){
+    if(SET.soundtrack==='classic')return _musicTickClassic();
+    const c=SND.ctx;if(!c||!SND.musicOn||!SND.on||!SND.mood)return;
+    if(SEQ.mood!==SND.mood){SEQ.mood=SND.mood;SEQ.step=0;SEQ.bar=0;SEQ.phrase=0;SEQ.next=c.currentTime+.1;}
+    const S2=songFor(SND.mood);const spb=60/S2.bpm/4;const sc=SC[S2.scale];
+    const deg=i=>S2.root+sc[((i%5)+5)%5]+12*Math.floor(i/5);
+    while(SEQ.next<c.currentTime+.3){
+      if(SEQ.next<c.currentTime-.1)SEQ.next=c.currentTime+.05;
+      const st=SEQ.step%16,bar=SEQ.bar;const swing=(S2.swing&&st%2===1)?(S2.swing-.5)*2*spb:0;
+      const t=Math.max(0,SEQ.next-c.currentTime+swing);
+      const chord=S2.prog[bar%S2.prog.length];const croot=S2.root+chord[0];
+      // arrangement: 2-bar intro, then full; every 16 bars a 2-bar breakdown without drums
+      const intro=bar<2,breakdown=bar>=16&&bar%16>=14,full=!intro&&!breakdown;
+      // pad on each bar
+      if(st===0&&S2.pad)padChord(CH[chord[1]].map(i=>croot+i-12),t,spb*16,S2.pad);
+      // drums
+      const D=DRUMS[S2.drums];
+      if(D&&full){
+        if(D.k&&D.k[st])kick(t,D.k[st]);if(D.s&&D.s[st])snare(t,D.s[st]);
+        if(D.h&&D.h[st])hat(t,D.h[st]*(.8+Math.random()*.4));if(D.rim&&st%8===6)rim(t,.8);
+        if(D.t&&D.t[st])taiko(t,.45*D.t[st],true);if(D.ka&&D.ka[st])ka(t,D.ka[st]);
+        if(D.shime&&D.shime[st])shime(t,D.shime[st]);if(D.chappa&&D.chappa[st])chappa(t,D.chappa[st]);
+        // fills at the end of every 4th bar
+        if(bar%4===3&&st>=12&&(S2.drums==='lofi'||S2.drums==='road'))snare(t,.3+.15*(st-12));
+        if(bar%4===3&&st>=12&&(S2.drums==='matsuri'||S2.drums==='battle'))taiko(t,.35,false);
+      }
+      // bass
+      if(S2.bass&&!intro){const bv=S2.bass*(breakdown?.6:1);
+        if(S2.drums==='battle'){if(st%2===0)bassN(croot-24,t,spb*1.6,bv*(st%4===0?1:.6));}
+        else if(S2.drums==='road'){if(st%4===0)bassN(croot-24+[0,7,12,7][st/4],t,spb*3.5,bv);}
+        else{if(st===0)bassN(croot-24,t,spb*6,bv);if(st===10)bassN(croot-24+(bar%2?7:0),t,spb*4,bv*.8);if(st===14&&Math.random()<.4)bassN(croot-24+5,t,spb*1.5,bv*.6);}}
+      // chord stabs / arpeggios
+      if(S2.stab&&full&&(st===6||st===14)&&Math.random()<.6)CH[chord[1]].slice(1,4).forEach((i,k)=>koto2(croot+i,t+k*.012,S2.stab));
+      if(S2.arp&&st%4===0){const tones=CH[chord[1]];const i=tones[(st/4+bar)%tones.length];koto2(croot+i,t,S2.arp*(st===0?1.2:.8));}
+      // melody: pick a motif each 2-bar phrase, vary it, rest every 4th phrase
+      if(bar%2===0&&st===0){SEQ.phrase++;SEQ.motif=MOT[S2.mot[(SEQ.phrase+Math.floor(SEQ.phrase/4))%S2.mot.length]];SEQ.trans=SEQ.phrase%3===2?pick([-1,1,2]):0;}
+      const rest=!S2.loopLead&&(intro&&S2.drums)||(!S2.loopLead&&SEQ.phrase%4===0&&bar%2===1);
+      if(SEQ.motif&&!rest){const pos=(bar%2)*16+st;for(const [s,d,len] of SEQ.motif)if(s===pos){const m=deg(d+SEQ.trans);lead(S2.lead,m,t,len*spb,S2.leadV*(breakdown?1.15:1));
+        if(S2.lead==='koto'&&Math.random()<.15)koto2(m+12,t+spb,S2.leadV*.45);}}
+      // texture
+      if(S2.crackle&&Math.random()<.18)noiseHit({t:t+Math.random()*spb,d:.008,v:.006+Math.random()*.02,type:'highpass',f:2500+Math.random()*4000,dest:out()});
+      if(S2.chirp&&st===8&&bar%2===1&&Math.random()<.6)chirp(t);
+      if(S2.bell&&st===0&&bar%4===0)bellSnd(t,.35);
+      SEQ.next+=spb;SEQ.step++;if(SEQ.step%16===0)SEQ.bar++;
+    }
+  };
+  function nowPlaying(){if(SET.soundtrack==='classic')return'Classic soundtrack';return SND.mood?songFor(SND.mood).name:'Silence';}
+  SET.soundtrack=SET.soundtrack||'new';SET.musicVol=SET.musicVol||1;
+  const _sndApply=sndApply;
+  sndApply=function(){_sndApply();try{if(SND.ctx&&SND.musicOn)SND.mus.gain.value=.42*(SET.musicVol||1);}catch(e){}};
+
   /* ---------- the hub panel ---------- */
   let TAB='deeds';
   const TABS=[['town','Town'],['deeds','Deeds'],['week','Bounties'],['rival','Rival'],['fortune','Fortune'],['haiku','Haiku'],['letters','Letters'],['stamps','Seals'],['album','Album'],['ledger','Ledger'],['almanac','Almanac'],['fame','Hall of fame'],['family','Family'],['settings','Settings']];
@@ -6968,6 +7080,8 @@ requestAnimationFrame(loop);
     card.querySelector('[data-xphoto]').onclick=()=>{closeModal();setTimeout(photo,60);};
     card.querySelector('[data-close]').onclick=closeModal;
     card.querySelectorAll('[data-xscale]').forEach(b=>b.onclick=()=>{SET.scale=+b.dataset.xscale;applySettings();openHub('settings');});
+    card.querySelectorAll('[data-xsound]').forEach(b=>b.onclick=()=>{SET.soundtrack=b.dataset.xsound;SEQ.mood=null;applySettings();openHub('settings');});
+    card.querySelectorAll('[data-xvol]').forEach(b=>b.onclick=()=>{SET.musicVol=+b.dataset.xvol;applySettings();sndApply();openHub('settings');});
     card.querySelectorAll('[data-xset]').forEach(b=>b.onchange=()=>{SET[b.dataset.xset]=b.checked;applySettings();});
     card.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{let m;try{m=ACT[b.dataset.act](b.dataset.arg);}catch(e){console.warn(e);m='Something went wrong.';}if(m!==false){hudUpdate();openHub('town',m);}});
     const lc=card.querySelector('[data-xcard]');if(lc)lc.onclick=()=>{closeModal();setTimeout(lifeCard,60);};
@@ -7004,7 +7118,7 @@ requestAnimationFrame(loop);
   goTitle=function(){_goTitle();showLegacy();};
   showLegacy();
 
-  window.UKX={openHub,photo,checkDeeds,DEEDS};
+  window.UKX={openHub,photo,checkDeeds,DEEDS,musicReset:()=>{SEQ.mood=null;},nowPlaying};
 })();
 
 
