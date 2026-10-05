@@ -45,14 +45,14 @@ function newDay(){G.time.day++;G.time.doy=(G.time.doy+1)%365;G.time.dow=(G.time.
     if(d&&rivals.length){const by=pick(rivals);G.news.unshift(`${dateStr()}: ${FACTIONS[by].name} took ${d.name} (${cityById(d.city).name}) from ${FACTIONS[d.owner].short}.`);d.owner=by;refreshOverlay()}}
   if(G.news.length>20)G.news.length=20;
   saveGame(true)}
-function wipeOut(){if(P.dead)return;P.dead=true;leaveScene(true,true);const c=nearestCity(P.x,P.y);const h=POIS.find(p=>p.kind==='hospital'&&p.city===c.id)||POIS.find(p=>p.kind==='hospital');
-  const fee=P.age<18?0:Math.min(P.money,Math.round(P.money*.1+20));P.money-=fee;exitCar(true);P.x=h.x;P.y=h.y+20;P.hp=P.maxHp*.6;P.heat=0;G.time.min+=180;setMood(-15);
+function wipeOut(){if(P.dead)return;P.dead=true;leaveScene(true,true);exitCar(true);const h=respawnAt('hospital');
+  const fee=P.age<18?0:Math.min(P.money,Math.round(P.money*.1+20));P.money-=fee;P.hp=P.maxHp*.6;P.heat=0;G.time.min+=180;setMood(-15);
   ENT.peds.forEach(e=>{e.angry=false;e.attacker=false});
-  openModal(mHead('+','Ligoninė',`You woke up in hospital in ${cityById(h.city).loc}.`)+`<div class="mbody scene"><p>Everything hurts. A nurse tells you someone called an ambulance.</p><p>${fee?`The bill: <b>${eur(fee)}</b>.`:'Kids are treated for free.'}</p></div><div class="mfoot"><button class="btn" onclick="closeModal()">Gerai</button></div>`);
+  openModal(mHead('+','Ligoninė',`You woke up in hospital in ${esc(MAP.name)}.`)+`<div class="mbody scene"><p>Everything hurts. A nurse tells you someone called an ambulance.</p><p>${fee?`The bill: <b>${eur(fee)}</b>.`:'Kids are treated for free.'}</p></div><div class="mfoot"><button class="btn" onclick="closeModal()">Gerai</button></div>`);
   setTimeout(()=>P.dead=false,500);missionFail('You were knocked out.')}
-function busted(){BUST.t=0;leaveScene(true,true);const c=nearestCity(P.x,P.y);const st=POIS.find(p=>p.kind==='police'&&p.city===c.id)||POIS.find(p=>p.kind==='police');
+function busted(){BUST.t=0;leaveScene(true,true);exitCar(true);const st=respawnAt('police')||{name:'policijos komisariatas'};P.busts=(P.busts||0)+1;
   const fine=Math.round(P.money*.15)+P.heat*25,lost=has('kontra');P.money=Math.max(0,P.money-fine);if(lost)give('kontra',-lost);
-  exitCar(true);P.x=st.x;P.y=st.y+20;P.heat=0;G.time.min+=240;setMood(-12);
+  P.heat=0;G.time.min+=240;setMood(-12);
   ENT.cars=ENT.cars.filter(c=>c.ai!=='police');ENT.peds.forEach(e=>{if(e.kind==='police')e.angry=false});
   const mf=myFac();if(mf&&mf.league==='street')gainRep(P.faction,5);
   openModal(mHead('★','Areštinė','Busted. Sulaikytas.')+`<div class="mbody scene"><p>A few hours in a cell at the ${esc(st.name)}. An officer reads you a lecture about wasting your life.</p><p>Fine: <b>${eur(fine)}</b>.${lost?` Contraband confiscated: <b>${lost}</b> boxes.`:''}${mf&&mf.league==='street'?' You kept your mouth shut. Your crew respects that.':''}</p></div><div class="mfoot"><button class="btn" onclick="closeModal()">Išeiti</button></div>`);
@@ -110,31 +110,29 @@ function availableJobs(){const out=[],c=curCity(),mf=myFac(),age=P.age;
   return out}
 function startMission(type){if(G.mission){log('Finish or cancel your current job first (Q).','bad');return}
   const c=curCity(),mf=myFac(),fid=P.faction,r=mf?rankIdx(fid):0;let M={type,fac:fid,city:c.id,t0:now()};
-  const rivalDistrict=()=>{const ds=DISTRICTS.filter(d=>d.owner&&d.owner!==fid&&FACTIONS[d.owner].league==='street');const local=ds.filter(d=>d.city===c.id);return pick(local.length?local:ds)};
+  const rivalDistrict=()=>{const ds=DISTRICTS.filter(d=>d.city===MAP.id&&d.cnt&&d.owner&&d.owner!==fid&&FACTIONS[d.owner].league==='street'&&!d.peace);return ds.length?pick(ds):null};
   switch(type){
   case 'bottles':M.title='Butelių medžioklė';M.need=10;M.start=has('bottle');M.step='Collect bottles';break;
   case 'errand':M.title='Mamos užduotis';M.step='Buy kibinai at Maksi';M.target=nearestPOI('shop');break;
-  case 'courier':{const from=nearestPOI('cafe')||nearestPOI('kebab');M.title='Kurjeris';M.step='Pick up the order';M.target={x:from.x,y:from.y,label:from.name};M.dest=randomDoorIn(c.id,10);M.dest.label='Customer';M.timer=150;M.pay=ri(8,18);break}
+  case 'courier':{const from=nearestPOI('cafe')||nearestPOI('kebab');if(!from){log('No food places here. Try in a town.','bad');return}M.title='Kurjeris';M.step='Pick up the order';M.target={x:from.x,y:from.y,label:from.name};M.dest=randomDoorIn(c.id,10);M.dest.label='Customer';M.timer=150;M.pay=ri(8,18);break}
   case 'taxi':{M.title='Taksi';M.step='Pick up the passenger';const p=roadPointIn(c.id,P,6,14);M.target={x:p.x,y:p.y,label:'Passenger'};M.dest=roadPointIn(c.id,p,16,30);M.dest.label='Destination';M.timer=180;M.pay=ri(12,25);break}
   case 'beat':{const d=rivalDistrict();if(!d){log('No rivals to fight right now.');return}M.title='Parodyti jėgą';M.d=d.id;M.need=3;M.got=0;M.target={x:d.cx*TS,y:d.cy*TS,label:d.name};M.step=`Knock out 3 ${FACTIONS[d.owner].short} in ${d.name}`;M.pay=40+r*20;M.rep=15;M.victim=d.owner;break}
-  case 'stogas':{const shops=POIS.filter(p=>['shop','kebab','bar','cafe'].includes(p.kind)&&p.city===c.id);M.title='Surinkti „stogą“';M.list=shops.sort(()=>Math.random()-.5).slice(0,3).map(p=>({x:p.x,y:p.y,label:p.name}));M.i=0;M.target=M.list[0];M.step='Visit the shops';M.pay=60+r*25;M.rep=12;break}
-  case 'deliver':{const near=randomDoorIn(c.id,6);M.title='Kontrabanda';M.step='Pick up the contraband';M.target={x:near.x,y:near.y,label:'Pickup'};const dc=pick(CITIES.filter(x=>x.R>=19));M.dest=Object.assign(dc.id===c.id?randomDoorIn(dc.id,20):randomDoorIn(dc.id,0),{label:'Garage in '+dc.name});M.timer=dc.id===c.id?200:420;M.pay=90+r*35+(dc.id!==c.id?120:0);M.rep=18;break}
-  case 'balloon':{let spot=null;for(let k=0;k<400&&!spot;k++){const x=ri(560,860),y=ri(380,640);if(tileAt(x,y)===T.FOREST&&(tileAt(x+6,y)===T.ABROAD||tileAt(x+10,y)===T.ABROAD||tileAt(x,y+8)===T.ABROAD))spot=[x,y]}
-    if(!spot)spot=[700,560];M.title='Balionas iš rytų';M.step='Find the balloon in the border forest';M.target={x:spot[0]*TS+16,y:spot[1]*TS+16,label:'Balloon'};
-    ENT.pickups.push({k:'kontra',n:3,x:M.target.x,y:M.target.y,keep:true,balloon:true});const hq=POIS.find(p=>p.hq===fid);M.dest={x:hq.x,y:hq.y,label:hq.name};M.pay=200+r*60;M.rep=30;break}
-  case 'turf':{const d=rivalDistrict()||pick(DISTRICTS.filter(d=>!d.owner));if(!d)return;M.title='Užimti teritoriją';M.d=d.id;M.target={x:d.cx*TS,y:d.cy*TS,label:d.name};M.step=`Take ${d.name} (${cityById(d.city).name})`;M.pay=150;M.rep=25;break}
+  case 'stogas':{const shops=POIS.filter(p=>['shop','kebab','bar','cafe','kiosk'].includes(p.kind));if(shops.length<2){log('Not enough shops here.','bad');return}M.title='Surinkti „stogą“';M.list=shops.sort(()=>Math.random()-.5).slice(0,3).map(p=>({x:p.x,y:p.y,label:p.name}));M.i=0;M.target=M.list[0];M.step='Visit the shops';M.pay=60+r*25;M.rep=12;break}
+  case 'deliver':{const near=randomDoorIn(c.id,6);M.title='Kontrabanda';M.step='Pick up the contraband';M.target={x:near.x,y:near.y,label:'Pickup'};const dc=curCity();M.dest=Object.assign(dc.id===c.id?randomDoorIn(dc.id,20):randomDoorIn(dc.id,0),{label:'Garage in '+dc.name});M.timer=dc.id===c.id?200:420;M.pay=90+r*35+(dc.id!==c.id?120:0);M.rep=18;break}
+  case 'balloon':{M.title='Balionas iš rytų';M.travels=true;M.step='Travel to Pasienio miškas (car, BlaBla or taxi)';M.target=null;M.pay=200+r*60;M.rep=30;if(MAP.id==='pasienis'){G.mission=M;placeBalloon();toast('📱',M.title,M.step);return}break}
+  case 'turf':{const d=rivalDistrict()||pick(DISTRICTS.filter(d=>d.city===MAP.id&&d.cnt&&!d.owner&&!d.peace));if(!d)return;M.title='Užimti teritoriją';M.d=d.id;M.target={x:d.cx*TS,y:d.cy*TS,label:d.name};M.step=`Take ${d.name} (${cityById(d.city).name})`;M.pay=150;M.rep=25;break}
   case 'race':startRace(M,r);return;
-  case 'hwyrace':startHwyRace(r);return;
+  case 'hwyrace':startRoadRace(r);return;
   case 'bossrace':startBossRace(r);return;
   case 'driftc':M.title='Šoninio iššūkis';M.need=6000;M.got=0;M.timer=60;M.step='Drift! 6,000 points';M.pay=60+r*25;M.rep=15;if(!P.inCar){log('Get in a car first (F).','bad');return}break;
   case 'meet':{const spot=POIS.find(p=>p.meet===fid)||POIS.find(p=>p.meet);M.title='Naktinis susitikimas';M.target={x:spot.x,y:spot.y,label:spot.name};M.step='Bring your car to the meet (21:00–03:00)';break}
-  case 'tag':{const rivalSchool=mf.type==='crew'?null:POIS.find(p=>p.kind==='school'&&p.city===mf.city&&p.fac!==fid);const base=rivalSchool||{x:DISTRICTS.find(d=>d.owner==='gopai').cx*TS,y:DISTRICTS.find(d=>d.owner==='gopai').cy*TS};
+  case 'tag':{const rivalSchool=mf.type==='crew'?null:POIS.find(p=>p.kind==='school'&&p.fac!==fid);const rd=DISTRICTS.find(d=>d.city===MAP.id&&d.cnt&&d.owner&&d.owner!==fid)||DISTRICTS.find(d=>d.city===MAP.id&&d.cnt);const base=rivalSchool||(rd?{x:rd.cx*TS,y:rd.cy*TS}:{x:P.x,y:P.y});
     M.title='Pažymėti teritoriją';M.list=[];for(let k=0;k<40&&M.list.length<3;k++){const t=randomTileNear(base.x,base.y,2,9,(t,x,y)=>t===T.WALK&&(tileAt(x,y-1)===T.BUILD||tileAt(x+1,y)===T.BUILD||tileAt(x-1,y)===T.BUILD));if(t&&!M.list.some(q=>dist(q.x,q.y,t[0]*TS,t[1]*TS)<64))M.list.push({x:t[0]*TS+16,y:t[1]*TS+16,label:'Wall'})}
     if(!M.list.length)M.list=[{x:base.x,y:base.y+40,label:'Wall'}];M.i=0;M.target=M.list[0];M.step='Tag the walls (hold E)';M.pay=10;M.rep=12;if(!has('spray'))log('You need a spray can (dažų balionėlis). Maksi sells them.','amb');break}
-  case 'scuffle':{const rs=POIS.find(p=>p.kind==='school'&&p.city===mf.city&&p.fac!==fid);const tg=mf.type==='crew'?DISTRICTS.find(d=>d.owner==='gopai'):null;M.title='Kiemo muštynės';M.need=3;M.got=0;
+  case 'scuffle':{const rs=POIS.find(p=>p.kind==='school'&&p.fac!==fid);const tg=DISTRICTS.find(d=>d.city===MAP.id&&d.cnt&&d.owner&&d.owner!==fid);if(!rs&&!tg){log('No rivals around here.','bad');return}M.title='Kiemo muštynės';M.need=3;M.got=0;
     M.target=rs?{x:rs.x,y:rs.y,label:rs.name}:{x:tg.cx*TS,y:tg.cy*TS,label:tg.name};M.step='Win 3 scuffles with rivals';M.rep=15;M.pay=0;
     if(rs){for(let k=0;k<3;k++){const t=randomTileNear(rs.x,rs.y,1,5,(t)=>WALKABLE[t]);if(t)spawnPed('school',t[0]*TS+16,t[1]*TS+16,rs.fac,{keep:true})}}break}
-  case 'hangout':{const wb=POIS.find(p=>p.hq==='centras');M.title='Vakaras ant tilto';M.target={x:wb.x,y:wb.y-60,label:'Baltasis tiltas'};M.need=40;M.got=0;M.step='Hang out on the bridge (18:00–23:00)';M.rep=10;break}
+  case 'hangout':{const wb=POIS.find(p=>p.hq==='centras');if(!wb){log('The White Bridge is in Vilnius. Travel there first.','bad');return}M.title='Vakaras ant tilto';M.target={x:wb.x,y:wb.y-60,label:'Baltasis tiltas'};M.need=40;M.got=0;M.step='Hang out on the bridge (18:00–23:00)';M.rep=10;break}
   }
   G.mission=M;toast('📱',M.title,M.step);SND.blip(990)}
 function nearestPOI(kind,city){let best=null,bd=1e12;POIS.forEach(p=>{if(p.kind!==kind)return;if(city&&p.city!==city)return;const d=dist(p.x,p.y,P.x,P.y);if(d<bd){bd=d;best=p}});return best}
@@ -148,7 +146,7 @@ function missionEvent(ev,arg){const M=G.mission;if(!M)return;
   if(ev==='kontra'&&(M.type==='balloon')){M.target=M.dest;M.step='Bring the boxes back to base';if(Math.random()<.6)crime(1,'Border guards spotted you')}}
 function tickMission(dt){const M=G.mission;if(!M)return;
   if(M.timer!==undefined&&M.type!=='race'){M.timer-=dt;if(M.timer<=0){if(M.type==='driftc'){if(M.got+DRIFT.cur>=M.need)missionDone();else missionFail(`Scored ${Math.round(M.got)}.`)}else missionFail('Out of time.');return}}
-  const me=P.inCar||P,at=t=>t&&dist(me.x,me.y,t.x,t.y)<(P.inCar?60:40);
+  const me=P.inCar||P,at=t=>t&&(!t.map||t.map===MAP.id)&&dist(me.x,me.y,t.x,t.y)<(P.inCar?60:40);
   switch(M.type){
   case 'bottles':M.step=`Bottles: ${Math.min(has('bottle'),M.need)}/${M.need}`;if(has('bottle')>=M.need&&!M.full){M.full=true;M.target=nearestPOI('shop');M.step='Return them at the Maksi taromatas'}break;
   case 'errand':if(has('kibinas')&&!M.bought){M.bought=true;const h=POIS.find(p=>p.id===P.home);M.target={x:h.x,y:h.y,label:'Namai'};M.step='Bring the kibinai home'}if(M.bought&&at(M.target)&&has('kibinas')){give('kibinas',-1);M.pay=3;missionDone('Mum says ačiū')}break;
@@ -234,6 +232,5 @@ const GOALS=[
  {id:'m5',t:'Svajonių BMW',en:'Own a BMW M5',ok:()=>P.cars.some(c=>c.model==='m5')},
 ];
 function checkGoals(){GOALS.forEach(g=>{if(!P.goals[g.id]&&g.ok()){P.goals[g.id]=true;toast('★',g.t,g.en+' · tikslas pasiektas');SND.fanfare();chron(`Goal reached: ${g.t}.`)}})}
-function checkVisits(){const c=cityAtPx(P.x,P.y);if(c&&!P.visited[c.id]){P.visited[c.id]=true;toast(c.code,c.name,c.blurb);chron(`Arrived in ${c.name}.`)}else if(c&&c.id!==LASTCITY){toast(c.code,c.name,c.blurb)}LASTCITY=c?c.id:LASTCITY;
-  POIS.forEach(p=>{if(p.kind==='landmark'&&!P.landmarks[p.id]&&dist(p.x,p.y,P.x,P.y)<3*TS){P.landmarks[p.id]=true;setMood(8);toast('◆',p.name,p.desc);SND.blip(800)}})}
+function checkVisits(){POIS.forEach(p=>{if(p.kind==='landmark'&&!P.landmarks[p.id]&&dist(p.x,p.y,P.x,P.y)<3*TS){P.landmarks[p.id]=true;setMood(8);toast('◆',p.name,p.desc);SND.blip(800)}})}
 let LASTCITY=null;

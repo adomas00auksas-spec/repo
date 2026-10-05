@@ -19,6 +19,7 @@ function update(dt){
   acc1+=dt;acc2+=dt;acc3+=dt;
   if(acc1>.25){acc1=0;populate();PROMPT=findPrompt();showPrompt()}
   musicTick(dt);brawlTick(dt);
+  roadTick();
   if(acc2>1){acc2=0;roadblockTick();meetTick();checkQuest();checkGoals();checkVisits();tickEvents();hudUpdate();updateZone()}
   if(acc3>60){acc3=0;saveGame(true)}
   // hold-to-act
@@ -35,7 +36,7 @@ function render(){
   if(SCENE&&running){renderInterior();return}
   const Z=ZOOM;ctx.setTransform(DPR,0,0,DPR,0,0);ctx.fillStyle='#3D6D8D';ctx.fillRect(0,0,VW,VH);
   let fx,fy;if(running&&P){const me=P.inCar||P;fx=me.x+(P.inCar?P.inCar.vx*.35:0);fy=me.y+(P.inCar?P.inCar.vy*.35:0)-20}
-  else{const V=cityById('vilnius');titlePan+=.15;fx=(V.cx-10)*TS+Math.sin(titlePan/200)*600;fy=(V.cy-6)*TS+Math.cos(titlePan/260)*300}
+  else{titlePan+=.15;const lm=POIS.find(p=>p.kind==='landmark')||{x:W*TS/2,y:H*TS/2};fx=lm.x+Math.sin(titlePan/200)*700;fy=lm.y+Math.cos(titlePan/260)*400}
   const tx0=fx-VW/2/Z,ty0=fy-VH/2/Z;cam.x=lerp(cam.x,tx0,running?.12:1);cam.y=lerp(cam.y,ty0,running?.12:1);
   if(!isFinite(cam.x)){cam.x=tx0;cam.y=ty0}
   let sx=0,sy=0;if(SHAKE>0){sx=rnd(-SHAKE,SHAKE);sy=rnd(-SHAKE,SHAKE);SHAKE*=.88;if(SHAKE<.3)SHAKE=0}
@@ -43,10 +44,16 @@ function render(){
   const vx0=cam.x,vy0=cam.y,vx1=cam.x+VW/Z,vy1=cam.y+VH/Z;
   const c0=Math.floor(vx0/CHPX),c1=Math.floor(vx1/CHPX),r0=Math.floor(vy0/CHPX),r1=Math.floor(vy1/CHPX);
   for(let cy=r0;cy<=r1;cy++)for(let cx=c0;cx<=c1;cx++){if(cx<0||cy<0||cx*CH>=W||cy*CH>=H)continue;ctx.drawImage(getChunk(cx,cy),cx*CHPX,cy*CHPX)}
-  // highway centre dashes
-  ctx.save();ctx.strokeStyle='rgba(240,236,220,.8)';ctx.lineWidth=2;ctx.setLineDash([16,20]);
-  HWYS.forEach(h=>{let on=false;for(const p of h.pts){if(p[0]*TS>vx0-400&&p[0]*TS<vx1+400&&p[1]*TS>vy0-400&&p[1]*TS<vy1+400){on=true;break}}if(!on)return;
-    ctx.beginPath();h.pts.forEach((p,i)=>{const X=p[0]*TS+16,Y=p[1]*TS+16;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});ctx.stroke()});ctx.restore();
+  // street overlays: rails, centre lines, trolley wires, lamps
+  ctx.save();const inView=st=>{for(const p of st.pts){if(p[0]*TS>vx0-600&&p[0]*TS<vx1+600&&p[1]*TS>vy0-600&&p[1]*TS<vy1+600)return true}return false};
+  const path=(st,off)=>{ctx.beginPath();st.pts.forEach((p,i)=>{const q=st.pts[Math.min(i+1,st.pts.length-1)],r=st.pts[Math.max(i-1,0)];const a=Math.atan2(q[1]-r[1],q[0]-r[0]);const X=p[0]*TS+16-Math.sin(a)*off,Y=p[1]*TS+16+Math.cos(a)*off;i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)})};
+  for(const st of STREETS){if(!inView(st))continue;
+    if(st.rail){ctx.setLineDash([3,9]);ctx.strokeStyle='#5A4330';ctx.lineWidth=12;path(st,-14);ctx.stroke();path(st,14);ctx.stroke();ctx.setLineDash([]);ctx.strokeStyle='#9AA0A3';ctx.lineWidth=2;[-19,-9,9,19].forEach(o=>{path(st,o);ctx.stroke()});continue}
+    if(st.ped)continue;
+    if(st.w>=2.2||st.hwy){ctx.setLineDash([16,20]);ctx.strokeStyle='rgba(240,236,220,.8)';ctx.lineWidth=2;path(st,0);ctx.stroke();ctx.setLineDash([])}
+    if(st.troll){ctx.strokeStyle='rgba(30,30,30,.55)';ctx.lineWidth=1;[-st.w*TS*.45-4,-st.w*TS*.45+4,st.w*TS*.45-4,st.w*TS*.45+4].forEach(o=>{path(st,o);ctx.stroke()})}}
+  ctx.restore();
+  for(const l of LAMPS){if(l.x<vx0-20||l.x>vx1+20||l.y<vy0-20||l.y>vy1+40)continue;ctx.fillStyle='rgba(0,0,0,.22)';ctx.beginPath();ctx.ellipse(l.x,l.y+6,4,2,0,0,7);ctx.fill();ctx.fillStyle='#3A3F44';ctx.fillRect(l.x-1.5,l.y-10,3,16);ctx.fillStyle=(running&&G&&nightLevel()>.25)?'#FFE9A0':'#E8E2C8';ctx.beginPath();ctx.arc(l.x,l.y-11,3,0,7);ctx.fill()}
   // pickups
   for(const k of ENT.pickups){if(k.x<vx0-40||k.x>vx1+40||k.y<vy0-40||k.y>vy1+40)continue;drawPickup(k)}
   // quest target ring
@@ -84,7 +91,7 @@ function render(){
   if(nl>0.01){const hw=dark.width,hh=dark.height,s=.5*Z;dctx.globalCompositeOperation='source-over';dctx.clearRect(0,0,hw,hh);dctx.fillStyle=`rgba(8,14,34,${nl})`;dctx.fillRect(0,0,hw,hh);
     if(nightLevel()>.2){dctx.globalCompositeOperation='destination-out';const L=(x,y,r,a)=>{const X=(x-cam.x)*s,Y=(y-cam.y)*s,R=r*s;if(X<-R||Y<-R||X>hw+R||Y>hh+R)return;const g=dctx.createRadialGradient(X,Y,0,X,Y,R);g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(1,'rgba(0,0,0,0)');dctx.fillStyle=g;dctx.fillRect(X-R,Y-R,R*2,R*2)};
       const tx0b=Math.floor(vx0/TS),tx1b=Math.ceil(vx1/TS),ty0b=Math.floor(vy0/TS),ty1b=Math.ceil(vy1/TS);
-      for(let y=ty0b;y<=ty1b;y++)for(let x=tx0b;x<=tx1b;x++){if(!inb(x,y))continue;const i=idx(x,y);if(CITYA[i]&&MXA[i]===2&&MYA[i]===2&&tileAt(x,y)===T.WALK&&hv(x,y,8)<.5)L(x*TS+8,y*TS+8,110,.85)}
+      for(const l of LAMPS)L(l.x,l.y-8,105,.85);
       for(const c of ENT.cars){if(c.ai==='parked'&&c!==(P&&P.inCar))continue;const hx=c.x+Math.cos(c.ang)*70,hy=c.y+Math.sin(c.ang)*70;L(hx,hy,80,.8);L(c.x,c.y,30,.5)}
       POIS.forEach(p=>{if(p.kind!=='landmark')L(p.x,p.y,60,.6)});if(P)L(P.x,P.y-10,60,.5)}
     ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(dark,0,0,hw,hh,0,0,VW*DPR,VH*DPR)}
@@ -157,7 +164,7 @@ $('#cBack').onclick=()=>{$('#creator').classList.add('hidden');$('#title').class
 $('#cRand').onclick=()=>{CR.sex=pick(['m','f']);CR.name=pick(NAMES[CR.sex]);CR.sur=ri(0,SURN.length-1);CR.surname=SURN[CR.sur][CR.sex==='f'?1:0];CR.age=pick(AGES).a;CR.city=pick(CITIES).id;CR.cls=pick(CLASSES).id;CR.parent=pick(PARENTS).id;
   CR.skin=pick(SKINS);CR.hair=pick(HAIRS);CR.outfit=pick(OUTFITS).id;CR.cap=Math.random()<.5;renderCreator()};
 $('#cStart').onclick=()=>{SND.init();SND.on=true;newLife()};
-resize();genWorld();
+resize();loadMap('vilnius');
 if(!loadSaved()){$('#bCont').disabled=true}
 requestAnimationFrame(frame);
 window.claude?.hot?.snapshot?.(()=>{saveGame(true);return{}});

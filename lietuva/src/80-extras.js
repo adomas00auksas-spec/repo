@@ -24,14 +24,6 @@ function crewHQActs(p){const fid=p.hq;if(P.faction!==fid||FACTIONS[fid].league!=
   h+=act('Pasikviesti bičą','A crew member follows you and fights with you. Up to one more per rank above Bičas.',`€60`,()=>{if((P.crew||0)>=mx){log('No more room in your crew at this rank.','bad');return}if(!pay(60))return;P.crew=(P.crew||0)+1;syncCrew();log('A new bičas joins you. „Eime.“','good');openHQ(p)},n>=mx);
   if(n)h+=act('Paleisti bičus','Send your crew home.','Paleisti',()=>{P.crew=0;syncCrew();openHQ(p)});return h}
 
-/* ---------- highway race ---------- */
-function startHwyRace(r){const c=curCity();if(!P.inCar||CARS[P.inCar.model].kind==='bike'){log('You need a car for a race. Get in one (F).','bad');return}
-  const opts=HWYS.filter(h=>/^A/.test(h.name)).map(h=>{const a=h.pts[0],b=h.pts[h.pts.length-1];if(dist(a[0],a[1],c.cx,c.cy)<6)return{h,pts:h.pts};if(dist(b[0],b[1],c.cx,c.cy)<6)return{h,pts:h.pts.slice().reverse()};return null}).filter(Boolean);
-  if(!opts.length){log('No highway race from this town. Try Vilnius, Kaunas or Panevėžys.','bad');return}
-  const o=pick(opts);const dest=nearestCity(o.pts[o.pts.length-1][0]*TS,o.pts[o.pts.length-1][1]*TS);
-  const cps=o.pts.slice(1).filter((p,i,a)=>i%2===1||i===a.length-1).map(p=>({x:p[0]*TS+16,y:p[1]*TS+16}));
-  const M={type:'race',hwy:true,fac:P.faction,city:c.id,t0:now()};startRace(M,r,cps);if(G.mission===M){M.title=`${c.name} → ${dest.name} (${o.h.name})`;M.pay=300+r*80;M.rep=40;toast('🏁',M.title,'Fictional race on a closed highway. Do not race on real roads.')}}
-
 /* ---------- story chapters ---------- */
 function pathNow(){const f=myFac();if(f)return f.league==='street'?'street':f.league;return P.age<13?'kid':'civil'}
 const CHAPTERS={
@@ -187,13 +179,6 @@ function closedMsg(kind){const h=HOURS[kind];return `Uždaryta. Open ${h[0]}:00�
 
 /* ---------- petrol stations (degalinės) on highways ---------- */
 Object.assign(ITEMS,{hotdog:{n:'Dešrainis iš degalinės',en:'Petrol-station hot dog. A Lithuanian road-trip classic',ic:'🌭',food:30,price:2.5},kava:{n:'Kava',en:'Coffee to go',ic:'☕',energy:25,price:1.8}});
-function placeFuel(){HWYS.filter(h=>/^A/.test(h.name)&&h.pts.length>3).forEach(h=>{let done=false;const mid=Math.floor(h.pts.length/2);for(const i of[mid,mid-1,mid+1]){if(done||i<1||i>=h.pts.length-1)continue;const[ax,ay]=h.pts[i],[bx,by]=h.pts[i+1];const L=Math.hypot(bx-ax,by-ay),nx=-(by-ay)/L,ny=(bx-ax)/L;
-  for(const side of[1,-1]){const cx=Math.round(ax+nx*side*6),cy=Math.round(ay+ny*side*6);let ok=true;
-    for(let y=cy-3;y<=cy+3&&ok;y++)for(let x=cx-3;x<=cx+3;x++){const t=tileAt(x,y);if(CITYA[idx(x,y)]||t===T.WATER||t===T.SEA||t===T.ABROAD||t===T.BUILD||t===T.HWY||t===T.BRIDGE){ok=false;break}}
-    if(!ok)continue;for(let y=cy-3;y<=cy+3;y++)for(let x=cx-3;x<=cx+3;x++){setT(x,y,T.LOT);RES[idx(x,y)]=1}
-    paintLine([[ax,ay],[cx,cy]],1.2,(x,y)=>{const t=TL[idx(x,y)];if(t!==T.HWY&&t!==T.BRIDGE&&t!==T.LOT){TL[idx(x,y)]=T.HWY}});
-    const b=addB({x:cx-2,y:cy-3,w:4,h:2,kind:'mall',ht:30,fac:'#E9EDE6',roof:'#B5332B',city:null});
-    const p={id:'fuel_'+h.name+'_'+POIS.length,kind:'fuel',name:'Degalinė „Kelias“ · '+h.name,city:nearestCity(cx*TS,cy*TS).id,b,x:cx*TS+16,y:(cy-1)*TS+14};b.poi=p;POIS.push(p);DECOR.push({k:'pumps',x:(cx-2)*TS,y:(cy+1)*TS});done=true;break}}})}
 function tplFuel(p){const s=mkRoom(12,8,{floor:'shop',wall:'#E9EDE6',title:p.name,sub:'Degalinė'});R.deco(s,'sign',4,1,4,{txt:'KELIAS',col:'#B5332B'});
   R.add(s,'counter',2,3,4,1,{reg:true,act:()=>openShopList('Degalinė',['hotdog','kava','gira','energ','kibinas','bandage']),label:'Kasa · hot dogs and coffee'});
   R.ped(s,'staff',3,2,{name:'Kasininkas',lk:staffLook('#B5332B',{female:false}),lines:[line('Dešrainio su garstyčiomis?','Hot dog with mustard?'),line('Kuri kolonėlė?','Which pump?')]});
@@ -255,5 +240,6 @@ function openRealEstate(){const order=['low','mid','upper','rich'];const cur=ord
       h+=act(`${c.home} · ${city.name}`,`${i===cur?'Move to another town, same kind of home.':c.en+' home.'} ${city.blurb.split('.')[0]}.`,eur(cost),()=>{if(P.age<18)return;if(!pay(cost))return;moveHome(city.id,k)},P.age<18)})});
   openModal(h+`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Uždaryti</button></div>`,true)}
 function moveHome(cityId,cls){const old=POIS.find(q=>q.id===P.home);if(old){if(old.b)old.b.poi=null;POIS.splice(POIS.indexOf(old),1)}
-  const c=cityById(cityId);const b=chooseHome(cityId,cls);const hp=addPOI(c,'home','Namai',b,{});hp.id='home_'+Date.now();P.home=hp.id;P.homeB=b.id;P.city=cityId;P.cls=cls;
-  G.way={x:hp.x,y:hp.y,label:'Nauji namai'};closeModal();toast('⌂','Nauji namai',`${CLASSES.find(x=>x.id===cls).home} in ${c.name}. Waypoint set.`);chron(`Moved into a ${CLASSES.find(x=>x.id===cls).home.toLowerCase()} in ${c.name}.`);SND.fanfare();saveGame(true)}
+  P.city=cityId;P.cls=cls;P.home='home_'+cityId+'_'+Date.now();P.homeB=null;closeModal();
+  if(MAP.id===cityId){ensureHome();const hp=POIS.find(q=>q.id===P.home);G.way={x:hp.x,y:hp.y,label:'Nauji namai',map:cityId}}
+  toast('⌂','Nauji namai',`${CLASSES.find(x=>x.id===cls).home} in ${cityById(cityId).name}.${MAP.id!==cityId?' Travel there to move in.':' Waypoint set.'}`);chron(`Moved into a ${CLASSES.find(x=>x.id===cls).home.toLowerCase()} in ${cityById(cityId).name}.`);SND.fanfare();saveGame(true)}

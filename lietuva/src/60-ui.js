@@ -20,7 +20,7 @@ function poiMenu(p){
   if(p.kind==='school')return openSchool(p);
   if(p.kind==='garage')return openGarage(p);
   if(p.kind==='bus')return openBus(p);
-  if(p.kind==='ferry'){const to=POIS.find(q=>q.id===p.to);return openModal(mHead('⛴',esc(p.name),'Perkėla · ferry across the strait')+`<div class="mbody">${act('Plaukti: '+esc(to.name),'€2 on foot, €6 with a car. About 20 minutes.','Plaukti',()=>{const fee=P.inCar?6:2;if(!pay(fee))return;const[x,y]=freeSpotNear(to.x,to.y,t=>P.inCar?DRIVE[t]||t===T.LOT:WALKABLE[t]);if(P.inCar){P.inCar.x=x;P.inCar.y=y;P.inCar.vx=P.inCar.vy=0}P.x=x;P.y=y;skipHours(.4);closeModal();log('The ferry drops you on the other side.','good')})}</div>`)}
+  if(p.kind==='ferry')return openTravel('ferry',p);
   const sh=SHOPS[p.kind];
   if(sh){let h=mHead(p.kind==='shop'?'M':p.kind==='kebab'?'K':p.kind==='market'?'T':'C',esc(p.name),c.name)+'<div class="mbody">';
     if(p.kind==='shop'){const b=has('bottle');h+=act('Taromatas',`Return empty bottles, 10 ct each. You have ${b}.`,`Priduoti (${eur(b*.1)})`,()=>{const n=has('bottle');if(!n)return;give('bottle',-n);P.money+=n*.1;P.stats.bottles=(P.stats.bottles||0)+n;SND.coin();G.flags.tara=true;
@@ -112,10 +112,7 @@ function openGarage(p){let h=mHead('A',esc(p.name),P.parent==='mech'?'Dad\'s fri
   if(P.job==='mechanic'){const hr=G.time.min/60;h+=act('Pamaina','Work a shift until 17:00 (come before 12:00). €70.','Dirbti',()=>{if(hr>=12||hr<8){log('Shift starts 8:00–12:00.','bad');return}skipHours(17-hr);P.money+=70;P.energy-=25;closeModal()})}
   openModal(h+`</div><div class="mfoot"><span style="margin-right:auto;align-self:center;font-weight:700">${eur(P.money)}</span><button class="btn" onclick="closeModal()">Išeiti</button></div>`)}
 function paintCar(col){const c=P.inCar;if(!c||c.owned===undefined)return;if(!pay(price(120,'car')))return;c.color=col;P.cars[c.owned].color=col;log('Fresh paint.','good')}
-function openBus(p){let h=mHead('BUS','Autobusų stotis',cityById(p.city).name+' · tarpmiestiniai autobusai')+'<div class="mbody">';
-  CITIES.forEach(c=>{if(c.id===p.city)return;const st=POIS.find(q=>q.kind==='bus'&&q.city===c.id);if(!st)return;const d=dist(c.cx,c.cy,tx(p.x),tx(p.y));const fare=Math.round(3+d/18);const hrs=Math.max(1,Math.round(d/120*2)/2);
-    h+=act(`→ ${c.name}`,`${hrs} h · ${c.blurb}`,eur(P.age<13?Math.ceil(fare/2):fare),()=>{if(!pay(P.age<13?Math.ceil(fare/2):fare))return;exitCar(true);P.x=st.x;P.y=st.y+24;skipHours(hrs);closeModal();log(`The bus pulls into ${c.name}.`,'good')})});
-  openModal(h+`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Išeiti</button></div>`)}
+function openBus(p){openTravel('bus',p)}
 
 function openPanel(k){
   if(k==='quests')return openQuests();if(k==='map')return openMap();if(k==='phone')return openPhone();if(k==='self')return openSelf();if(k==='items')return openItems();if(k==='gloss')return openGloss();if(k==='menu')return openMenu()}
@@ -127,6 +124,7 @@ function openQuests(){const S=baseSteps();const full=questSteps();const CH=G.cha
   h+=`<div class="quest"><h4>Tikslai</h4><div class="sub">Goals</div><ol>${GOALS.map(g=>`<li class="${P.goals[g.id]?'done':''}">${esc(g.t)} <span class="note">${esc(g.en)}${g.prog?' · '+g.prog():''}</span></li>`).join('')}</ol></div>`;
   openModal(h+'</div>')}
 function openPhone(){const jobs=availableJobs();let h=mHead('T','Telefonas',`${DAYS[G.time.dow]} · ${fmtTime()} · ${eur(P.money)}`)+'<div class="mbody">';
+  h+=`<h3 style="font:800 20px var(--display);margin:0 0 8px">Kelionės · travel</h3><div class="row" style="margin-bottom:12px"><button class="btn sm" onclick="openTravel('blabla')">BlaBla</button><button class="btn sm" onclick="openTravel('taxi')">Taksi</button>${P.inCar?`<button class="btn sm" onclick="openTravel('car')">Savo mašina</button>`:''}<button class="btn sm ghost" onclick="openMap('lt')">Žemėlapis</button></div>`;
   h+='<h3 style="font:800 20px var(--display);margin:0 0 8px">Darbai · jobs</h3>';
   if(!jobs.length)h+='<p class="note">No jobs right now.</p>';
   jobs.forEach(j=>{const f=j.fac?FACTIONS[j.fac]:null;h+=act(j.title,`${f?`<span class="pill" style="background:${f.color};color:#fff">${esc(f.short)}</span> `:''}${j.desc} <b>${j.pay}</b>`,'Imtis',()=>{closeModal();startMission(j.type)},!!G.mission)});
@@ -143,7 +141,7 @@ function openSelf(){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls),p
   openModal(h+`<div class="mfoot"><button class="btn ghost" onclick="openCars()">Transportas</button><button class="btn" onclick="closeModal()">Gerai</button></div>`)}
 function openCars(){let h=mHead('🚗','Transportas','Your vehicles')+'<div class="mbody">';
   if(!P.cars.length)h+='<p class="note">You do not own anything with wheels. Garages (autoservisas) sell cars and bikes.</p>';
-  P.cars.forEach((oc,i)=>{const d=CARS[oc.model],t=oc.tune||{};h+=act(d.name,`${Object.keys(t).filter(k=>t[k]).map(k=>TUNES.find(x=>x.id===k).name).join(', ')||'Stock'} · ${Math.round(oc.hp||100)}%`,'Atvaryti (€15)',()=>{if(d.kind!=='bike'&&P.age<16){log('Too young to drive it.','bad');return}if(!pay(15))return;const[x,y]=freeSpotNear(P.x,P.y,(t,X,Y)=>(DRIVE[t]||t===T.LOT||t===T.WALK)&&dist(X*TS,Y*TS,P.x,P.y)>30);spawnOwnedCar(i,x,y,0);closeModal();log(`${d.name} is parked next to you.`,'good')})});
+  P.cars.forEach((oc,i)=>{const d=CARS[oc.model],t=oc.tune||{};h+=act(d.name,`${Object.keys(t).filter(k=>t[k]).map(k=>TUNES.find(x=>x.id===k).name).join(', ')||'Stock'} · ${Math.round(oc.hp||100)}%`,'Atvaryti (€15)',()=>{if(d.kind!=='bike'&&P.age<16){log('Too young to drive it.','bad');return}if(!pay(15))return;const[x,y]=freeSpotNear(P.x,P.y,(t,X,Y)=>(DRIVE[t]||t===T.LOT||t===T.WALK)&&dist(X*TS,Y*TS,P.x,P.y)>30);if(MAP.kind==='road'){log('Not on the highway.','bad');return}P.cars[i].map=MAP.id;P.cars[i].pos=null;spawnOwnedCar(i,x,y,0);closeModal();log(`${d.name} is parked next to you.`,'good')})});
   openModal(h+`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Gerai</button></div>`)}
 function openItems(){let h=mHead('D','Daiktai','Belongings')+'<div class="mbody">';const ids=Object.keys(P.inv).filter(k=>P.inv[k]>0);
   if(!ids.length)h+='<p class="note">Empty pockets.</p>';
@@ -165,20 +163,24 @@ function refreshOverlay(){OVC=document.createElement('canvas');OVC.width=W;OVC.h
   const col={};Object.entries(FACTIONS).forEach(([k,f])=>col[k]=[parseInt(f.color.slice(1,3),16),parseInt(f.color.slice(3,5),16),parseInt(f.color.slice(5,7),16)]);
   for(let i=0;i<W*H;i++){const di=DISTA[i];if(!di)continue;const o=DISTRICTS[di-1].owner;if(!o)continue;const c=col[o];d[i*4]=c[0];d[i*4+1]=c[1];d[i*4+2]=c[2];d[i*4+3]=120}
   g.putImageData(im,0,0)}
-function openMap(){const sc=Math.min(1.4,(Math.min(innerWidth,1000)-80)/W);const w=Math.round(W*sc),h2=Math.round(H*sc);
-  openModal(mHead('Ž','Žemėlapis','Lietuva. Click to set a waypoint. Coloured areas are gang territory.')+`<div class="mbody"><div class="mapwrap"><canvas id="bigmap" width="${w*2}" height="${h2*2}" style="width:${w}px;height:${h2}px"></canvas></div><div class="legend" id="mleg"></div></div>`,true);
+let MAPTAB='city';
+function openMap(tab){if(tab)MAPTAB=tab;if(MAPTAB==='lt'||MAP.kind==='road'&&!tab){return openLtMap()}
+  const sc=Math.min(1.6,(Math.min(innerWidth,1000)-80)/W,(innerHeight*.66)/H);const w=Math.round(W*sc),h2=Math.round(H*sc);
+  openModal(mHead('Ž',esc(MAP.name),'Click to set a waypoint. Coloured areas are gang territory.')+`<div class="mbody"><div class="row" style="margin-bottom:10px"><button class="chip on">${esc(MAP.name)}</button><button class="chip" onclick="openMap('lt')">Lietuva</button></div><div class="mapwrap"><canvas id="bigmap" width="${w*2}" height="${h2*2}" style="width:${w}px;height:${h2}px"></canvas></div><div class="legend" id="mleg"></div></div>`,true);
   const cvm=$('#bigmap'),g=cvm.getContext('2d');g.scale(sc*2,sc*2);g.imageSmoothingEnabled=false;g.drawImage(MMC,0,0);g.drawImage(OVC,0,0);
-  g.lineWidth=1.2/sc;HWYS.forEach(hw=>{g.strokeStyle='rgba(240,205,90,.9)';g.beginPath();hw.pts.forEach((p,i)=>i?g.lineTo(p[0],p[1]):g.moveTo(p[0],p[1]));g.stroke()});
-  g.font=`800 ${16/sc}px "Big Shoulders Display",sans-serif`;g.textAlign='center';
-  CITIES.forEach(c=>{g.fillStyle='rgba(20,28,26,.75)';const tw=g.measureText(c.name).width+8/sc;g.fillRect(c.cx-tw/2,c.cy-c.R-22/sc,tw,18/sc);g.fillStyle='#fff';g.fillText(c.name,c.cx,c.cy-c.R-8/sc)});
-  g.font=`700 ${10/sc}px "IBM Plex Sans",sans-serif`;POIS.forEach(p=>{if(p.kind==='landmark'){g.fillStyle=P.landmarks[p.id]?'#E2A11B':'#fff';g.beginPath();g.arc(p.x/TS,p.y/TS,3/sc,0,7);g.fill()}});
-  POIS.forEach(p=>{if(p.kind==='hq'||p.hq){g.fillStyle=FACTIONS[p.hq].color;g.fillRect(p.x/TS-3/sc,p.y/TS-3/sc,6/sc,6/sc)}});
+  g.textAlign='center';g.font=`700 ${11/sc}px "IBM Plex Sans",sans-serif`;STREETS.forEach(st=>{if(!st.name||st.rail)return;const p=st.pts[Math.floor(st.pts.length/2)];g.fillStyle='rgba(20,28,26,.7)';const tw=g.measureText(st.name).width+6/sc;g.fillRect(p[0]-tw/2,p[1]-8/sc,tw,13/sc);g.fillStyle='#fff';g.fillText(st.name,p[0],p[1]+2/sc)});
+  if(MAP.kind==='city'){g.font=`800 ${13/sc}px "Big Shoulders Display",sans-serif`;DISTRICTS.filter(d=>d.city===MAP.id&&d.cnt).forEach(d=>{g.fillStyle='rgba(255,255,255,.85)';g.fillText(d.name.toUpperCase(),d.cx,d.cy)})}
+  POIS.forEach(p=>{if(p.kind==='landmark'){g.fillStyle=P.landmarks[p.id]?'#E2A11B':'#fff';g.beginPath();g.arc(p.x/TS,p.y/TS,3/sc,0,7);g.fill()}else if(p.kind==='stop'){g.fillStyle=p.troll?'#B5332B':'#1F618D';g.fillRect(p.x/TS-2/sc,p.y/TS-2/sc,4/sc,4/sc)}
+    else if(['bus','train','hospital','police','garage','market'].includes(p.kind)){g.fillStyle=POI_COL[p.kind]||'#26343A';g.fillRect(p.x/TS-3/sc,p.y/TS-3/sc,6/sc,6/sc)}});
+  POIS.forEach(p=>{if(p.kind==='hq'||p.hq){g.fillStyle=FACTIONS[p.hq].color;g.fillRect(p.x/TS-4/sc,p.y/TS-4/sc,8/sc,8/sc)}});
   const mark=(x,y,col,r)=>{g.fillStyle=col;g.strokeStyle='#fff';g.lineWidth=2/sc;g.beginPath();g.arc(x/TS,y/TS,r/sc,0,7);g.fill();g.stroke()};
-  {const h=POIS.find(q=>q.id===P.home);if(h){g.fillStyle='#E2A11B';g.fillRect(h.x/TS-4/sc,h.y/TS-4/sc,8/sc,8/sc)}}(G.biz||[]).forEach(id=>{const q=POIS.find(x=>x.id===id);if(q){g.fillStyle='#59B86A';g.fillRect(q.x/TS-4/sc,q.y/TS-4/sc,8/sc,8/sc)}});
-  if(G.mission&&G.mission.target)mark(G.mission.target.x,G.mission.target.y,'#B5332B',6);if(G.way)mark(G.way.x,G.way.y,'#2D5DA8',6);mark(worldPos().x,worldPos().y,'#E2A11B',7);
-  cvm.onclick=e=>{const r=cvm.getBoundingClientRect();const x=(e.clientX-r.left)/sc*TS,y=(e.clientY-r.top)/sc*TS;G.way={x,y,label:'Waypoint'};openMap()};
-  const used=[...new Set(DISTRICTS.map(d=>d.owner).filter(Boolean))];$('#mleg').innerHTML=used.map(k=>`<span><i style="background:${FACTIONS[k].color}"></i>${esc(FACTIONS[k].name)} (${DISTRICTS.filter(d=>d.owner===k).length})</span>`).join('')+'<span><i style="background:#E2A11B;border-radius:50%"></i>Tu (you)</span><span><i style="background:#B5332B;border-radius:50%"></i>Job</span><span><i style="background:#fff;border-radius:50%"></i>Landmark</span>'}
-
+  {const h=POIS.find(q=>q.id===P.home);if(h){g.fillStyle='#E2A11B';g.fillRect(h.x/TS-5/sc,h.y/TS-5/sc,10/sc,10/sc)}}(G.biz||[]).forEach(id=>{const q=POIS.find(x=>x.id===id);if(q){g.fillStyle='#59B86A';g.fillRect(q.x/TS-4/sc,q.y/TS-4/sc,8/sc,8/sc)}});
+  const qt=questTarget();if(qt)mark(qt.x,qt.y,'#B5332B',6);if(G.way&&(!G.way.map||G.way.map===MAP.id))mark(G.way.x,G.way.y,'#2D5DA8',6);mark(worldPos().x,worldPos().y,'#E2A11B',7);
+  cvm.onclick=e=>{const r=cvm.getBoundingClientRect();const x=(e.clientX-r.left)/sc*TS,y=(e.clientY-r.top)/sc*TS;G.way={x,y,label:'Waypoint',map:MAP.id};openMap('city')};
+  const used=[...new Set(DISTRICTS.filter(d=>d.city===MAP.id).map(d=>d.owner).filter(Boolean))];$('#mleg').innerHTML=used.map(k=>`<span><i style="background:${FACTIONS[k].color}"></i>${esc(FACTIONS[k].name)}</span>`).join('')+'<span><i style="background:#E2A11B"></i>Namai / tu</span><span><i style="background:#B5332B;border-radius:50%"></i>Tikslas</span><span><i style="background:#1F618D"></i>Stotelė</span><span><i style="background:#fff;border-radius:50%"></i>Lankytina vieta</span>'}
+function openLtMap(){const w=Math.min(860,innerWidth-80),h2=Math.round(w*.76);
+  openModal(mHead('LT','Lietuva','Towns and places. Travel from bus and train stations, by car at the edge of town, or with BlaBla and taxi from your phone.')+`<div class="mbody"><div class="row" style="margin-bottom:10px">${MAP.kind!=='road'?`<button class="chip" onclick="openMap('city')">${esc(MAP.name)}</button>`:''}<button class="chip on">Lietuva</button></div><div class="mapwrap"><canvas id="ltmap" width="${w*2}" height="${h2*2}" style="width:${w}px;height:${h2}px"></canvas></div>
+    <p class="note">Visited: ${Object.keys(P.visited).filter(k=>PLACE(k)).map(k=>PLACE(k).name).join(', ')}</p></div>`,true);drawLithuania($('#ltmap'),MAP.kind==='road'?null:MAP.id)}
 /* ---------- HUD ---------- */
 const fmtTime=()=>{const m=Math.floor(G.time.min);return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
 function partOfDay(){const h=G.time.min/60;return h<5?'Naktis':h<11?'Rytas':h<17?'Diena':h<22?'Vakaras':'Naktis'}
@@ -191,10 +193,10 @@ function hudUpdate(){if(!G)return;const d=doyToDate(G.time.doy);$('#hDate').text
     (P.heat>0?`<div class="stars">Policija ${[1,2,3,4,5].map(i=>`<i class="${i<=Math.ceil(P.heat)?'on':''}">★</i>`).join('')}</div>`:'');
   renderTracker()}
 function renderTracker(){const el=$('#hTrack');const M=G.mission;const S=questSteps();
-  if(M){el.classList.remove('hidden');el.innerHTML=`<div class="qh"><span>Darbas</span><span>${M.timer!==undefined&&M.type!=='race'?Math.ceil(M.timer)+'s':''}</span></div><div class="qt">${esc(M.title)}</div><div class="qs">${esc(M.step||'')}</div>${M.target?`<div class="qd">${esc(M.target.label||'')} · ${Math.round(dist(worldPos().x,worldPos().y,M.target.x,M.target.y)/TS*10)} m</div>`:''}`}
-  else if(G.qi<S.length){const s=S[G.qi],t=s.tg&&s.tg();el.classList.remove('hidden');el.innerHTML=`<div class="qh"><span>${s.ch?esc(s.ch):'Istorija'}</span><span>${G.qi}/${S.length}</span></div><div class="qt">${esc(s.t)}</div><div class="qs">${esc(s.en)}</div>${t?`<div class="qd">${esc(t.name||t.label||'')} · ${Math.round(dist(worldPos().x,worldPos().y,t.x,t.y)/TS*10)} m</div>`:''}`}
+  if(M){el.classList.remove('hidden');el.innerHTML=`<div class="qh"><span>Darbas</span><span>${M.timer!==undefined&&M.type!=='race'?Math.ceil(M.timer)+'s':''}</span></div><div class="qt">${esc(M.title)}</div><div class="qs">${esc(M.step||'')}</div>${M.target?(M.target.map&&M.target.map!==MAP.id?`<div class="qd">Važiuok: ${esc(PLACE(M.target.map).name)}</div>`:`<div class="qd">${esc(M.target.label||'')} · ${Math.round(dist(worldPos().x,worldPos().y,M.target.x,M.target.y)/TS*MPT)} m</div>`):''}`}
+  else if(G.qi<S.length){const s=S[G.qi],t=s.tg&&s.tg();el.classList.remove('hidden');el.innerHTML=`<div class="qh"><span>${s.ch?esc(s.ch):'Istorija'}</span><span>${G.qi}/${S.length}</span></div><div class="qt">${esc(s.t)}</div><div class="qs">${esc(s.en)}</div>${t?`<div class="qd">${esc(t.name||t.label||'')} · ${Math.round(dist(worldPos().x,worldPos().y,t.x,t.y)/TS*MPT)} m</div>`:''}`}
   else el.classList.add('hidden')}
-function questTarget(){if(G.mission&&G.mission.target)return G.mission.target;const S=questSteps();if(G.qi<S.length&&S[G.qi].tg){const t=S[G.qi].tg();if(t)return{x:t.x,y:t.y,label:t.name}}return G.way||null}
+function questTarget(){const okm=t=>t&&(!t.map||t.map===MAP.id);if(G.mission){if(okm(G.mission.target))return G.mission.target;if(G.mission.target)return null}const S=questSteps();if(G.qi<S.length&&S[G.qi].tg){const t=S[G.qi].tg();if(t)return{x:t.x,y:t.y,label:t.name}}return G.way||null}
 function renderHotbar(){const slots=['kibinas','kepta','ledai','bandage','spray','bat'];const extra=Object.keys(P.inv).filter(k=>!slots.includes(k)&&(ITEMS[k].food||ITEMS[k].energy)&&P.inv[k]>0);
   const list=[...slots.filter(k=>has(k)),...extra].slice(0,6);HOTBAR=list;
   $('#hotbar').innerHTML=[0,1,2,3,4,5].map(i=>{const k=list[i];return k?`<button class="slot full" title="${esc(ITEMS[k].n)}" onclick="useItem('${k}')"><span class="k">${i+1}</span>${ITEMS[k].ic}<span class="n">${k==='bat'?(P.gear.bat?'✓':''):P.inv[k]}</span></button>`:`<div class="slot"><span class="k">${i+1}</span></div>`}).join('')}
@@ -202,14 +204,15 @@ let HOTBAR=[];
 function updateZone(){$('#minimap').classList.toggle('hidden',!!SCENE);if(SCENE){const el=$('#hZone');el.classList.remove('hidden');el.innerHTML=`<i style="background:#E2A11B"></i><b>${esc(SCENE.title)}</b> · ${esc(SCENE.sub)}`;return}const d=districtAt(P.x,P.y),c=cityAtPx(P.x,P.y),el=$('#hZone');
   if(d){const o=d.owner?FACTIONS[d.owner]:null;el.classList.remove('hidden');el.innerHTML=`<i style="background:${o?o.color:'#9CA79F'}"></i><b>${esc(d.name)}</b> · ${o?esc(o.name):'neutrali zona'}${G.events&&G.events.some(e=>!e.done&&e.d===d.id)?' · <b style="color:#ff8a7a">UNDER ATTACK</b>':''}`}
   else if(c){el.classList.remove('hidden');el.innerHTML=`<b>${esc(c.name)}</b>`}
-  else{const hw=nearHwy();if(hw){el.classList.remove('hidden');el.innerHTML=`<b>${esc(hw)}</b> · kelias`}else el.classList.add('hidden')}
-  $('#mmT').textContent=c?c.name:(nearHwy()||'Lietuva')}
-function nearHwy(){const x=tx(P.x),y=tx(P.y);if(tileAt(x,y)!==T.HWY&&tileAt(x,y)!==T.BRIDGE)return null;let best=null,bd=1e9;HWYS.forEach(h=>h.pts.forEach(p=>{const d=dist(p[0],p[1],x,y);if(d<bd){bd=d;best=h.name}}));return best}
+  else if(MAP.kind!=='city'){el.classList.remove('hidden');el.innerHTML=`<b>${esc(MAP.name)}</b>`}else el.classList.add('hidden');
+  $('#mmT').textContent=MAP.kind==='road'?roadName(MAP.from,MAP.to):MAP.name}
+function nearHwy(){return MAP.kind==='road'?MAP.name:null}
 
 /* ---------- interaction prompt ---------- */
 let PROMPT=null;
 function findPrompt(){
   if(SCENE)return findPromptI();
+  if(P.inCar&&MAP.kind==='city'&&EXITS.some(e=>dist(e.x,e.y,P.x,P.y)<6*TS))return{key:'E',text:'Išvažiuoti iš miesto · leave town',fn:()=>openTravel('car')};
   if(P.inCar){const gp=POIS.find(q=>q.kind==='garage'&&dist(q.x,q.y,P.x,P.y)<80);if(gp&&Math.hypot(P.inCar.vx,P.inCar.vy)<40)return{key:'E',text:'Autoservisas · drive in (F išlipti)',fn:()=>poiMenu(gp)}}
   const ha=holdAction();if(ha)return{key:'E',text:ha.label,hold:ha};
   if(P.inCar){return{key:'F',text:'Išlipti · get out'}}
@@ -251,9 +254,9 @@ const ENGINE={target:0};
 /* =====================================================================
    SAVE / LOAD
    ===================================================================== */
-const SAVE_KEY='lietuva-gyvenimas-v1';
+const SAVE_KEY='lietuva-gyvenimas-v2';
 function saveGame(quiet){if(!G)return;try{const p=Object.assign({},P);delete p.inCar;const cars=P.cars.map((oc,i)=>{const e=ownedCarEntity(i);if(e)oc.pos={x:e.x,y:e.y,ang:e.ang};return oc});p.cars=cars;
-  p.x=worldPos().x;p.y=worldPos().y;
+  p.x=worldPos().x;p.y=worldPos().y;p.map=MAP.kind==='road'?MAP.to:MAP.id;if(MAP.kind==='road'){p.x=null}
   localStorage.setItem(SAVE_KEY,JSON.stringify({G:Object.assign({},G,{p:undefined}),p,owners:DISTRICTS.map(d=>d.owner),decor:DECOR.filter(d=>d.k==='tag')}));if(!quiet)toast('💾','Išsaugota','Saved in this browser.')}catch(e){if(!quiet)log('Could not save in this browser (storage blocked).','bad')}}
 function loadSaved(){try{const s=localStorage.getItem(SAVE_KEY);return s?JSON.parse(s):null}catch(e){return null}}
 
@@ -287,10 +290,8 @@ function drawPreview(){const c=$('#pcan'),g=c.getContext('2d');g.clearRect(0,0,c
 /* =====================================================================
    START A LIFE
    ===================================================================== */
-function chooseHome(cityId,cls){const c=cityById(cityId);const band={low:[.6,1],mid:[.45,.85],upper:[.25,.5],rich:[.78,1.2]}[cls];const kinds={low:['sov'],mid:['sov'],upper:['office','sov','old'],rich:['house']}[cls];
-  return freeBuilding(c,band[0],band[1],kinds)||freeBuilding(c,0,1.3,null)||kiosk(c)||BUILDINGS.find(b=>b.city===cityId&&!b.landmark)}
 function newLife(){const ai=AGES.findIndex(a=>a.a===CR.age),cls=CLASSES.find(c=>c.id===CR.cls),c=cityById(CR.city);
-  const sch=pick([0,1]);const b=chooseHome(CR.city,CR.cls);const hp=addPOI(c,'home','Namai',b,{});
+  const sch=pick([0,1]);loadMap(CR.city);const b=chooseHome(CR.city,CR.cls);const hp=addPOI(c,'home','Namai',b,{});hp.id='home_'+CR.city;
   P={name:CR.name.trim()||'Lukas',surname:CR.surname.trim()||'Kazlauskas',sex:CR.sex,age:CR.age,city:CR.city,cls:CR.cls,parent:CR.parent,job:CR.age>=13?CR.job:'student',
     look:{skin:CR.skin,hair:CR.hair,outfit:CR.outfit,color:CR.color,cap:CR.cap},money:cls.money[ai],hp:100,maxHp:100+(CR.parent==='army'?25:0),energy:90,food:70,mood:60,heat:0,fight:CR.age>=16?3:CR.age>=13?2:1,
     faction:null,rep:{},school:'sch_'+CR.city+sch,inv:{kibinas:1},gear:{bat:false},cars:[],home:hp.id,homeB:b.id,visited:{},landmarks:{},stats:{},goals:{},
@@ -303,14 +304,15 @@ function newLife(){const ai=AGES.findIndex(a=>a.a===CR.age),cls=CLASSES.find(c=>
 function spawnStartVehicles(){const cls=CLASSES.find(c=>c.id===P.cls);const h=POIS.find(p=>p.id===P.home);
   if(P.age<16&&!P.cars.some(c=>c.model==='bike'))P.cars.push({model:'bike',color:'#C0392B',tune:{},hp:100});
   if(P.age>=16&&!P.cars.some(c=>c.model!=='bike')){const m=P.parent==='mech'?(cls.car&&CARS[cls.car].price>2300?cls.car:'e36'):cls.car;if(m)P.cars.push({model:m,color:CARS[m].col,tune:{},hp:100})}
-  P.cars.forEach((oc,i)=>{if(ownedCarEntity(i))return;let x,y,a=0;if(oc.pos){x=oc.pos.x;y=oc.pos.y;a=oc.pos.ang}else{[x,y]=freeSpotNear(h.x+(i*40),h.y+30,(t,X,Y)=>(oc.model==='bike'?WALKABLE[t]:DRIVE[t]||t===T.LOT)&&dist(X*TS,Y*TS,h.x,h.y)>24)}spawnOwnedCar(i,x,y,a)})}
+  P.cars.forEach((oc,i)=>{if(!oc.map)oc.map=P.city;if(oc.map!==MAP.id||ownedCarEntity(i))return;const hh=h||{x:P.x,y:P.y};let x,y,a=0;if(oc.pos){x=oc.pos.x;y=oc.pos.y;a=oc.pos.ang}else{[x,y]=freeSpotNear(hh.x+(i*40),hh.y+30,(t,X,Y)=>(oc.model==='bike'?WALKABLE[t]:DRIVE[t]||t===T.LOT)&&dist(X*TS,Y*TS,hh.x,hh.y)>24)}spawnOwnedCar(i,x,y,a)})}
 function loadLife(s){s.owners.forEach((o,i)=>{if(DISTRICTS[i])DISTRICTS[i].owner=o});
   P=s.p;G=s.G;G.p=undefined;P.inCar=null;P.punchCd=0;P.punchT=0;P.inv_t=0;P.hitFlash=0;
-  const c=cityById(P.city);let hb=BUILDINGS[P.homeB];if(!hb||hb.poi){hb=chooseHome(P.city,P.cls)}const hp=addPOI(c,'home','Namai',hb,{});hp.id=P.home;P.homeB=hb.id;
-  (s.decor||[]).forEach(d=>DECOR.push(d));spawnStartVehicles();startGame(false)}
+  const m=P.map&&PLACE(P.map)?P.map:P.city;loadMap(m);ensureHome();
+  if(P.x==null||!inb(tx(P.x),tx(P.y))||SOLID_FOOT[tileAt(tx(P.x),tx(P.y))]){const sp=arrivalSpot('bus');P.x=sp.x;P.y=sp.y}
+  (s.decor||[]).filter(d=>!d.map||d.map===MAP.id).forEach(d=>DECOR.push(d));spawnStartVehicles();startGame(false)}
 function startGame(isNew){refreshOverlay();$('#title').classList.add('hidden');$('#creator').classList.add('hidden');$('#hud').classList.remove('hidden');
   if(matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
-  running=true;WINTER=null;seasonCheck();setTimeout(()=>{syncCrew();syncDog()},50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
+  running=true;WINTER=null;seasonCheck();setTimeout(()=>{syncCrew();syncDog()},50);LASTCITY=MAP.id;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
   if(isNew){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls);const sch=FACTIONS[P.school];
     const intro={6:`Tomorrow is your first day at ${sch.name}. Mum already bought the flowers for the teacher. Today the yard is yours: bottles to collect, a taromatas that pays 10 cents each, and an ice cream van somewhere.`,
       13:`Rugsėjo 1-oji. A new school year at ${sch.name}. The older kids say the ${FACTIONS[pick(Object.keys(FACTIONS).filter(k=>FACTIONS[k].city===P.city&&FACTIONS[k].type==='school'&&k!==P.school))||P.school].short} crowd are planning something. ${P.city==='vilnius'?'And everyone cool hangs out at the White Bridge.':''}`,

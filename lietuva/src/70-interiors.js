@@ -198,8 +198,9 @@ function fadeScreen(){const d=document.createElement('div');d.style.cssText='pos
 function garageCar(p){if(P.inCar&&P.inCar.owned!==undefined)return P.inCar;let best=null,bd=10*TS;ENT.cars.forEach(c=>{if(c.owned===undefined)return;const d=dist(c.x,c.y,p.x,p.y);if(d<bd){bd=d;best=c}});return best}
 
 /* ---------- enter / leave ---------- */
-const TPL={fuel:tplFuel,home:tplHome,shop:tplShop,kebab:tplKebab,cafe:tplCafe,market:tplMarket,bar:tplBar,garage:tplGarage,police:tplPolice,hospital:tplHospital,gym:tplGym,school:tplSchool,office:tplOffice,bus:tplBus,hq:tplHQ,landmark:tplLandmark};
+const TPL={train:p=>{const s=tplBus(p);s.sub='Geležinkelio stotis';s.objs.forEach(o=>{if(o.k==='ticket'||o.k==='depboard'){o.act=()=>openTravel('train',p);o.label=o.k==='ticket'?'Bilietų kasa · train tickets':'Traukiniai · departures'}});return s},fuel:tplFuel,home:tplHome,shop:tplShop,kebab:tplKebab,cafe:tplCafe,market:tplMarket,bar:tplBar,garage:tplGarage,police:tplPolice,hospital:tplHospital,gym:tplGym,school:tplSchool,office:tplOffice,bus:tplBus,hq:tplHQ,landmark:tplLandmark};
 function openPOI(p){
+  if(POI_HANDLERS[p.kind])return POI_HANDLERS[p.kind](p);
   if(!isOpen(p.kind)&&!(p.kind==='garage'&&G.biz&&G.biz.includes(p.id))){log(closedMsg(p.kind),'bad');return}
   if(p.kind==='landmark'&&p.hq)return poiMenu(p);
   const f=TPL[p.kind];const s=f&&!P.inCar?f(p):null;if(!s)return poiMenu(p);

@@ -4,7 +4,7 @@
    A Lithuania life simulator. Fictional role-play. Nothing here is advice.
    ===================================================================== */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const TS=32, W=900, H=700;
+const TS=32;let W=900,H=700;
 const rnd=(a=1,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
 const ri=(a,b)=>Math.floor(rnd(a,b+1));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -28,63 +28,61 @@ function shade(hex,f){let n=parseInt(hex.slice(1),16),r=n>>16,g=n>>8&255,b=n&255
   return '#'+((1<<24)|(r<<16)|(g<<8)|b|0).toString(16).slice(1)}
 
 /* ---------- tiles ---------- */
-const T={GRASS:0,FOREST:1,SEA:2,WATER:3,SAND:4,ROAD:5,WALK:6,BUILD:7,PARK:8,COBBLE:9,BRIDGE:10,FIELD:11,HWY:12,LOT:13,DUNE:14,YARD:15,ABROAD:16,WBRIDGE:17,PIER:18};
+const T={GRASS:0,FOREST:1,SEA:2,WATER:3,SAND:4,ROAD:5,WALK:6,BUILD:7,PARK:8,COBBLE:9,BRIDGE:10,FIELD:11,HWY:12,LOT:13,DUNE:14,YARD:15,ABROAD:16,WBRIDGE:17,PIER:18,RAIL:19};
 const SOLID_FOOT=new Uint8Array(20),SOLID_CAR=new Uint8Array(20),DRIVE=new Uint8Array(20),WALKABLE=new Uint8Array(20);
 [T.SEA,T.WATER,T.BUILD,T.ABROAD].forEach(t=>{SOLID_FOOT[t]=1;SOLID_CAR[t]=1});
 SOLID_CAR[T.FOREST]=1;
 [T.ROAD,T.COBBLE,T.BRIDGE,T.HWY,T.LOT].forEach(t=>DRIVE[t]=1);
-[T.WALK,T.COBBLE,T.PARK,T.YARD,T.WBRIDGE,T.PIER,T.LOT].forEach(t=>WALKABLE[t]=1);
+[T.WALK,T.COBBLE,T.PARK,T.YARD,T.WBRIDGE,T.PIER,T.LOT,T.RAIL].forEach(t=>WALKABLE[t]=1);
 
 /* ---------- cities ---------- */
 const CITIES=[
  {id:'vilnius',name:'Vilnius',loc:'Vilniuje',gen:'Vilniaus',code:'VLN',lon:25.28,lat:54.69,R:62,
   blurb:'The capital. Baroque old town, glass towers across the Neris, and the White Bridge where the Centras kids hang out.',
-  districts:['Senamiestis','Šnipiškės','Žirmūnai','Naujininkai','Lazdynai','Antakalnis']},
+  districts:CITYDATA.vilnius.districts.map(d=>d.name)},
  {id:'kaunas',name:'Kaunas',loc:'Kaune',gen:'Kauno',code:'KNS',lon:23.90,lat:54.90,R:52,
   blurb:'Basketball city. Laisvės alėja, the Žalgiris arena, and a castle where the Neris meets the Nemunas.',
-  districts:['Centras','Šilainiai','Dainava','Aleksotas','Vilijampolė']},
+  districts:CITYDATA.kaunas.districts.map(d=>d.name)},
  {id:'klaipeda',name:'Klaipėda',loc:'Klaipėdoje',gen:'Klaipėdos',code:'KLP',lon:21.20,lat:55.71,R:34,
   blurb:'The only seaport. Cranes, the sailing ship Meridianas, and the ferry over to the Curonian Spit.',
-  districts:['Senamiestis','Uostas','Smeltė','Bandužiai']},
+  districts:CITYDATA.klaipeda.districts.map(d=>d.name)},
  {id:'siauliai',name:'Šiauliai',loc:'Šiauliuose',gen:'Šiaulių',code:'ŠIA',lon:23.32,lat:55.93,R:34,
   blurb:'The city of the sun. The Hill of Crosses stands in the fields to the north.',
-  districts:['Centras','Lieporiai','Dainai','Gubernija']},
+  districts:CITYDATA.siauliai.districts.map(d=>d.name)},
  {id:'panevezys',name:'Panevėžys',loc:'Panevėžyje',gen:'Panevėžio',code:'PNV',lon:24.36,lat:55.73,R:34,
   blurb:'Aukštaitija\'s capital, theatre town, and home of a lot of very loud tuned cars.',
-  districts:['Centras','Rožynas','Kniaudiškiai','Pilėnai']},
+  districts:CITYDATA.panevezys.districts.map(d=>d.name)},
  {id:'alytus',name:'Alytus',loc:'Alytuje',gen:'Alytaus',code:'ALT',lon:24.05,lat:54.40,R:28,
   blurb:'Dzūkija, pine forest and the Nemunas bend. The old parachute tower watches over the town.',
-  districts:['Centras','Dainava','Vidzgiris','Putinai']},
+  districts:CITYDATA.alytus.districts.map(d=>d.name)},
  {id:'palanga',name:'Palanga',loc:'Palangoje',gen:'Palangos',code:'PLG',lon:21.10,lat:55.92,R:20,
   blurb:'Summer capital. Basanavičiaus street, the long pier and amber shops everywhere.',
-  districts:['Centras','Vanagupė','Kunigiškiai']},
+  districts:CITYDATA.palanga.districts.map(d=>d.name)},
  {id:'nida',name:'Nida',loc:'Nidoje',gen:'Nidos',code:'NID',lon:21.02,lat:55.31,R:14,
   blurb:'Fishing village on the Curonian Spit, between the sea and the lagoon, under the great Parnidis dune.',
-  districts:['Nida','Skruzdynė']},
+  districts:CITYDATA.nida.districts.map(d=>d.name)},
 ];
-CITIES.forEach((c,i)=>{c.i=i;[c.cx,c.cy]=geo(c.lon,c.lat)});
-// hand placement fixes so coastal towns sit on land
-(()=>{const C=id=>CITIES.find(c=>c.id===id);C('klaipeda').cx=80;C('palanga').cx=76;C('palanga').cy=147;C('nida').cx=52;C('nida').cy=322})();
+CITIES.forEach((c,i)=>{c.i=i;c.cx=0;c.cy=0;c.R=40;c.loc=c.loc||c.name});
 const cityById=id=>CITIES.find(c=>c.id===id);
 
 /* ---------- factions ---------- */
 // league: street (gangs, cartels, crews fight over districts), auto (clubs), school
 const FACTIONS={
  centras:{name:'Centro bachūrai',short:'Centras',type:'crew',league:'street',city:'vilnius',color:'#E2A11B',minAge:13,boss:'Rokas „Tiltas“',
-   desc:'The Centras kids. Skate decks, cheap energy drinks and the White Bridge every evening. Not a real gang, but nobody from Naujininkai walks the bridge alone.'},
- gopai:{name:'Naujininkų gopai',short:'Gopai',type:'gang',league:'street',city:'vilnius',color:'#2E3236',minAge:16,boss:'Valdas „Sėklos“',
-   desc:'Tracksuits, sunflower seeds and squats behind the panel blocks. Old-school neighbourhood gang that runs the south side.'},
- vilkai:{name:'Vilijampolės vilkai',short:'Vilkai',type:'gang',league:'street',city:'kaunas',color:'#7A4B2A',minAge:16,boss:'Arūnas „Vilkas“',
+   desc:'Centriniai: the White Bridge crowd. Oversized hoodies, rap on a speaker, skateboards, smoking and cheap drinks bought from barygos. Not a real gang, but no marozas walks the bridge alone.'},
+ gopai:{name:'Naujininkų marozai',short:'Marozai',type:'gang',league:'street',city:'vilnius',color:'#2E3236',minAge:16,boss:'Valdas „Sėklos“',
+   desc:'Marozai: matching Adidas tracksuits, silver chains, sunflower seeds and squats by the kiosk. They talk Russian among themselves and think they are hard gangsters. They run the panel blocks of Naujininkai and Žirmūnai.',maroz:1},
+ vilkai:{maroz:1,name:'Vilijampolės vilkai',short:'Vilkai',type:'gang',league:'street',city:'kaunas',color:'#7A4B2A',minAge:16,boss:'Arūnas „Vilkas“',
    desc:'The wolves of Vilijampolė. They say they were here before the mikrorajonai were built.'},
- ziurkes:{name:'Uosto žiurkės',short:'Žiurkės',type:'gang',league:'street',city:'klaipeda',color:'#4C6A86',minAge:16,boss:'Kęstas „Krantas“',
+ ziurkes:{maroz:1,name:'Uosto žiurkės',short:'Žiurkės',type:'gang',league:'street',city:'klaipeda',color:'#4C6A86',minAge:16,boss:'Kęstas „Krantas“',
    desc:'Dock rats. They know which container is which, and who to pay.'},
- sakalai:{name:'Šiaulių šakalai',short:'Šakalai',type:'gang',league:'street',city:'siauliai',color:'#7E4F96',minAge:16,boss:'Gintas „Saulė“',
+ sakalai:{maroz:1,name:'Šiaulių šakalai',short:'Šakalai',type:'gang',league:'street',city:'siauliai',color:'#7E4F96',minAge:16,boss:'Gintas „Saulė“',
    desc:'Jackals of Šiauliai. Small city, long memory.'},
- broliai:{name:'Rožyno broliai',short:'Broliai',type:'gang',league:'street',city:'panevezys',color:'#A33B3B',minAge:16,boss:'Dainius „Brolis“',
+ broliai:{maroz:1,name:'Rožyno broliai',short:'Broliai',type:'gang',league:'street',city:'panevezys',color:'#A33B3B',minAge:16,boss:'Dainius „Brolis“',
    desc:'Brothers of Rožynas. Half of them are actually cousins.'},
- pacanai:{name:'Dainavos pacanai',short:'Pacanai',type:'gang',league:'street',city:'alytus',color:'#5E7A2E',minAge:16,boss:'Mindaugas „Dzūkas“',
+ pacanai:{maroz:1,name:'Dainavos pacanai',short:'Pacanai',type:'gang',league:'street',city:'alytus',color:'#5E7A2E',minAge:16,boss:'Mindaugas „Dzūkas“',
    desc:'Dzūkija lads from the Dainava blocks. Polite to grandmothers, rude to everyone else.'},
- vanagai:{name:'Kurorto vanagai',short:'Vanagai',type:'gang',league:'street',city:'palanga',color:'#2A7C79',minAge:16,boss:'Tadas „Vanagas“',
+ vanagai:{maroz:1,name:'Kurorto vanagai',short:'Vanagai',type:'gang',league:'street',city:'palanga',color:'#2A7C79',minAge:16,boss:'Tadas „Vanagas“',
    desc:'Seaside hawks. Quiet all winter, everywhere all summer.'},
  pasienio:{name:'Pasienio kartelis',short:'Pasienio',type:'cartel',league:'street',city:'alytus',color:'#D2601A',minAge:18,boss:'„Generolas“',
    desc:'The Border Cartel. Contraband through the forests from the east: trucks, drones, even weather balloons. Runs like a business, punishes like a cartel.'},
@@ -119,9 +117,9 @@ Object.entries(SCHOOLS).forEach(([cid,arr])=>arr.forEach(([n,col],k)=>{
   desc:'Your school yard is your territory. Tag the rival school, win the yard scuffles, keep your hoop.',school:k}}));
 // initial district owners (index matches CITIES[].districts)
 const START_OWNERS={
- vilnius:['centras','centras','gopai','gopai','pasienio',null],
- kaunas:[null,'vilkai','vilkai','pasienio','vilkai'],
- klaipeda:[null,'uosto','ziurkes','ziurkes'],
+ vilnius:[null,null,'centras','pasienio','centras','gopai',null,'gopai',null],
+ kaunas:[null,null,null,'vilkai','pasienio','vilkai'],
+ klaipeda:[null,'ziurkes','uosto','ziurkes'],
  siauliai:[null,'sakalai','sakalai','uosto'],
  panevezys:[null,'broliai','broliai','broliai'],
  alytus:[null,'pacanai','pasienio','pasienio'],
@@ -152,6 +150,7 @@ const CARS={
  x5:{name:'BMW X5 E53',max:490,acc:265,grip:6.6,len:48,wid:23,price:9500,drive:'awd',col:'#202428'},
  m5:{name:'BMW M5 E60',max:620,acc:390,grip:4.6,len:48,wid:21,price:24000,drive:'rwd',col:'#3B4A5A'},
  police:{name:'Škoda Octavia (Policija)',max:540,acc:330,grip:7.4,len:46,wid:21,drive:'fwd',col:'#F4F4F0',police:true},
+ troll:{name:'Troleibusas',max:260,acc:110,grip:8,len:84,wid:24,drive:'rwd',col:'#C8202E',bus:true,troll:true},
  bus:{name:'Autobusas',max:300,acc:120,grip:8,len:90,wid:26,drive:'rwd',col:'#E8C547',bus:true},
 };
 const TRAFFIC_MODELS=['golf','golf','passat','passat','audi80','lada','w124','e39','prius','prius','x5','e36','e46'];
