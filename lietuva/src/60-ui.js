@@ -23,6 +23,7 @@ function poiMenu(p){
   if(p.kind==='ferry')return openTravel('ferry',p);
   const sh=SHOPS[p.kind];
   if(sh){let h=mHead(p.kind==='shop'?'M':p.kind==='kebab'?'K':p.kind==='market'?'T':'C',esc(p.name),c.name)+'<div class="mbody">';
+    if(p.kind==='kiosk')h+=act('Dirbti kioske','A five-hour shift behind the counter. Know who not to sell to.','Dirbti',()=>{closeModal();kioskShift()});
     if(p.kind==='kiosk')h+=act('🚬 Cigaretės','Legal cigarettes, €5.50. ID checked.','€5,50',()=>{if(P.age<18){log('Kioskininkė: „Parodyk pasą! Kiek tau metų?!“ No sale.','bad');setMood(-2);return}if(pay(5.5)){give('cigs',1)}});
     if(p.kind==='shop'){const b=has('bottle');h+=act('Taromatas',`Return empty bottles, 10 ct each. You have ${b}.`,`Priduoti (${eur(b*.1)})`,()=>{const n=has('bottle');if(!n)return;give('bottle',-n);P.money+=n*.1;P.stats.bottles=(P.stats.bottles||0)+n;SND.coin();G.flags.tara=true;
       const M=G.mission;if(M&&M.type==='bottles'){M.pay=1;missionDone(`${n} bottles`)}log(`Taromatas: ${n} × €0.10`,'good');poiMenu(p)},!b)}
@@ -87,6 +88,7 @@ function openHQ(p){const fid=p.hq,f=FACTIONS[fid];G.flags.hqVisit=true;const min
   h+=`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Išeiti</button></div>`;openModal(h)}
 function openSchool(p){const f=FACTIONS[p.fac],mineSchool=P.school===p.fac,h0=G.time.min/60,wd=G.time.dow>=1&&G.time.dow<=5;G.flags.schoolVisit=G.flags.schoolVisit||mineSchool;
   let h=mHead('M',esc(p.name),mineSchool?'Tavo mokykla · your school':'Rival school')+'<div class="mbody">';
+  if(mineSchool&&examsAvailable(p)){h+=act('Šimtadienis','100 days before the final exams: the school party.','Švęsti',()=>{closeModal();simtadienis()},!!G.flags.simt);h+=act('Brandos egzaminai','The final school exams: 5 questions, 3 to pass.','Laikyti',()=>{closeModal();takeExams()})}
   if(mineSchool&&P.age<19){h+=act('Eiti į pamokas','Attend classes until 14:00. Tamo stays happy, parents keep paying allowance.','Į pamokas',()=>{if(!(wd&&h0>=7.5&&h0<11)){log('Lessons run on weekdays, arrive between 7:30 and 11:00.','bad');return}skipHours(14-h0);G.attended=true;P.energy-=15;setMood(-4);P.money+=0;log(pick(['Math test: 8/10. Tamo: „Puiku!“','History: the Grand Duchy reached the Black Sea. Cool.','PE: you won the basketball game.','Lithuanian: a whole lesson about Donelaitis.']),'good');closeModal()},false);
     h+=act('Mėtyti į krepšį','Shoot hoops in the yard. Timing game.','Žaisti',()=>openHoops((s)=>{if(P.faction===p.fac)gainRep(p.fac,s)}));
     if(P.age>=13){const mine=P.faction===p.fac;if(mine){h+=`<p><span class="pill g">Kiemo gauja</span> Rank <b>${rankName(p.fac)}</b> · rep ${repOf(p.fac)}</p>`;availableJobs().filter(j=>j.fac===p.fac).forEach(j=>h+=act(j.title,j.desc+` <b>${j.pay}</b>`,'Imtis',()=>{closeModal();startMission(j.type)}))}
@@ -124,7 +126,7 @@ function openQuests(){const S=baseSteps();const full=questSteps();const CH=G.cha
   if((G.chDone||[]).length)h+=`<p class="note">Finished chapters: ${(G.chDone).map(k=>esc(CHAPTERS[k].t)).join(', ')}</p>`;
   h+=`<div class="quest"><h4>Tikslai</h4><div class="sub">Goals</div><ol>${GOALS.map(g=>`<li class="${P.goals[g.id]?'done':''}">${esc(g.t)} <span class="note">${esc(g.en)}${g.prog?' · '+g.prog():''}</span></li>`).join('')}</ol></div>`;
   openModal(h+'</div>')}
-function openPhone(){const jobs=availableJobs();let h=mHead('T','Telefonas',`${DAYS[G.time.dow]} · ${fmtTime()} · ${eur(P.money)}`)+'<div class="mbody">';
+function openPhoneJobs(){const jobs=availableJobs();let h=mHead('T','Telefonas',`${DAYS[G.time.dow]} · ${fmtTime()} · ${eur(P.money)}`)+'<div class="mbody">'+phoneTabs('darbai');
   h+=`<h3 style="font:800 20px var(--display);margin:0 0 8px">Kelionės · travel</h3><div class="row" style="margin-bottom:12px"><button class="btn sm" onclick="openTravel('blabla')">BlaBla</button><button class="btn sm" onclick="openTravel('taxi')">Taksi</button>${P.inCar?`<button class="btn sm" onclick="openTravel('car')">Savo mašina</button>`:''}<button class="btn sm ghost" onclick="openMap('lt')">Žemėlapis</button></div>`;
   h+='<h3 style="font:800 20px var(--display);margin:0 0 8px">Darbai · jobs</h3>';
   if(!jobs.length)h+='<p class="note">No jobs right now.</p>';
@@ -136,7 +138,7 @@ function openPhone(){const jobs=availableJobs();let h=mHead('T','Telefonas',`${D
 function openSelf(){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls),par=PARENTS.find(x=>x.id===P.parent),job=JOBS.find(x=>x.id===P.job);
   let h=mHead('A',esc(P.name+' '+P.surname),`${P.age} m. · ${c.name} · ${cls.t}`)+'<div class="mbody"><div class="grid2"><dl class="kv">';
   h+=`<dt>Tėvai</dt><dd>${par.t} (${par.en})</dd><dt>Užsiėmimas</dt><dd>${job?job.t:'Vaikas'}</dd><dt>Namai</dt><dd>${cls.home}</dd><dt>Gauja / klubas</dt><dd>${P.faction?esc(FACTIONS[P.faction].name)+' · '+rankName(P.faction):'Niekas · none'}</dd>`;
-  h+=`<dt>Muštynės</dt><dd>${P.fight}/10</dd><dt>Nokautai</dt><dd>${P.stats.ko||0}</dd><dt>Geriausias šoninis</dt><dd>${P.stats.bestDrift||0}</dd><dt>Buteliai</dt><dd>${P.stats.bottles||0}</dd><dt>Miestai</dt><dd>${Object.keys(P.visited).map(k=>cityById(k).name).join(', ')}</dd></dl>`;
+  h+=`<dt>Stilius</dt><dd>${STYLE_NAME[styleOf()]}</dd><dt>Teisės</dt><dd>${P.license?'B kategorija':'Neturi'}</dd><dt>Sekėjai</dt><dd>${P.followers||0}</dd><dt>Muštynės</dt><dd>${P.fight}/10</dd><dt>Nokautai</dt><dd>${P.stats.ko||0}</dd><dt>Geriausias šoninis</dt><dd>${P.stats.bestDrift||0}</dd><dt>Buteliai</dt><dd>${P.stats.bottles||0}</dd><dt>Miestai</dt><dd>${Object.keys(P.visited).map(k=>cityById(k).name).join(', ')}</dd></dl>`;
   h+='<div><b style="font:800 18px var(--display)">Reputacija</b>'+(Object.keys(P.rep).filter(k=>P.rep[k]&&FACTIONS[k]).map(k=>`<div class="bar"><span>${esc(FACTIONS[k].short)}</span><span>${rankName(k)} · ${P.rep[k]}</span></div>`).join('')||'<p class="note">No reputation yet.</p>');
   h+='<b style="font:800 18px var(--display);display:block;margin-top:10px">Kronika</b>'+G.hist.slice(-8).reverse().map(t=>`<p class="note" style="margin:0 0 4px">${esc(t)}</p>`).join('')+'</div></div></div>';
   openModal(h+`<div class="mfoot"><button class="btn ghost" onclick="openCars()">Transportas</button><button class="btn" onclick="closeModal()">Gerai</button></div>`)}
@@ -156,6 +158,7 @@ function openGloss(){let h=mHead('Aa','Žodynėlis','Little dictionary of words 
 function openMenu(){openModal(mHead('≡','Meniu','')+`<div class="mbody">${act('Išsaugoti','Save to this browser.','Saugoti',()=>{saveGame();log('Saved.','good')})}
   ${act('Muzika',`Background folk tune: ${MUSIC.on?'on':'off'}.`,MUSIC.on?'Išjungti':'Įjungti',()=>{MUSIC.on=!MUSIC.on;openMenu()})}
   ${act('Valdymas','WASD/arrows move · Shift sprint (turbo in tuned cars) · E talk/enter/hold to tag · F car in/out · J or click punch · Space handbrake · H horn · M map · Q quests · T phone · C self · I items · L dictionary · 1–6 hotbar','—',()=>{},true)}
+  ${act('Epilogas','End this life here and see the ending you earned.','Epilogas',()=>epilogue())}
   ${act('Į pradžią','Back to the title screen. Unsaved progress since the last save is lost.','Išeiti',()=>{saveGame();location.reload()})}</div>`)}
 
 /* ---------- map ---------- */

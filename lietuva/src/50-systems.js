@@ -26,7 +26,7 @@ function tickTime(dt){G.time.min+=dt*2;if(G.time.min>=1440){G.time.min-=1440;new
   if(P.hp<P.maxHp&&P.food>40)P.hp=Math.min(P.maxHp,P.hp+dt*.4);
   if(P.hp<=0)wipeOut()}
 function newDay(){G.time.day++;G.time.doy=(G.time.doy+1)%365;G.time.dow=(G.time.dow+1)%7;
-  seasonCheck();holidayCheck();if(G.flags.hangover===G.time.day){P.energy=Math.max(0,P.energy-30);setMood(-10);log('Pagirios. Your head is splitting. Never again (you say every time).','bad')}G.weather=Math.random()<.22?(WINTER?'Sniegas':'Lietus'):Math.random()<.4?'Debesuota':'Giedra';
+  seasonCheck();holidayCheck();armyCheck();familyEvent();if(G.flags.hangover===G.time.day){P.energy=Math.max(0,P.energy-30);setMood(-10);log('Pagirios. Your head is splitting. Never again (you say every time).','bad')}G.weather=Math.random()<.22?(WINTER?'Sniegas':'Lietus'):Math.random()<.4?'Debesuota':'Giedra';
   const b=doyToDate(G.time.doy);if(b.m===P.bm&&b.d===P.bd){P.age++;toast('🎂',`Gimtadienis! ${P.age} m.`,'Happy birthday. Su gimtadieniu!');chron(`Turned ${P.age}.`)}
   // allowance
   const cls=CLASSES.find(c=>c.id===P.cls);if(P.age<24){let a=cls.allow[P.age<10?0:P.age<16?1:2];if(P.parent==='office')a*=1.2;if(G.skipped>=3){a=Math.round(a*.3);log('Tamo told your parents you keep skipping school. Allowance cut.','bad')}P.money+=a;log(`Parents gave you pocket money: ${eur(a)}`,'good')}
@@ -54,7 +54,7 @@ function busted(){BUST.t=0;leaveScene(true,true);exitCar(true);const st=respawnA
   const fine=Math.round(P.money*.15)+P.heat*25,lost=has('kontra');P.money=Math.max(0,P.money-fine);if(lost)give('kontra',-lost);
   P.heat=0;G.time.min+=240;setMood(-12);
   ENT.cars=ENT.cars.filter(c=>c.ai!=='police');ENT.peds.forEach(e=>{if(e.kind==='police')e.angry=false});
-  const mf=myFac();if(mf&&mf.league==='street')gainRep(P.faction,5);
+  const mf=myFac();if(mf&&mf.league==='street')gainRep(P.faction,5);setTimeout(prisonCheck,1500);
   openModal(mHead('★','Areštinė','Busted. Sulaikytas.')+`<div class="mbody scene"><p>A few hours in a cell at the ${esc(st.name)}. An officer reads you a lecture about wasting your life.</p><p>Fine: <b>${eur(fine)}</b>.${lost?` Contraband confiscated: <b>${lost}</b> boxes.`:''}${mf&&mf.league==='street'?' You kept your mouth shut. Your crew respects that.':''}</p></div><div class="mfoot"><button class="btn" onclick="closeModal()">Išeiti</button></div>`);
   missionFail('Busted by the police.')}
 
@@ -63,7 +63,7 @@ function nearestCar(r){let best=null,bd=r;for(const c of ENT.cars){if(c.ai==='po
 function enterCar(c){const m=CARS[c.model];
   if(m.kind!=='bike'&&P.age<16){log('Per jaunas vairuoti. You are too young to drive a car. Take the bus or a bike.','bad');return}
   if(m.bus)return;
-  if(c.owned===undefined){
+  if(c.owned===undefined&&!c.exam){
     if(c.ai==='traffic'||c.ai==='hwy'){const drv=spawnPed('civ',c.x+24,c.y,null);drv.state='flee';drv.t=5;bubble(drv,'Vagis!');crime(1,'Carjacking')}
     else if(Math.random()<.5)crime(1,'Car theft');
     log(`Stole a ${m.name}. It is not yours, police may notice.`,'amb')}
@@ -90,6 +90,7 @@ function availableJobs(){const out=[],c=curCity(),mf=myFac(),age=P.age;
   if(age<13){out.push({type:'bottles',title:'Butelių medžioklė',desc:'Collect 10 empty bottles around the yards and return them at a taromatas (Maksi shop). 10 ct each.',pay:'€1 + 10 ct/bottle'});
     out.push({type:'errand',title:'Mamos užduotis',desc:'Mum needs kibinai from the Maksi shop. Buy one and bring it home.',pay:'€3 + ice cream money'})}
   if(age>=13)out.push({type:'courier',title:'Kurjeris: cepelinai',desc:'Pick up an order from a café and deliver it before it gets cold. Bike or car.',pay:'€8–18'});
+  if(age>=18)out.push({type:'norway',title:'Statybos Norvegijoje',desc:'Three months on a building site near Bergen. Big money, lots of rain.',pay:'€6,400'});
   if(age>=16&&P.cars.some(o=>o.model!=='bike'))out.push({type:'taxi',title:'Taksi programėlė',desc:'Pick up a passenger and drive them across town. Faster = better tip.',pay:'€12–35'});
   if(mf){const fid=P.faction,r=rankIdx(fid);
     if(mf.league==='street'){
@@ -123,6 +124,7 @@ function startMission(type){if(G.mission){log('Finish or cancel your current job
   case 'turf':{const d=rivalDistrict()||pick(DISTRICTS.filter(d=>d.city===MAP.id&&d.cnt&&!d.owner&&!d.peace));if(!d)return;M.title='Užimti teritoriją';M.d=d.id;M.target={x:d.cx*TS,y:d.cy*TS,label:d.name};M.step=`Take ${d.name} (${cityById(d.city).name})`;M.pay=150;M.rep=25;break}
   case 'race':startRace(M,r);return;
   case 'hwyrace':startRoadRace(r);return;
+  case 'norway':norwayJob();return;
   case 'bossrace':startBossRace(r);return;
   case 'driftc':M.title='Šoninio iššūkis';M.need=6000;M.got=0;M.timer=60;M.step='Drift! 6,000 points';M.pay=60+r*25;M.rep=15;if(!P.inCar){log('Get in a car first (F).','bad');return}break;
   case 'meet':{const spot=POIS.find(p=>p.meet===fid)||POIS.find(p=>p.meet);M.title='Naktinis susitikimas';M.target={x:spot.x,y:spot.y,label:spot.name};M.step='Bring your car to the meet (21:00–03:00)';break}

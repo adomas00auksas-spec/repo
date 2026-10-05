@@ -179,7 +179,7 @@ function homeSleep(){const m=G.time.min;const add=m<7*60?7*60-m:1440-m+7*60;fade
 function homeEat(){if(G.flags.ateAt===G.time.day){log('The fridge is empty until tomorrow.','bad');return}G.flags.ateAt=G.time.day;P.food=Math.min(100,P.food+45);log(pick(['Mum\'s cepelinai. Skanu!','Leftover šaltibarščiai.','Bread, butter and a cucumber. Classic.']),'good')}
 function homeTV(){skipHours(1);setMood(6);P.energy=Math.min(100,P.energy+4);log(pick(['Žalgiris won by 12. The neighbours are shouting.','„Eurovizija“ rerun. Lithuania got 12 points from Latvia.','The news: petrol prices up again.','A Lithuanian soap opera. Someone has a secret twin.']),'amb')}
 function homePC(){openModal(mHead('PC','Kompiuteris','Home computer')+`<div class="mbody">${act('Žaisti žaidimus','Play games for two hours. +mood, -energy.','Žaisti',()=>{skipHours(2);setMood(10);P.energy-=10;log('Two hours gone. Worth it.','good');closeModal()})}
-  ${act('Darbų skelbimai','Open the job board (same as your phone).','Atidaryti',()=>openPhone())}${act('Žemėlapis','Plan a route.','Atidaryti',()=>openMap())}
+  ${act('Darbų skelbimai','Open the job board (same as your phone).','Atidaryti',()=>openPhone())}${P.age>=30?act('Epilogas','See how your life turned out so far.','Žiūrėti',()=>epilogue()):''}${act('Žemėlapis','Plan a route.','Atidaryti',()=>openMap())}
   ${act('Užaugti','Skip years ahead to the next stage of life.','Kalendorius',()=>{closeModal();growMenu()},!AGES.find(a=>a.a>P.age))}</div><div class="mfoot"><button class="btn" onclick="closeModal()">Uždaryti</button></div>`)}
 function growMenu(){const nxt=AGES.find(a=>a.a>P.age);if(!nxt)return;openModal(mHead('📅','Užaugti',`Skip ahead to age ${nxt.a}`)+`<div class="mbody scene"><p>${nxt.sub}</p><p class="note">Years pass in a moment. You keep your money, crew and memories.</p></div><div class="mfoot"><button class="btn ghost" onclick="closeModal()">Ne dabar</button><button class="btn amber" onclick="leaveScene(false,true);growUp(${nxt.a})">Užaugti iki ${nxt.a}</button></div>`)}
 function familyTalk(e){if(P.age<13&&!G.mission&&Math.random()<.5){bubble(e,'Nubėk į parduotuvę, gerai?');startMission('errand');return}
@@ -231,7 +231,7 @@ function updateInterior(dt){const s=SCENE;
   for(const b of ENT.bubbles)b.life-=dt;ENT.bubbles=ENT.bubbles.filter(b=>b.life>0);
   if(s.schoolRaid&&!s.raidDone&&s.peds.filter(e=>e.angry).every(e=>e.ko>0)){s.raidDone=true;G.raids=G.raids||{};G.raids[s.schoolRaid]=G.time.day;gainRep(P.faction,30);G.flags.scuffleWin=true;toast('MOK','Mokyklų karas','You stormed the rival school corridor. Rep +30.');chron(`Stormed ${FACTIONS[s.schoolRaid].name}.`);SND.fanfare()}
   if(s.raid&&!s.raidDone&&s.peds.filter(e=>e.angry).every(e=>e.ko>0)){s.raidDone=true;raidWon(s.raid)}
-  tickMission(dt);
+  tickMission(dt);tickExam(dt);
   acc1+=dt;acc2+=dt;if(acc1>.2){acc1=0;PROMPT=findPromptI();showPrompt()}if(acc2>1){acc2=0;checkQuest();checkGoals();hudUpdate();updateZone()}
   musicTick(dt);ENGINE.target=0}
 function updateIPed(e,dt){if(e.ko>0){e.ko-=dt;if(e.ko<=0){e.ko=0;e.hp=e.maxhp*.5;e.angry=false}return}
@@ -371,6 +371,7 @@ function drawIObj(o){const g=ctx,px=o.x*TS,py=o.y*TS,pw=o.w*TS,ph=o.h*TS;
   case 'mailbox':g.fillStyle='#5A6064';g.fillRect(px+2,py,pw-4,22);g.fillStyle='#3A3F44';for(let k=0;k<o.w*3;k++){g.fillRect(px+5+k*10,py+3,8,7);g.fillRect(px+5+k*10,py+12,8,7)}break;
   case 'graffiti':g.save();g.translate(px+4,py+16);g.rotate(-.1);g.font='900 13px "Big Shoulders Display",sans-serif';g.fillStyle='#C0392B';g.fillText(o.txt,0,0);g.restore();break;
   case 'radiator':box(px+4,py+10,24,16,14,'#E8E6DF','#D9DEDE');break;
+  case 'dance':{const t=performance.now()/300|0;for(let yy=0;yy<o.h;yy++)for(let xx=0;xx<o.w;xx++){g.fillStyle=['#E0458A','#3FA7D6','#E2A11B','#59B86A','#6B4FA0'][(xx+yy+t)%5];g.globalAlpha=.55;g.fillRect(px+xx*TS+1,py+yy*TS+1,TS-2,TS-2)}g.globalAlpha=1;break}
   case 'seats':for(let k=0;k<o.w;k++){box(px+k*TS+4,py+8,24,20,10,'#8E2F2F','#6E2424')}break;
   }}
 function drawPet(e){const g=ctx,x=e.x,y=e.y,c=e.lk.outfit,dog=e.pet==='dog';g.fillStyle='rgba(0,0,0,.2)';g.beginPath();g.ellipse(x,y,11,4,0,0,7);g.fill();

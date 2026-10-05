@@ -15,7 +15,7 @@ function update(dt){
   if(!P.inCar){for(const c of ENT.cars){const sp=Math.hypot(c.vx,c.vy)||(c.cur||0);if(sp<130)continue;if(dist(c.x,c.y,P.x,P.y)<20&&P.inv_t<=0){hurtPlayer(sp/18,c);P.inv_t=.8;shake(6)}}}
   for(const f of ENT.fx){f.life-=dt;if(f.k==='spark'){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=300*dt}else{f.r+=dt*14}}ENT.fx=ENT.fx.filter(f=>f.life>0);
   for(const b of ENT.bubbles)b.life-=dt;ENT.bubbles=ENT.bubbles.filter(b=>b.life>0);
-  updateHeat(dt);tickMission(dt);tickCustomMission(dt);specialsTick(dt);angryTick(dt);viceTick(dt);
+  updateHeat(dt);tickMission(dt);tickCustomMission(dt);lifeTick(dt);specialsTick(dt);angryTick(dt);viceTick(dt);
   acc1+=dt;acc2+=dt;acc3+=dt;
   if(acc1>.25){acc1=0;populate();PROMPT=findPrompt();showPrompt()}
   musicTick(dt);brawlTick(dt);

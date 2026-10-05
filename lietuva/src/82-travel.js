@@ -29,6 +29,7 @@ function openTravel(mode,poi){const from=MAP.kind==='road'?MAP.to:MAP.id;
     const sub=`${km} km · ${hrs} h · ${pl.blurb}`;
     if(mode==='car')h+=act(`→ ${pl.name}`,sub+` Fuel ${eur(cost)}.`,'Važiuoti',()=>{closeModal();carTripMenu(id,km,cost,hrs)});
     else h+=act(`→ ${pl.name}`,sub,eur(cost),()=>{if(!pay(cost))return;closeModal();travelTo(id,mode,{km,hrs})})});
+  if(mode==='bus'&&P.age>=18)h+=act('→ Londonas (Lutonas)','The long bus to England. 40 hours, two ferries, a lot of instant noodles. Emigrate for a few years.','€80',()=>{closeModal();emigrate()});
   openModal(h+'</div>')}
 function carTripMenu(id,km,cost,hrs){openModal(mHead('🚗',`→ ${PLACE(id).name}`,`${km} km · ${roadName(MAP.id,id)}`)+`<div class="mbody">
   ${act('Važiuoti pačiam','Drive the highway yourself: petrol station, traffic, police and potholes on the way.','Vairuoti',()=>{if(!pay(cost))return;closeModal();roadTrip(id,{})})}
