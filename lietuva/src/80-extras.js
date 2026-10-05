@@ -81,7 +81,7 @@ function nearStairDoor(){const tx0=tx(P.x)>>4,ty0=tx(P.y)>>4;for(let by=ty0-1;by
 
 /* ---------- winter ---------- */
 let WINTER=false;
-function seasonCheck(){const m=doyToDate(G.time.doy).m;const w=m===11||m<=1;if(w!==WINTER){WINTER=w;chunkCache.clear();if(w){toast('❄','Žiema','Snow in Lithuania. Roads are slippery, drive carefully.')}}}
+function seasonCheck(){const m=doyToDate(G.time.doy).m;const w=m===11||m<=1;if(w!==WINTER){WINTER=w;chunkCache.clear();iceCheck();if(w){toast('❄','Žiema','Snow in Lithuania. Roads are slippery, drive carefully.')}}}
 
 /* ---------- prompts outdoors that are not POIs ---------- */
 function extraPrompt(){if(P.inCar)return null;
@@ -121,16 +121,16 @@ function openClothes(){P.owned=P.owned||{};let h=mHead('👕','Drabužiai','Clot
   h+=act('Spinta','Change outfit and colours.','Atidaryti',()=>openWardrobe());openModal(h+'</div>')}
 
 /* ---------- fishing ---------- */
-const FISH_SEA=[['strimele',.35],['plekste',.3],['menke',.2],['stinta',.15]],FISH_FRESH=[['kuoja',.32],['eserys',.26],['karsis',.16],['lydeka',.12],['sterkas',.08],['unguris',.06]];
+const FISH_ICE=[['kuoja',.4],['eserys',.4],['stinta',.2]],FISH_SEA=[['strimele',.35],['plekste',.3],['menke',.2],['stinta',.15]],FISH_FRESH=[['kuoja',.32],['eserys',.26],['karsis',.16],['lydeka',.12],['sterkas',.08],['unguris',.06]];
 Object.assign(ITEMS,{meskere:{n:'Meškerė',en:'Fishing rod. Stand by water and press E',ic:'🎣',price:20,tool:true},
  kuoja:{n:'Kuoja',en:'Roach. Small and common',ic:'🐟',price:0,sell:2,fish:1},eserys:{n:'Ešerys',en:'Perch with stripes',ic:'🐟',price:0,sell:3,fish:1},karsis:{n:'Karšis',en:'Bream',ic:'🐟',price:0,sell:5,fish:2},
  lydeka:{n:'Lydeka',en:'Pike. Toothy and proud',ic:'🐊',price:0,sell:12,fish:3},sterkas:{n:'Sterkas',en:'Zander, a restaurant favourite',ic:'🐟',price:0,sell:15,fish:3},unguris:{n:'Unguris',en:'Eel. Smoked in Nida',ic:'🐍',price:0,sell:20,fish:4},
  strimele:{n:'Strimelė',en:'Baltic herring',ic:'🐟',price:0,sell:3,fish:1},plekste:{n:'Plekšnė',en:'Flounder, flat as a plate',ic:'🐟',price:0,sell:6,fish:2},menke:{n:'Menkė',en:'Cod',ic:'🐟',price:0,sell:9,fish:3},stinta:{n:'Stinta',en:'Smelt. Palanga holds a whole festival for it',ic:'🐟',price:0,sell:4,fish:2}});
 SHOPS.market.items.push('meskere');
-function waterNear(){const x=tx(P.x),y=tx(P.y);for(const[dx,dy]of[[0,1],[1,0],[-1,0],[0,-1],[0,0]]){const t=tileAt(x+dx,y+dy);if(t===T.SEA)return'sea';if(t===T.WATER)return'fresh'}if(tileAt(x,y)===T.PIER)return tileAt(x,y+2)===T.SEA||tileAt(x-3,y)===T.SEA?'sea':'fresh';return null}
-function rollFish(kind){const tb=kind==='sea'?FISH_SEA:FISH_FRESH;let r=Math.random(),acc=0;for(const[id,w]of tb){acc+=w;if(r<acc)return id}return tb[0][0]}
+function waterNear(){const x=tx(P.x),y=tx(P.y);for(const[dx,dy]of[[0,1],[1,0],[-1,0],[0,-1],[0,0]]){const t=tileAt(x+dx,y+dy);if(t===T.SEA)return'sea';if(t===T.WATER)return WINTER?'ice':'fresh'}if(tileAt(x,y)===T.PIER)return tileAt(x,y+2)===T.SEA||tileAt(x-3,y)===T.SEA?'sea':'fresh';return null}
+function rollFish(kind){const tb=kind==='sea'?FISH_SEA:kind==='ice'?FISH_ICE:FISH_FRESH;let r=Math.random(),acc=0;for(const[id,w]of tb){acc+=w;if(r<acc)return id}return tb[0][0]}
 function openFishing(kind){let phase='wait',t=rnd(1.2,3.5),pos=0,dir=1,zone=rnd(25,65),fish=rollFish(kind),diff=ITEMS[fish].fish,zw=Math.max(8,20-diff*3),speed=1+diff*.5,run=true;
-  openModal(mHead('🎣','Žvejyba',kind==='sea'?'Baltijos jūra':'Ežeras, upė ar marios')+`<div class="mbody mg"><p id="fr" class="note" style="font-size:15px">Laukiam… (waiting for a bite)</p><div class="mgbar"><div class="zone2" style="left:${zone}%;width:${zw}%;opacity:.25" id="fz"></div><div class="mark" id="fm"></div></div></div><div class="mfoot"><button class="btn green" id="fs">Traukti</button><button class="btn ghost" onclick="FISHG.run=false;closeModal()">Baigti</button></div>`);
+  openModal(mHead('🎣','Žvejyba',kind==='sea'?'Baltijos jūra':kind==='ice'?'Poledinė žvejyba · ice fishing through a hole':'Ežeras, upė ar marios')+`<div class="mbody mg"><p id="fr" class="note" style="font-size:15px">Laukiam… (waiting for a bite)</p><div class="mgbar"><div class="zone2" style="left:${zone}%;width:${zw}%;opacity:.25" id="fz"></div><div class="mark" id="fm"></div></div></div><div class="mfoot"><button class="btn green" id="fs">Traukti</button><button class="btn ghost" onclick="FISHG.run=false;closeModal()">Baigti</button></div>`);
   const pull=()=>{if(!run)return;if(phase==='wait'){$('#fr').textContent='Per anksti! Too early, the fish swam off.';phase='done';run=false;FISHG.run=false;return}
     if(phase==='bite'){const ok=pos>=zone&&pos<=zone+zw;run=false;FISHG.run=false;phase='done';skipHours(.5);P.energy-=3;
       if(ok){give(fish,1);P.stats.fish=(P.stats.fish||0)+1;SND.fanfare();setMood(5);$('#fr').innerHTML=`Pagavai: <b>${ITEMS[fish].n}</b> (${ITEMS[fish].en}). Market price ${eur(ITEMS[fish].sell)}.`}
@@ -141,3 +141,41 @@ function openFishing(kind){let phase='wait',t=rnd(1.2,3.5),pos=0,dir=1,zone=rnd(
 const FISHG={run:false,pull:null};
 GOALS.push({id:'fish',t:'Žvejys',en:'Catch 20 fish',ok:()=>(P.stats.fish||0)>=20,prog:()=>(P.stats.fish||0)+'/20'},
  {id:'biz',t:'Verslininkas',en:'Own 3 businesses',ok:()=>G.biz&&G.biz.length>=3,prog:()=>(G.biz?G.biz.length:0)+'/3'});
+
+/* ---------- story scenes for big moments ---------- */
+const JOIN_SPEECH={gang:f=>`${f.boss} looks you up and down for a long time. „Pas mus taisyklės paprastos: savų neišduodi, svetimiems nenusileidi. Gatvės tavęs neišmokys mandagumo, bet išmokys pagarbos.“ Someone hands you a tracksuit jacket in ${f.short} colours.`,
+ cartel:f=>`„${f.boss}“ does not stand up. „Čia ne gauja, čia verslas. Mes neklausinėjam, kas kur keliauja per mišką. Ir tu neklausinėk.“ A phone with one saved number lands on the table in front of you.`,
+ crew:f=>`${f.boss} spins a skateboard wheel and grins. „Sveikas atvykęs į Centrą. Vakarais ant tilto, savaitgaliais Užupyje. Naujininkų gopams – nė žingsnio.“`,
+ auto:f=>`${f.boss} pops the bonnet of an old BMW and points at the engine. „Mašina – kaip šeima. Prižiūrėk, ir ji tave parveš namo. Lenktyniaujam tik ten, kur niekas nenukentės.“ Everyone laughs, then revs.`,
+ school:f=>`${f.boss} meets you behind the gym. „Mūsų kiemas, mūsų krepšinio aikštelė, mūsų taisyklės. Mokytojams – nė žodžio.“`};
+function scene(gl,title,paras){openModal(mHead(gl,esc(title),'')+`<div class="mbody scene">${paras.map(t=>`<p>${t}</p>`).join('')}</div><div class="mfoot"><button class="btn amber" onclick="closeModal()">Tęsti</button></div>`)}
+function joinScene(fid){const f=FACTIONS[fid];const fn=JOIN_SPEECH[f.type];if(fn)setTimeout(()=>scene(f.short.slice(0,3).toUpperCase(),`Sveikas, ${rankName(fid)}`,[fn(f),'<span class="note">Fictional role-play. Open the phone (T) for jobs from your new crew.</span>']),200)}
+function topRankScene(fid){const f=FACTIONS[fid];setTimeout(()=>scene('★',rankName(fid),[f.league==='street'?`They stop calling you by your first name. In ${cityById(f.city).name} people lower their voice when you walk into the kebab shop. ${f.boss} pours two glasses of gira: „Dabar tu sprendi.“`
+  :f.league==='auto'?`At the night meet the whole car park goes quiet when your car rolls in. Phones come out. Tomorrow half of Lithuania will watch your drift on TikTok.`
+  :`The whole yard chants your name at break. Even the kids from the rival school nod when you pass.`,'<span class="note">This is a game. In real life gangs and street racing end careers, families and lives.</span>']),300)}
+
+/* ---------- boss race (auto) ---------- */
+function startBossRace(r){if(!P.inCar||CARS[P.inCar.model].kind==='bike'){log('You need a car for a race. Get in one (F).','bad');return}
+  const M={type:'race',boss:true,fac:P.faction,city:curCity().id,t0:now()};startRace(M,r);if(G.mission!==M)return;M.title=`Iššūkis: ${FACTIONS[P.faction].boss}`;M.pay=600;M.rep=90;
+  M.ai.forEach((a,i)=>{a.skill=i?.98:.94;a.model=i?'m5':'e46'});toast('🏁',M.title,'Beat the club boss on six checkpoints.')}
+
+/* ---------- holidays ---------- */
+const HOLIDAYS=[
+ {m:8,d:1,t:'Rugsėjo 1-oji',en:'Knowledge Day. Kids carry flowers to their teachers.',mood:4},
+ {m:10,d:1,t:'Vėlinės',en:'All Souls. Cemeteries glow with thousands of candles tonight.',mood:2},
+ {m:11,d:24,t:'Kūčios',en:'Christmas Eve: twelve meatless dishes, kūčiukai with poppy milk.',mood:10,gift:true},
+ {m:11,d:25,t:'Kalėdos',en:'Christmas. Linksmų Kalėdų!',mood:12,gift:true},
+ {m:0,d:1,t:'Naujieji metai',en:'New Year. Fireworks over every town.',mood:8},
+ {m:1,d:16,t:'Vasario 16-oji',en:'Restoration of the State Day, 1918. Flags on every building.',mood:8},
+ {m:2,d:4,t:'Kaziuko mugė',en:'St Casimir\'s fair in Vilnius: verbos, wooden spoons and riestainiai.',mood:8},
+ {m:2,d:11,t:'Kovo 11-oji',en:'Restoration of Independence, 1990.',mood:8},
+ {m:5,d:24,t:'Joninės',en:'Midsummer. Bonfires, wreaths and searching for the fern flower.',mood:15},
+ {m:6,d:6,t:'Valstybės diena',en:'Statehood Day. At 21:00 everyone sings Tautiška giesmė together.',mood:10},
+];
+function holidayToday(){const d=doyToDate(G.time.doy);return HOLIDAYS.find(h=>h.m===d.m&&h.d===d.d)}
+function holidayCheck(){const h=holidayToday();if(!h)return;toast('LT',h.t,h.en);setMood(h.mood);chron(`Celebrated ${h.t}.`);
+  if(h.gift&&P.age<24&&!G.flags['gift'+G.time.day]){G.flags['gift'+G.time.day]=1;const n=ri(10,40);P.money+=n;log(`A present from your family: ${eur(n)}.`,'good')}}
+
+/* ---------- ice: frozen lakes are walkable in winter ---------- */
+function iceCheck(){SOLID_FOOT[T.WATER]=WINTER?0:1;if(!WINTER&&P&&!P.inCar&&tileAt(tx(P.x),tx(P.y))===T.WATER){const[x,y]=freeSpotNear(P.x,P.y,t=>WALKABLE[t]||t===T.GRASS||t===T.SAND);P.x=x;P.y=y;log('The ice melted. You scrambled to the shore.','amb')}
+  ENT.peds.forEach(e=>{if(!WINTER&&tileAt(tx(e.x),tx(e.y))===T.WATER)e.dead=true})}

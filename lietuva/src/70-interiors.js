@@ -128,6 +128,7 @@ function tplSchool(p){const s=mkRoom(18,12,{floor:'lino',wall:'#D6DFC9',title:p.
   R.deco(s,'flag',16,1);
   const f=FACTIONS[p.fac];const rivalSide=P.faction&&FACTIONS[P.faction].league==='school'&&P.faction!==p.fac&&P.age>=13;
   for(let k=0;k<4;k++){const e=R.ped(s,'school',ri(2,15),ri(8,10),{fac:p.fac,lines:[line('Labas!','Hi!'),line('Rytoj kontrolinis…','Test tomorrow…'),line('Eime per pertrauką į kiemą.','Let\'s go to the yard at break.')]});if(rivalSide){e.angry=true;s.hostileCount++}}
+  if(rivalSide&&!(G.raids&&G.raids[p.fac]===G.time.day))s.schoolRaid=p.fac;
   return s}
 function tplOffice(p){const s=mkRoom(16,10,{floor:'grey',wall:'#DCE3E6',title:p.name,sub:'Verslo centras'});
   R.wallV(s,11,2,8,[5]);R.deco(s,'window',2,1,3);R.deco(s,'window',7,1,3);R.deco(s,'window',13,1,2);
@@ -203,6 +204,7 @@ function openPOI(p){
   enterScene(s,p)}
 function enterScene(s,p){s.poi=p;s.ret={x:p.x,y:p.y+20};SCENE=s;ENT.bubbles=[];P.x=s.door*TS+16;P.y=(s.h-1)*TS+4;P.dir=3;keys.clear();fadeScreen();SND.door();
   if(p.kind==='hq')G.flags.hqVisit=true;if(p.kind==='school'&&P.school===p.fac)G.flags.schoolVisit=true;
+  if(!G.flags.intHint){G.flags.intHint=true;log('Inside: walk up to furniture or people and press <b>E</b> when a prompt shows. Walk out through the door at the bottom.','amb')}
   if(s.raid)toast('!!',`Būstinės reidas`,`${FACTIONS[s.raid].short} will not let you walk out. Knock them all out.`);
   $('#speedo').classList.add('hidden');PROMPT=null;showPrompt();updateZone()}
 function leaveScene(silent,keepPos){if(!SCENE)return;const r=SCENE.ret;SCENE=null;ENT.bubbles=[];if(!keepPos){P.x=r.x;P.y=r.y;P.dir=1}keys.clear();if(!silent){fadeScreen();SND.door()}updateZone();PROMPT=null;showPrompt();crewList().forEach(e=>{e.x=P.x+rnd(-24,24);e.y=P.y+rnd(6,26)})}
@@ -218,11 +220,12 @@ function updateInterior(dt){const s=SCENE;
   const sp=(P.age<10?95:115)*((keys.has('ShiftLeft')||keys.has('ShiftRight'))?1.4:1);
   if(L>0){P.anim+=dt*10;P.dir=Math.abs(mx)>Math.abs(my)?(mx>0?0:2):(my>0?1:3);iMove(P,mx*sp*dt,my*sp*dt,8)}
   if(P.y>(s.h-1)*TS+22){if(s.raid&&s.peds.some(e=>e.angry&&!(e.ko>0))){P.y=(s.h-1)*TS+10;log('The door is blocked. Fight your way out!','bad')}else{leaveScene();return}}
-  for(const e of s.peds)updateIPed(e,dt);
+  for(const e of s.peds){updateIPed(e,dt);if(SCENE!==s)return}
   if(s.pickups)for(const k of s.pickups){if(!k.got&&dist(k.x,k.y,P.x,P.y)<22){k.got=true;give('bottle',1);SND.blip(880);missionEvent('bottle')}}
   if(P.heat>0&&s.poi.kind!=='police'){HEAT.calm+=dt*2;if(HEAT.calm>6+P.heat*2){P.heat=Math.max(0,Math.ceil(P.heat)-1);HEAT.calm=0;if(!P.heat)log('You laid low inside. The police moved on.','good')}}
   for(const f of ENT.fx){f.life-=dt;if(f.k==='spark'){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=300*dt}else f.r+=dt*14}ENT.fx=ENT.fx.filter(f=>f.life>0);
   for(const b of ENT.bubbles)b.life-=dt;ENT.bubbles=ENT.bubbles.filter(b=>b.life>0);
+  if(s.schoolRaid&&!s.raidDone&&s.peds.filter(e=>e.angry).every(e=>e.ko>0)){s.raidDone=true;G.raids=G.raids||{};G.raids[s.schoolRaid]=G.time.day;gainRep(P.faction,30);G.flags.scuffleWin=true;toast('MOK','Mokyklų karas','You stormed the rival school corridor. Rep +30.');chron(`Stormed ${FACTIONS[s.schoolRaid].name}.`);SND.fanfare()}
   if(s.raid&&!s.raidDone&&s.peds.filter(e=>e.angry).every(e=>e.ko>0)){s.raidDone=true;raidWon(s.raid)}
   tickMission(dt);
   acc1+=dt;acc2+=dt;if(acc1>.2){acc1=0;PROMPT=findPromptI();showPrompt()}if(acc2>1){acc2=0;checkQuest();checkGoals();hudUpdate();updateZone()}

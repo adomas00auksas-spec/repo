@@ -50,6 +50,42 @@ stations for fast travel, ferry to Nida, territory income and rival attacks, a T
 that tells your parents when you skip school, a glossary of Lithuanian words and slang,
 goals, chronicle, saving in the browser.
 
+## Interiors
+
+Press **E** at any door to walk inside. Furniture and people with a prompt can be used:
+
+| Place | What you can do inside |
+|---|---|
+| Home (layout depends on family class) | Sleep in the bed, eat from the fridge, watch TV, computer (games, jobs, grow up), wardrobe; talk to mum/dad, or your cat/dog when you live alone |
+| Maksi shop | Checkout counter, taromatas bottle machine, security guard |
+| Kebab shop, café, bar, garage | Order or tune at the counter; buy the place as a business from the certificate on the wall |
+| Market (turgus) | Stalls run by grandmothers; sell fish and amber |
+| School | Attend class at the board, shoot hoops in the sports hall, join the yard crew via the teacher. Rival school corridors can be stormed |
+| Gym | Bench press and punch bags (fighting skill), treadmill (max health), basketball |
+| Police, hospital, office, bus station | Pay fines, heal, work your desk, buy bus tickets |
+| Gang and cartel HQs | Boss menu, jobs, hire crew. Rival HQs can be raided |
+| Car club garages | Car on the lift, neon sign, boss |
+| Landmarks | Cathedral (light a candle), Trakai and Kaunas castles and the Amber Museum (exhibits with real history), theatre, Žalgiris and Cido arenas (watch a game), Akropolis mall (clothes, cinema, food court) |
+| Any panel block, church or mall | Stairwells with mailboxes, neighbours and bottles; churches; malls |
+
+Hiding indoors makes the police lose interest faster (except inside the police station).
+
+## More systems
+
+- **Crew:** from rank Bachūras you can hire up to three crew members at your HQ. They follow you, fight rivals and ride along in your car.
+- **Raids:** walk into a rival gang or cartel HQ and knock everyone out for the safe and one of their districts.
+- **Story chapters:** after the first quest line, a chapter starts for your path: *Kelias į viršų* (street), *Šoninio karalius* (car clubs), *Mokyklos karalius* (school), *Kiemo vaikas* (kids), *Savas kelias* (no crew).
+- **Races:** street races, highway races between towns (Drifteris+) and a boss race against your club leader.
+- **Businesses:** buy a kebab shop, café, bar or garage for daily income.
+- **Fishing:** buy a rod (meškerė) at a market, stand by water and press E. Real Baltic and freshwater fish (stinta, lydeka, unguris…).
+- **Clothes:** sunglasses, gold chain, Žalgiris jersey at the mall.
+- **Winter:** from December, snow, frozen lakes and icy roads.
+- Mouse wheel or +/− to zoom.
+
+## Editing the game
+
+The playable file `index.html` is generated. Edit the parts in `src/` and run `./build.sh`.
+
 ## Controls
 
 WASD / arrows move · Shift sprint (turbo in tuned cars) · **E** talk, enter, hold to tag ·
@@ -59,13 +95,9 @@ On phones: joystick plus on-screen buttons.
 
 ## Ideas for next versions
 
-- Interiors (flat, school corridor, garage) instead of menus.
-- Hiring your own crew members who follow you and fight.
 - Basketball league at Žalgiris arena; Kaziuko mugė and Joninės festival days.
-- Winter: snow, ice physics, ice fishing on the lagoon.
-- Proper street races between towns on the A1 with checkpoints on the highway.
+- Ice fishing on the frozen lagoon.
 - Police chases with roadblocks; a lawyer you can pay.
-- Businesses to buy (kebab shop, car wash, garage) that pay daily.
 - Family events: siblings, parents ageing, your own family at 24+.
 - More towns: Marijampolė (the used-car market), Utena, Druskininkai, Trakai as a town.
 - Sound effects and music from a real synth, voiced Lithuanian lines.

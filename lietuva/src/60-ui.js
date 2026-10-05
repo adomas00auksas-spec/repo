@@ -81,14 +81,14 @@ function openHQ(p){const fid=p.hq,f=FACTIONS[fid];G.flags.hqVisit=true;const min
   else{const why=P.age<f.minAge?`Age ${f.minAge}+ only. „Ateik, kai paaugsi.“`:P.faction?`You are already with ${FACTIONS[P.faction].name}. Leave them first.`:null;
     const pen=f.league==='street'&&P.parent==='police'?' Your mum being a cop makes them suspicious: you start with less rep.':'';
     h+=act('Prisijungti',why||`Join ${f.name} as ${RANKS[rankTable(f)][0]}.${pen}`,'Prisijungti',()=>{P.faction=fid;if(P.parent==='police'&&f.league==='street')P.rep[fid]=(P.rep[fid]||0)-10;if(P.parent==='gangster'&&f.league==='street'&&f.type==='gang')P.rep[fid]=Math.max(repOf(fid),40);
-      toast(f.short.slice(0,3).toUpperCase(),`Sveikas, ${rankName(fid)}!`,`You joined ${f.name}. Open the phone (T) for jobs.`);chron(`Joined ${f.name}.`);SND.fanfare();openHQ(p)},!!why)}
+      toast(f.short.slice(0,3).toUpperCase(),`Sveikas, ${rankName(fid)}!`,`You joined ${f.name}. Open the phone (T) for jobs.`);chron(`Joined ${f.name}.`);SND.fanfare();closeModal();joinScene(fid)},!!why)}
   h+=`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Išeiti</button></div>`;openModal(h)}
 function openSchool(p){const f=FACTIONS[p.fac],mineSchool=P.school===p.fac,h0=G.time.min/60,wd=G.time.dow>=1&&G.time.dow<=5;G.flags.schoolVisit=G.flags.schoolVisit||mineSchool;
   let h=mHead('M',esc(p.name),mineSchool?'Tavo mokykla · your school':'Rival school')+'<div class="mbody">';
   if(mineSchool&&P.age<19){h+=act('Eiti į pamokas','Attend classes until 14:00. Tamo stays happy, parents keep paying allowance.','Į pamokas',()=>{if(!(wd&&h0>=7.5&&h0<11)){log('Lessons run on weekdays, arrive between 7:30 and 11:00.','bad');return}skipHours(14-h0);G.attended=true;P.energy-=15;setMood(-4);P.money+=0;log(pick(['Math test: 8/10. Tamo: „Puiku!“','History: the Grand Duchy reached the Black Sea. Cool.','PE: you won the basketball game.','Lithuanian: a whole lesson about Donelaitis.']),'good');closeModal()},false);
     h+=act('Mėtyti į krepšį','Shoot hoops in the yard. Timing game.','Žaisti',()=>openHoops((s)=>{if(P.faction===p.fac)gainRep(p.fac,s)}));
     if(P.age>=13){const mine=P.faction===p.fac;if(mine){h+=`<p><span class="pill g">Kiemo gauja</span> Rank <b>${rankName(p.fac)}</b> · rep ${repOf(p.fac)}</p>`;availableJobs().filter(j=>j.fac===p.fac).forEach(j=>h+=act(j.title,j.desc+` <b>${j.pay}</b>`,'Imtis',()=>{closeModal();startMission(j.type)}))}
-      else h+=act('Prisijungti prie kiemo gaujos',P.faction?`You are with ${FACTIONS[P.faction].name}.`:`Run with the ${esc(f.short)} yard crew. Boss: ${esc(f.boss)}.`,'Prisijungti',()=>{P.faction=p.fac;toast('MOK','Kiemo gauja','You joined your school yard crew.');chron(`Joined the ${f.name} yard crew.`);openSchool(p)},!!P.faction)}}
+      else h+=act('Prisijungti prie kiemo gaujos',P.faction?`You are with ${FACTIONS[P.faction].name}.`:`Run with the ${esc(f.short)} yard crew. Boss: ${esc(f.boss)}.`,'Prisijungti',()=>{P.faction=p.fac;chron(`Joined the ${f.name} yard crew.`);closeModal();joinScene(p.fac)},!!P.faction)}}
   else h+=`<p class="scene" style="font-size:14.5px">This is ${esc(f.name)}. ${P.faction&&FACTIONS[P.faction].league==='school'?'Their kids do not like your colours. Watch yourself here.':'Not your school.'}</p>`;
   openModal(h+`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Išeiti</button></div>`)}
 function openHoops(done){let shots=0,score=0,pos=0,dir=1,zone=rnd(30,62),run=true;const zw=14;
@@ -137,7 +137,7 @@ function openSelf(){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls),p
   let h=mHead('A',esc(P.name+' '+P.surname),`${P.age} m. · ${c.name} · ${cls.t}`)+'<div class="mbody"><div class="grid2"><dl class="kv">';
   h+=`<dt>Tėvai</dt><dd>${par.t} (${par.en})</dd><dt>Užsiėmimas</dt><dd>${job?job.t:'Vaikas'}</dd><dt>Namai</dt><dd>${cls.home}</dd><dt>Gauja / klubas</dt><dd>${P.faction?esc(FACTIONS[P.faction].name)+' · '+rankName(P.faction):'Niekas · none'}</dd>`;
   h+=`<dt>Muštynės</dt><dd>${P.fight}/10</dd><dt>Nokautai</dt><dd>${P.stats.ko||0}</dd><dt>Geriausias šoninis</dt><dd>${P.stats.bestDrift||0}</dd><dt>Buteliai</dt><dd>${P.stats.bottles||0}</dd><dt>Miestai</dt><dd>${Object.keys(P.visited).map(k=>cityById(k).name).join(', ')}</dd></dl>`;
-  h+='<div><b style="font:800 18px var(--display)">Reputacija</b>'+(Object.keys(P.rep).filter(k=>P.rep[k]).map(k=>`<div class="bar"><span>${esc(FACTIONS[k].short)}</span><span>${rankName(k)} · ${P.rep[k]}</span></div>`).join('')||'<p class="note">No reputation yet.</p>');
+  h+='<div><b style="font:800 18px var(--display)">Reputacija</b>'+(Object.keys(P.rep).filter(k=>P.rep[k]&&FACTIONS[k]).map(k=>`<div class="bar"><span>${esc(FACTIONS[k].short)}</span><span>${rankName(k)} · ${P.rep[k]}</span></div>`).join('')||'<p class="note">No reputation yet.</p>');
   h+='<b style="font:800 18px var(--display);display:block;margin-top:10px">Kronika</b>'+G.hist.slice(-8).reverse().map(t=>`<p class="note" style="margin:0 0 4px">${esc(t)}</p>`).join('')+'</div></div></div>';
   openModal(h+`<div class="mfoot"><button class="btn ghost" onclick="openCars()">Transportas</button><button class="btn" onclick="closeModal()">Gerai</button></div>`)}
 function openCars(){let h=mHead('🚗','Transportas','Your vehicles')+'<div class="mbody">';
@@ -172,6 +172,7 @@ function openMap(){const sc=Math.min(1.4,(Math.min(innerWidth,1000)-80)/W);const
   g.font=`700 ${10/sc}px "IBM Plex Sans",sans-serif`;POIS.forEach(p=>{if(p.kind==='landmark'){g.fillStyle=P.landmarks[p.id]?'#E2A11B':'#fff';g.beginPath();g.arc(p.x/TS,p.y/TS,3/sc,0,7);g.fill()}});
   POIS.forEach(p=>{if(p.kind==='hq'||p.hq){g.fillStyle=FACTIONS[p.hq].color;g.fillRect(p.x/TS-3/sc,p.y/TS-3/sc,6/sc,6/sc)}});
   const mark=(x,y,col,r)=>{g.fillStyle=col;g.strokeStyle='#fff';g.lineWidth=2/sc;g.beginPath();g.arc(x/TS,y/TS,r/sc,0,7);g.fill();g.stroke()};
+  {const h=POIS.find(q=>q.id===P.home);if(h){g.fillStyle='#E2A11B';g.fillRect(h.x/TS-4/sc,h.y/TS-4/sc,8/sc,8/sc)}}(G.biz||[]).forEach(id=>{const q=POIS.find(x=>x.id===id);if(q){g.fillStyle='#59B86A';g.fillRect(q.x/TS-4/sc,q.y/TS-4/sc,8/sc,8/sc)}});
   if(G.mission&&G.mission.target)mark(G.mission.target.x,G.mission.target.y,'#B5332B',6);if(G.way)mark(G.way.x,G.way.y,'#2D5DA8',6);mark(worldPos().x,worldPos().y,'#E2A11B',7);
   cvm.onclick=e=>{const r=cvm.getBoundingClientRect();const x=(e.clientX-r.left)/sc*TS,y=(e.clientY-r.top)/sc*TS;G.way={x,y,label:'Waypoint'};openMap()};
   const used=[...new Set(DISTRICTS.map(d=>d.owner).filter(Boolean))];$('#mleg').innerHTML=used.map(k=>`<span><i style="background:${FACTIONS[k].color}"></i>${esc(FACTIONS[k].name)} (${DISTRICTS.filter(d=>d.owner===k).length})</span>`).join('')+'<span><i style="background:#E2A11B;border-radius:50%"></i>Tu (you)</span><span><i style="background:#B5332B;border-radius:50%"></i>Job</span><span><i style="background:#fff;border-radius:50%"></i>Landmark</span>'}
@@ -307,7 +308,7 @@ function loadLife(s){s.owners.forEach((o,i)=>{if(DISTRICTS[i])DISTRICTS[i].owner
   (s.decor||[]).forEach(d=>DECOR.push(d));spawnStartVehicles();startGame(false)}
 function startGame(isNew){refreshOverlay();$('#title').classList.add('hidden');$('#creator').classList.add('hidden');$('#hud').classList.remove('hidden');
   if(matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
-  running=true;seasonCheck();setTimeout(syncCrew,50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
+  running=true;WINTER=null;seasonCheck();setTimeout(syncCrew,50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
   if(isNew){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls);const sch=FACTIONS[P.school];
     const intro={6:`Tomorrow is your first day at ${sch.name}. Mum already bought the flowers for the teacher. Today the yard is yours: bottles to collect, a taromatas that pays 10 cents each, and an ice cream van somewhere.`,
       13:`Rugsėjo 1-oji. A new school year at ${sch.name}. The older kids say the ${FACTIONS[pick(Object.keys(FACTIONS).filter(k=>FACTIONS[k].city===P.city&&FACTIONS[k].type==='school'&&k!==P.school))||P.school].short} crowd are planning something. ${P.city==='vilnius'?'And everyone cool hangs out at the White Bridge.':''}`,

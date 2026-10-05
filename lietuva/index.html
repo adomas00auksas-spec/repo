@@ -814,10 +814,10 @@ function buildMinimap(){MMC=document.createElement('canvas');MMC.width=W;MMC.hei
    RENDERING
    ===================================================================== */
 const cv=$('#world'),ctx=cv.getContext('2d');
-let VW=0,VH=0,DPR=1,ZOOM=1;
+let VW=0,VH=0,DPR=1,ZOOM=1,ZMUL=1;
 const cam={x:0,y:0};
 const dark=document.createElement('canvas'),dctx=dark.getContext('2d');
-function resize(){DPR=Math.min(2,window.devicePixelRatio||1);VW=innerWidth;VH=innerHeight;ZOOM=VW<700?.8:1;
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);VW=innerWidth;VH=innerHeight;ZOOM=(VW<700?.8:1)*ZMUL;
   cv.width=VW*DPR;cv.height=VH*DPR;dark.width=Math.ceil(VW/2);dark.height=Math.ceil(VH/2)}
 addEventListener('resize',resize);
 
@@ -1295,7 +1295,7 @@ function setMood(n){P.mood=clamp(P.mood+n,0,100)}
 function price(p,kind){let f=1;if(P.parent==='market'&&kind==='food')f=.7;if(P.parent==='mech'&&kind==='car')f=.6;if(P.job==='mechanic'&&kind==='car')f*=.85;return Math.round(p*f*100)/100}
 function pay(n){if(P.money<n){log(`Not enough money (need ${eur(n)}).`,'bad');SND.blip(200);return false}P.money-=n;SND.coin();return true}
 function gainRep(fid,n){if(!fid)return;const before=rankIdx(fid);P.rep[fid]=(P.rep[fid]||0)+n;const after=rankIdx(fid);
-  if(after>before){const f=FACTIONS[fid];toast(f.short.slice(0,3).toUpperCase(),'Naujas rangas: '+rankName(fid),`${f.name} now call you ${rankName(fid)}.`);SND.fanfare();chron(`Became ${rankName(fid)} in ${f.name}.`)}}
+  if(after>before){const f=FACTIONS[fid];toast(f.short.slice(0,3).toUpperCase(),'Naujas rangas: '+rankName(fid),`${f.name} now call you ${rankName(fid)}.`);SND.fanfare();chron(`Became ${rankName(fid)} in ${f.name}.`);if(after===RANKS[rankTable(f)].length-1)topRankScene(fid)}}
 function chron(t){G.hist.push(`${dateStr()}: ${t}`);if(G.hist.length>80)G.hist.shift()}
 function dateStr(){const d=doyToDate(G.time.doy);return `${d.m+1}/${d.d} (${P.age} m.)`}
 function doyToDate(doy){let m=0,d=doy%365;while(d>=MDAYS[m]){d-=MDAYS[m];m++}return{m,d:d+1}}
@@ -1311,7 +1311,7 @@ function tickTime(dt){G.time.min+=dt*2;if(G.time.min>=1440){G.time.min-=1440;new
   if(P.hp<P.maxHp&&P.food>40)P.hp=Math.min(P.maxHp,P.hp+dt*.4);
   if(P.hp<=0)wipeOut()}
 function newDay(){G.time.day++;G.time.doy=(G.time.doy+1)%365;G.time.dow=(G.time.dow+1)%7;
-  seasonCheck();G.weather=Math.random()<.22?(WINTER?'Sniegas':'Lietus'):Math.random()<.4?'Debesuota':'Giedra';
+  seasonCheck();holidayCheck();G.weather=Math.random()<.22?(WINTER?'Sniegas':'Lietus'):Math.random()<.4?'Debesuota':'Giedra';
   const b=doyToDate(G.time.doy);if(b.m===P.bm&&b.d===P.bd){P.age++;toast('🎂',`Gimtadienis! ${P.age} m.`,'Happy birthday. Su gimtadieniu!');chron(`Turned ${P.age}.`)}
   // allowance
   const cls=CLASSES.find(c=>c.id===P.cls);if(P.age<24){let a=cls.allow[P.age<10?0:P.age<16?1:2];if(P.parent==='office')a*=1.2;if(G.skipped>=3){a=Math.round(a*.3);log('Tamo told your parents you keep skipping school. Allowance cut.','bad')}P.money+=a;log(`Parents gave you pocket money: ${eur(a)}`,'good')}
@@ -1386,6 +1386,7 @@ function availableJobs(){const out=[],c=curCity(),mf=myFac(),age=P.age;
     }
     if(mf.league==='auto'){out.push({type:'race',fac:fid,title:'Gatvės lenktynės',desc:'Six checkpoints across the city against two club members. Fictional, closed-street racing only.',pay:`€${100+r*40}, rep +20`});
       out.push({type:'driftc',fac:fid,title:'Šoninio iššūkis',desc:'Score 6,000 drift points in 60 seconds. Handbrake (Space) to start a slide.',pay:`€${60+r*25}, rep +15`});
+      if(r>=3&&!G.flags.bossWin)out.push({type:'bossrace',fac:fid,title:`Iššūkis bosui`,desc:`Race ${mf.boss} and their best driver. Win and the whole club knows your name.`,pay:'€600, rep +90'});
       if(r>=2)out.push({type:'hwyrace',fac:fid,title:'Lenktynės tarp miestų',desc:'Race two club drivers along a highway to the next town. Fictional, closed highway.',pay:`€${300+r*80}, rep +40`});
       out.push({type:'meet',fac:fid,title:'Naktinis susitikimas',desc:'Bring your own car to the club meet spot between 21:00 and 03:00. Better tuning, more respect.',pay:'rep by car'})}
     if(mf.league==='school'||mf.type==='crew'){out.push({type:'tag',fac:fid,title:'Pažymėti teritoriją',desc:'Tag 3 walls near the rival hangout with a spray can (hold E).',pay:'€10, rep +12'});
@@ -1409,6 +1410,7 @@ function startMission(type){if(G.mission){log('Finish or cancel your current job
   case 'turf':{const d=rivalDistrict()||pick(DISTRICTS.filter(d=>!d.owner));if(!d)return;M.title='Užimti teritoriją';M.d=d.id;M.target={x:d.cx*TS,y:d.cy*TS,label:d.name};M.step=`Take ${d.name} (${cityById(d.city).name})`;M.pay=150;M.rep=25;break}
   case 'race':startRace(M,r);return;
   case 'hwyrace':startHwyRace(r);return;
+  case 'bossrace':startBossRace(r);return;
   case 'driftc':M.title='Šoninio iššūkis';M.need=6000;M.got=0;M.timer=60;M.step='Drift! 6,000 points';M.pay=60+r*25;M.rep=15;if(!P.inCar){log('Get in a car first (F).','bad');return}break;
   case 'meet':{const spot=POIS.find(p=>p.meet===fid)||POIS.find(p=>p.meet);M.title='Naktinis susitikimas';M.target={x:spot.x,y:spot.y,label:spot.name};M.step='Bring your car to the meet (21:00–03:00)';break}
   case 'tag':{const rivalSchool=mf.type==='crew'?null:POIS.find(p=>p.kind==='school'&&p.city===mf.city&&p.fac!==fid);const base=rivalSchool||{x:DISTRICTS.find(d=>d.owner==='gopai').cx*TS,y:DISTRICTS.find(d=>d.owner==='gopai').cy*TS};
@@ -1456,7 +1458,7 @@ function startRace(M,r,cps){const c=curCity();if(!P.inCar||CARS[P.inCar.model].k
 function tickRace(M,dt){if(M.count>0){M.count-=dt;M.step=M.count>0?Math.ceil(M.count)+'…':'Važiuojam!';if(P.inCar){P.inCar.vx*=.8;P.inCar.vy*=.8}return}
   M.timer+=dt;const me=P.inCar;if(!me){missionFail('You left the car.');return}
   if(dist(me.x,me.y,M.target.x,M.target.y)<70){M.i++;SND.blip(1000);if(M.i>=M.cps.length){const ahead=M.ai.filter(a=>a.cp>=M.cps.length).length;const place=ahead+1;
-      if(place===1){G.flags[M.hwy?'hwyWin':'raceWin']=true;missionDone(`1st place in ${M.timer.toFixed(1)}s`)}else{M.pay=place===2?30:0;M.rep=place===2?8:2;missionDone(`${place}. vieta`)}return}
+      if(place===1){G.flags[M.hwy?'hwyWin':'raceWin']=true;if(M.boss)G.flags.bossWin=true;missionDone(`1st place in ${M.timer.toFixed(1)}s`)}else{M.pay=place===2?30:0;M.rep=place===2?8:2;missionDone(`${place}. vieta`)}return}
     M.target=Object.assign({label:`Checkpoint ${M.i+1}/${M.cps.length}`},M.cps[M.i])}
   M.ai.forEach(a=>{if(a.cp>=M.cps.length){a.vx*=.95;a.vy*=.95;carMove(a,dt);return}const t=M.cps[a.cp];const st=carStats(a);const ang=Math.atan2(t.y-a.y,t.x-a.x);let da=((ang-a.ang+Math.PI*3)%(Math.PI*2))-Math.PI;
     const fx=Math.cos(a.ang),fy=Math.sin(a.ang),rx=-fy,ry=fx;let vF=a.vx*fx+a.vy*fy,vR=a.vx*rx+a.vy*ry;
@@ -1505,9 +1507,9 @@ function checkQuest(){let S=questSteps();let guard=0;while(G.qi<S.length&&S[G.qi
     else{toast('LT','Naujas gyvenimas · baigta','Your life is yours now. A new chapter starts based on the path you choose.');chron('Settled into a new life.')}
     S=questSteps()}}
 const GOALS=[
- {id:'gang',t:'Gangsteris',en:'Reach the top street rank',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k].league==='street'&&FACTIONS[k].type!=='crew'&&rankIdx(k)>=5)},
- {id:'auto',t:'Klubo legenda',en:'Top rank in a car club',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k].league==='auto'&&rankIdx(k)>=4)},
- {id:'school',t:'Mokyklos karalius',en:'Top rank in your school yard',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k].league==='school'&&rankIdx(k)>=3)},
+ {id:'gang',t:'Gangsteris',en:'Reach the top street rank',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k]&&FACTIONS[k].league==='street'&&FACTIONS[k].type!=='crew'&&rankIdx(k)>=5)},
+ {id:'auto',t:'Klubo legenda',en:'Top rank in a car club',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k]&&FACTIONS[k].league==='auto'&&rankIdx(k)>=4)},
+ {id:'school',t:'Mokyklos karalius',en:'Top rank in your school yard',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k]&&FACTIONS[k].league==='school'&&rankIdx(k)>=3)},
  {id:'travel',t:'Keliautojas',en:'Visit all 8 towns',ok:()=>Object.keys(P.visited).length>=8,prog:()=>Object.keys(P.visited).length+'/8'},
  {id:'sights',t:'Lankytinos vietos',en:'See 12 landmarks',ok:()=>Object.keys(P.landmarks).length>=12,prog:()=>Object.keys(P.landmarks).length+'/12'},
  {id:'rich',t:'Turtuolis',en:'Have €100,000',ok:()=>P.money>=100000,prog:()=>eur(P.money)},
@@ -1603,14 +1605,14 @@ function openHQ(p){const fid=p.hq,f=FACTIONS[fid];G.flags.hqVisit=true;const min
   else{const why=P.age<f.minAge?`Age ${f.minAge}+ only. „Ateik, kai paaugsi.“`:P.faction?`You are already with ${FACTIONS[P.faction].name}. Leave them first.`:null;
     const pen=f.league==='street'&&P.parent==='police'?' Your mum being a cop makes them suspicious: you start with less rep.':'';
     h+=act('Prisijungti',why||`Join ${f.name} as ${RANKS[rankTable(f)][0]}.${pen}`,'Prisijungti',()=>{P.faction=fid;if(P.parent==='police'&&f.league==='street')P.rep[fid]=(P.rep[fid]||0)-10;if(P.parent==='gangster'&&f.league==='street'&&f.type==='gang')P.rep[fid]=Math.max(repOf(fid),40);
-      toast(f.short.slice(0,3).toUpperCase(),`Sveikas, ${rankName(fid)}!`,`You joined ${f.name}. Open the phone (T) for jobs.`);chron(`Joined ${f.name}.`);SND.fanfare();openHQ(p)},!!why)}
+      toast(f.short.slice(0,3).toUpperCase(),`Sveikas, ${rankName(fid)}!`,`You joined ${f.name}. Open the phone (T) for jobs.`);chron(`Joined ${f.name}.`);SND.fanfare();closeModal();joinScene(fid)},!!why)}
   h+=`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Išeiti</button></div>`;openModal(h)}
 function openSchool(p){const f=FACTIONS[p.fac],mineSchool=P.school===p.fac,h0=G.time.min/60,wd=G.time.dow>=1&&G.time.dow<=5;G.flags.schoolVisit=G.flags.schoolVisit||mineSchool;
   let h=mHead('M',esc(p.name),mineSchool?'Tavo mokykla · your school':'Rival school')+'<div class="mbody">';
   if(mineSchool&&P.age<19){h+=act('Eiti į pamokas','Attend classes until 14:00. Tamo stays happy, parents keep paying allowance.','Į pamokas',()=>{if(!(wd&&h0>=7.5&&h0<11)){log('Lessons run on weekdays, arrive between 7:30 and 11:00.','bad');return}skipHours(14-h0);G.attended=true;P.energy-=15;setMood(-4);P.money+=0;log(pick(['Math test: 8/10. Tamo: „Puiku!“','History: the Grand Duchy reached the Black Sea. Cool.','PE: you won the basketball game.','Lithuanian: a whole lesson about Donelaitis.']),'good');closeModal()},false);
     h+=act('Mėtyti į krepšį','Shoot hoops in the yard. Timing game.','Žaisti',()=>openHoops((s)=>{if(P.faction===p.fac)gainRep(p.fac,s)}));
     if(P.age>=13){const mine=P.faction===p.fac;if(mine){h+=`<p><span class="pill g">Kiemo gauja</span> Rank <b>${rankName(p.fac)}</b> · rep ${repOf(p.fac)}</p>`;availableJobs().filter(j=>j.fac===p.fac).forEach(j=>h+=act(j.title,j.desc+` <b>${j.pay}</b>`,'Imtis',()=>{closeModal();startMission(j.type)}))}
-      else h+=act('Prisijungti prie kiemo gaujos',P.faction?`You are with ${FACTIONS[P.faction].name}.`:`Run with the ${esc(f.short)} yard crew. Boss: ${esc(f.boss)}.`,'Prisijungti',()=>{P.faction=p.fac;toast('MOK','Kiemo gauja','You joined your school yard crew.');chron(`Joined the ${f.name} yard crew.`);openSchool(p)},!!P.faction)}}
+      else h+=act('Prisijungti prie kiemo gaujos',P.faction?`You are with ${FACTIONS[P.faction].name}.`:`Run with the ${esc(f.short)} yard crew. Boss: ${esc(f.boss)}.`,'Prisijungti',()=>{P.faction=p.fac;chron(`Joined the ${f.name} yard crew.`);closeModal();joinScene(p.fac)},!!P.faction)}}
   else h+=`<p class="scene" style="font-size:14.5px">This is ${esc(f.name)}. ${P.faction&&FACTIONS[P.faction].league==='school'?'Their kids do not like your colours. Watch yourself here.':'Not your school.'}</p>`;
   openModal(h+`</div><div class="mfoot"><button class="btn" onclick="closeModal()">Išeiti</button></div>`)}
 function openHoops(done){let shots=0,score=0,pos=0,dir=1,zone=rnd(30,62),run=true;const zw=14;
@@ -1659,7 +1661,7 @@ function openSelf(){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls),p
   let h=mHead('A',esc(P.name+' '+P.surname),`${P.age} m. · ${c.name} · ${cls.t}`)+'<div class="mbody"><div class="grid2"><dl class="kv">';
   h+=`<dt>Tėvai</dt><dd>${par.t} (${par.en})</dd><dt>Užsiėmimas</dt><dd>${job?job.t:'Vaikas'}</dd><dt>Namai</dt><dd>${cls.home}</dd><dt>Gauja / klubas</dt><dd>${P.faction?esc(FACTIONS[P.faction].name)+' · '+rankName(P.faction):'Niekas · none'}</dd>`;
   h+=`<dt>Muštynės</dt><dd>${P.fight}/10</dd><dt>Nokautai</dt><dd>${P.stats.ko||0}</dd><dt>Geriausias šoninis</dt><dd>${P.stats.bestDrift||0}</dd><dt>Buteliai</dt><dd>${P.stats.bottles||0}</dd><dt>Miestai</dt><dd>${Object.keys(P.visited).map(k=>cityById(k).name).join(', ')}</dd></dl>`;
-  h+='<div><b style="font:800 18px var(--display)">Reputacija</b>'+(Object.keys(P.rep).filter(k=>P.rep[k]).map(k=>`<div class="bar"><span>${esc(FACTIONS[k].short)}</span><span>${rankName(k)} · ${P.rep[k]}</span></div>`).join('')||'<p class="note">No reputation yet.</p>');
+  h+='<div><b style="font:800 18px var(--display)">Reputacija</b>'+(Object.keys(P.rep).filter(k=>P.rep[k]&&FACTIONS[k]).map(k=>`<div class="bar"><span>${esc(FACTIONS[k].short)}</span><span>${rankName(k)} · ${P.rep[k]}</span></div>`).join('')||'<p class="note">No reputation yet.</p>');
   h+='<b style="font:800 18px var(--display);display:block;margin-top:10px">Kronika</b>'+G.hist.slice(-8).reverse().map(t=>`<p class="note" style="margin:0 0 4px">${esc(t)}</p>`).join('')+'</div></div></div>';
   openModal(h+`<div class="mfoot"><button class="btn ghost" onclick="openCars()">Transportas</button><button class="btn" onclick="closeModal()">Gerai</button></div>`)}
 function openCars(){let h=mHead('🚗','Transportas','Your vehicles')+'<div class="mbody">';
@@ -1694,6 +1696,7 @@ function openMap(){const sc=Math.min(1.4,(Math.min(innerWidth,1000)-80)/W);const
   g.font=`700 ${10/sc}px "IBM Plex Sans",sans-serif`;POIS.forEach(p=>{if(p.kind==='landmark'){g.fillStyle=P.landmarks[p.id]?'#E2A11B':'#fff';g.beginPath();g.arc(p.x/TS,p.y/TS,3/sc,0,7);g.fill()}});
   POIS.forEach(p=>{if(p.kind==='hq'||p.hq){g.fillStyle=FACTIONS[p.hq].color;g.fillRect(p.x/TS-3/sc,p.y/TS-3/sc,6/sc,6/sc)}});
   const mark=(x,y,col,r)=>{g.fillStyle=col;g.strokeStyle='#fff';g.lineWidth=2/sc;g.beginPath();g.arc(x/TS,y/TS,r/sc,0,7);g.fill();g.stroke()};
+  {const h=POIS.find(q=>q.id===P.home);if(h){g.fillStyle='#E2A11B';g.fillRect(h.x/TS-4/sc,h.y/TS-4/sc,8/sc,8/sc)}}(G.biz||[]).forEach(id=>{const q=POIS.find(x=>x.id===id);if(q){g.fillStyle='#59B86A';g.fillRect(q.x/TS-4/sc,q.y/TS-4/sc,8/sc,8/sc)}});
   if(G.mission&&G.mission.target)mark(G.mission.target.x,G.mission.target.y,'#B5332B',6);if(G.way)mark(G.way.x,G.way.y,'#2D5DA8',6);mark(worldPos().x,worldPos().y,'#E2A11B',7);
   cvm.onclick=e=>{const r=cvm.getBoundingClientRect();const x=(e.clientX-r.left)/sc*TS,y=(e.clientY-r.top)/sc*TS;G.way={x,y,label:'Waypoint'};openMap()};
   const used=[...new Set(DISTRICTS.map(d=>d.owner).filter(Boolean))];$('#mleg').innerHTML=used.map(k=>`<span><i style="background:${FACTIONS[k].color}"></i>${esc(FACTIONS[k].name)} (${DISTRICTS.filter(d=>d.owner===k).length})</span>`).join('')+'<span><i style="background:#E2A11B;border-radius:50%"></i>Tu (you)</span><span><i style="background:#B5332B;border-radius:50%"></i>Job</span><span><i style="background:#fff;border-radius:50%"></i>Landmark</span>'}
@@ -1829,7 +1832,7 @@ function loadLife(s){s.owners.forEach((o,i)=>{if(DISTRICTS[i])DISTRICTS[i].owner
   (s.decor||[]).forEach(d=>DECOR.push(d));spawnStartVehicles();startGame(false)}
 function startGame(isNew){refreshOverlay();$('#title').classList.add('hidden');$('#creator').classList.add('hidden');$('#hud').classList.remove('hidden');
   if(matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
-  running=true;seasonCheck();setTimeout(syncCrew,50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
+  running=true;WINTER=null;seasonCheck();setTimeout(syncCrew,50);LASTCITY=P.city;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
   if(isNew){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls);const sch=FACTIONS[P.school];
     const intro={6:`Tomorrow is your first day at ${sch.name}. Mum already bought the flowers for the teacher. Today the yard is yours: bottles to collect, a taromatas that pays 10 cents each, and an ice cream van somewhere.`,
       13:`Rugsėjo 1-oji. A new school year at ${sch.name}. The older kids say the ${FACTIONS[pick(Object.keys(FACTIONS).filter(k=>FACTIONS[k].city===P.city&&FACTIONS[k].type==='school'&&k!==P.school))||P.school].short} crowd are planning something. ${P.city==='vilnius'?'And everyone cool hangs out at the White Bridge.':''}`,
@@ -1970,6 +1973,7 @@ function tplSchool(p){const s=mkRoom(18,12,{floor:'lino',wall:'#D6DFC9',title:p.
   R.deco(s,'flag',16,1);
   const f=FACTIONS[p.fac];const rivalSide=P.faction&&FACTIONS[P.faction].league==='school'&&P.faction!==p.fac&&P.age>=13;
   for(let k=0;k<4;k++){const e=R.ped(s,'school',ri(2,15),ri(8,10),{fac:p.fac,lines:[line('Labas!','Hi!'),line('Rytoj kontrolinis…','Test tomorrow…'),line('Eime per pertrauką į kiemą.','Let\'s go to the yard at break.')]});if(rivalSide){e.angry=true;s.hostileCount++}}
+  if(rivalSide&&!(G.raids&&G.raids[p.fac]===G.time.day))s.schoolRaid=p.fac;
   return s}
 function tplOffice(p){const s=mkRoom(16,10,{floor:'grey',wall:'#DCE3E6',title:p.name,sub:'Verslo centras'});
   R.wallV(s,11,2,8,[5]);R.deco(s,'window',2,1,3);R.deco(s,'window',7,1,3);R.deco(s,'window',13,1,2);
@@ -2045,6 +2049,7 @@ function openPOI(p){
   enterScene(s,p)}
 function enterScene(s,p){s.poi=p;s.ret={x:p.x,y:p.y+20};SCENE=s;ENT.bubbles=[];P.x=s.door*TS+16;P.y=(s.h-1)*TS+4;P.dir=3;keys.clear();fadeScreen();SND.door();
   if(p.kind==='hq')G.flags.hqVisit=true;if(p.kind==='school'&&P.school===p.fac)G.flags.schoolVisit=true;
+  if(!G.flags.intHint){G.flags.intHint=true;log('Inside: walk up to furniture or people and press <b>E</b> when a prompt shows. Walk out through the door at the bottom.','amb')}
   if(s.raid)toast('!!',`Būstinės reidas`,`${FACTIONS[s.raid].short} will not let you walk out. Knock them all out.`);
   $('#speedo').classList.add('hidden');PROMPT=null;showPrompt();updateZone()}
 function leaveScene(silent,keepPos){if(!SCENE)return;const r=SCENE.ret;SCENE=null;ENT.bubbles=[];if(!keepPos){P.x=r.x;P.y=r.y;P.dir=1}keys.clear();if(!silent){fadeScreen();SND.door()}updateZone();PROMPT=null;showPrompt();crewList().forEach(e=>{e.x=P.x+rnd(-24,24);e.y=P.y+rnd(6,26)})}
@@ -2060,11 +2065,12 @@ function updateInterior(dt){const s=SCENE;
   const sp=(P.age<10?95:115)*((keys.has('ShiftLeft')||keys.has('ShiftRight'))?1.4:1);
   if(L>0){P.anim+=dt*10;P.dir=Math.abs(mx)>Math.abs(my)?(mx>0?0:2):(my>0?1:3);iMove(P,mx*sp*dt,my*sp*dt,8)}
   if(P.y>(s.h-1)*TS+22){if(s.raid&&s.peds.some(e=>e.angry&&!(e.ko>0))){P.y=(s.h-1)*TS+10;log('The door is blocked. Fight your way out!','bad')}else{leaveScene();return}}
-  for(const e of s.peds)updateIPed(e,dt);
+  for(const e of s.peds){updateIPed(e,dt);if(SCENE!==s)return}
   if(s.pickups)for(const k of s.pickups){if(!k.got&&dist(k.x,k.y,P.x,P.y)<22){k.got=true;give('bottle',1);SND.blip(880);missionEvent('bottle')}}
   if(P.heat>0&&s.poi.kind!=='police'){HEAT.calm+=dt*2;if(HEAT.calm>6+P.heat*2){P.heat=Math.max(0,Math.ceil(P.heat)-1);HEAT.calm=0;if(!P.heat)log('You laid low inside. The police moved on.','good')}}
   for(const f of ENT.fx){f.life-=dt;if(f.k==='spark'){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=300*dt}else f.r+=dt*14}ENT.fx=ENT.fx.filter(f=>f.life>0);
   for(const b of ENT.bubbles)b.life-=dt;ENT.bubbles=ENT.bubbles.filter(b=>b.life>0);
+  if(s.schoolRaid&&!s.raidDone&&s.peds.filter(e=>e.angry).every(e=>e.ko>0)){s.raidDone=true;G.raids=G.raids||{};G.raids[s.schoolRaid]=G.time.day;gainRep(P.faction,30);G.flags.scuffleWin=true;toast('MOK','Mokyklų karas','You stormed the rival school corridor. Rep +30.');chron(`Stormed ${FACTIONS[s.schoolRaid].name}.`);SND.fanfare()}
   if(s.raid&&!s.raidDone&&s.peds.filter(e=>e.angry).every(e=>e.ko>0)){s.raidDone=true;raidWon(s.raid)}
   tickMission(dt);
   acc1+=dt;acc2+=dt;if(acc1>.2){acc1=0;PROMPT=findPromptI();showPrompt()}if(acc2>1){acc2=0;checkQuest();checkGoals();hudUpdate();updateZone()}
@@ -2294,7 +2300,7 @@ function nearStairDoor(){const tx0=tx(P.x)>>4,ty0=tx(P.y)>>4;for(let by=ty0-1;by
 
 /* ---------- winter ---------- */
 let WINTER=false;
-function seasonCheck(){const m=doyToDate(G.time.doy).m;const w=m===11||m<=1;if(w!==WINTER){WINTER=w;chunkCache.clear();if(w){toast('❄','Žiema','Snow in Lithuania. Roads are slippery, drive carefully.')}}}
+function seasonCheck(){const m=doyToDate(G.time.doy).m;const w=m===11||m<=1;if(w!==WINTER){WINTER=w;chunkCache.clear();iceCheck();if(w){toast('❄','Žiema','Snow in Lithuania. Roads are slippery, drive carefully.')}}}
 
 /* ---------- prompts outdoors that are not POIs ---------- */
 function extraPrompt(){if(P.inCar)return null;
@@ -2334,16 +2340,16 @@ function openClothes(){P.owned=P.owned||{};let h=mHead('👕','Drabužiai','Clot
   h+=act('Spinta','Change outfit and colours.','Atidaryti',()=>openWardrobe());openModal(h+'</div>')}
 
 /* ---------- fishing ---------- */
-const FISH_SEA=[['strimele',.35],['plekste',.3],['menke',.2],['stinta',.15]],FISH_FRESH=[['kuoja',.32],['eserys',.26],['karsis',.16],['lydeka',.12],['sterkas',.08],['unguris',.06]];
+const FISH_ICE=[['kuoja',.4],['eserys',.4],['stinta',.2]],FISH_SEA=[['strimele',.35],['plekste',.3],['menke',.2],['stinta',.15]],FISH_FRESH=[['kuoja',.32],['eserys',.26],['karsis',.16],['lydeka',.12],['sterkas',.08],['unguris',.06]];
 Object.assign(ITEMS,{meskere:{n:'Meškerė',en:'Fishing rod. Stand by water and press E',ic:'🎣',price:20,tool:true},
  kuoja:{n:'Kuoja',en:'Roach. Small and common',ic:'🐟',price:0,sell:2,fish:1},eserys:{n:'Ešerys',en:'Perch with stripes',ic:'🐟',price:0,sell:3,fish:1},karsis:{n:'Karšis',en:'Bream',ic:'🐟',price:0,sell:5,fish:2},
  lydeka:{n:'Lydeka',en:'Pike. Toothy and proud',ic:'🐊',price:0,sell:12,fish:3},sterkas:{n:'Sterkas',en:'Zander, a restaurant favourite',ic:'🐟',price:0,sell:15,fish:3},unguris:{n:'Unguris',en:'Eel. Smoked in Nida',ic:'🐍',price:0,sell:20,fish:4},
  strimele:{n:'Strimelė',en:'Baltic herring',ic:'🐟',price:0,sell:3,fish:1},plekste:{n:'Plekšnė',en:'Flounder, flat as a plate',ic:'🐟',price:0,sell:6,fish:2},menke:{n:'Menkė',en:'Cod',ic:'🐟',price:0,sell:9,fish:3},stinta:{n:'Stinta',en:'Smelt. Palanga holds a whole festival for it',ic:'🐟',price:0,sell:4,fish:2}});
 SHOPS.market.items.push('meskere');
-function waterNear(){const x=tx(P.x),y=tx(P.y);for(const[dx,dy]of[[0,1],[1,0],[-1,0],[0,-1],[0,0]]){const t=tileAt(x+dx,y+dy);if(t===T.SEA)return'sea';if(t===T.WATER)return'fresh'}if(tileAt(x,y)===T.PIER)return tileAt(x,y+2)===T.SEA||tileAt(x-3,y)===T.SEA?'sea':'fresh';return null}
-function rollFish(kind){const tb=kind==='sea'?FISH_SEA:FISH_FRESH;let r=Math.random(),acc=0;for(const[id,w]of tb){acc+=w;if(r<acc)return id}return tb[0][0]}
+function waterNear(){const x=tx(P.x),y=tx(P.y);for(const[dx,dy]of[[0,1],[1,0],[-1,0],[0,-1],[0,0]]){const t=tileAt(x+dx,y+dy);if(t===T.SEA)return'sea';if(t===T.WATER)return WINTER?'ice':'fresh'}if(tileAt(x,y)===T.PIER)return tileAt(x,y+2)===T.SEA||tileAt(x-3,y)===T.SEA?'sea':'fresh';return null}
+function rollFish(kind){const tb=kind==='sea'?FISH_SEA:kind==='ice'?FISH_ICE:FISH_FRESH;let r=Math.random(),acc=0;for(const[id,w]of tb){acc+=w;if(r<acc)return id}return tb[0][0]}
 function openFishing(kind){let phase='wait',t=rnd(1.2,3.5),pos=0,dir=1,zone=rnd(25,65),fish=rollFish(kind),diff=ITEMS[fish].fish,zw=Math.max(8,20-diff*3),speed=1+diff*.5,run=true;
-  openModal(mHead('🎣','Žvejyba',kind==='sea'?'Baltijos jūra':'Ežeras, upė ar marios')+`<div class="mbody mg"><p id="fr" class="note" style="font-size:15px">Laukiam… (waiting for a bite)</p><div class="mgbar"><div class="zone2" style="left:${zone}%;width:${zw}%;opacity:.25" id="fz"></div><div class="mark" id="fm"></div></div></div><div class="mfoot"><button class="btn green" id="fs">Traukti</button><button class="btn ghost" onclick="FISHG.run=false;closeModal()">Baigti</button></div>`);
+  openModal(mHead('🎣','Žvejyba',kind==='sea'?'Baltijos jūra':kind==='ice'?'Poledinė žvejyba · ice fishing through a hole':'Ežeras, upė ar marios')+`<div class="mbody mg"><p id="fr" class="note" style="font-size:15px">Laukiam… (waiting for a bite)</p><div class="mgbar"><div class="zone2" style="left:${zone}%;width:${zw}%;opacity:.25" id="fz"></div><div class="mark" id="fm"></div></div></div><div class="mfoot"><button class="btn green" id="fs">Traukti</button><button class="btn ghost" onclick="FISHG.run=false;closeModal()">Baigti</button></div>`);
   const pull=()=>{if(!run)return;if(phase==='wait'){$('#fr').textContent='Per anksti! Too early, the fish swam off.';phase='done';run=false;FISHG.run=false;return}
     if(phase==='bite'){const ok=pos>=zone&&pos<=zone+zw;run=false;FISHG.run=false;phase='done';skipHours(.5);P.energy-=3;
       if(ok){give(fish,1);P.stats.fish=(P.stats.fish||0)+1;SND.fanfare();setMood(5);$('#fr').innerHTML=`Pagavai: <b>${ITEMS[fish].n}</b> (${ITEMS[fish].en}). Market price ${eur(ITEMS[fish].sell)}.`}
@@ -2354,6 +2360,44 @@ function openFishing(kind){let phase='wait',t=rnd(1.2,3.5),pos=0,dir=1,zone=rnd(
 const FISHG={run:false,pull:null};
 GOALS.push({id:'fish',t:'Žvejys',en:'Catch 20 fish',ok:()=>(P.stats.fish||0)>=20,prog:()=>(P.stats.fish||0)+'/20'},
  {id:'biz',t:'Verslininkas',en:'Own 3 businesses',ok:()=>G.biz&&G.biz.length>=3,prog:()=>(G.biz?G.biz.length:0)+'/3'});
+
+/* ---------- story scenes for big moments ---------- */
+const JOIN_SPEECH={gang:f=>`${f.boss} looks you up and down for a long time. „Pas mus taisyklės paprastos: savų neišduodi, svetimiems nenusileidi. Gatvės tavęs neišmokys mandagumo, bet išmokys pagarbos.“ Someone hands you a tracksuit jacket in ${f.short} colours.`,
+ cartel:f=>`„${f.boss}“ does not stand up. „Čia ne gauja, čia verslas. Mes neklausinėjam, kas kur keliauja per mišką. Ir tu neklausinėk.“ A phone with one saved number lands on the table in front of you.`,
+ crew:f=>`${f.boss} spins a skateboard wheel and grins. „Sveikas atvykęs į Centrą. Vakarais ant tilto, savaitgaliais Užupyje. Naujininkų gopams – nė žingsnio.“`,
+ auto:f=>`${f.boss} pops the bonnet of an old BMW and points at the engine. „Mašina – kaip šeima. Prižiūrėk, ir ji tave parveš namo. Lenktyniaujam tik ten, kur niekas nenukentės.“ Everyone laughs, then revs.`,
+ school:f=>`${f.boss} meets you behind the gym. „Mūsų kiemas, mūsų krepšinio aikštelė, mūsų taisyklės. Mokytojams – nė žodžio.“`};
+function scene(gl,title,paras){openModal(mHead(gl,esc(title),'')+`<div class="mbody scene">${paras.map(t=>`<p>${t}</p>`).join('')}</div><div class="mfoot"><button class="btn amber" onclick="closeModal()">Tęsti</button></div>`)}
+function joinScene(fid){const f=FACTIONS[fid];const fn=JOIN_SPEECH[f.type];if(fn)setTimeout(()=>scene(f.short.slice(0,3).toUpperCase(),`Sveikas, ${rankName(fid)}`,[fn(f),'<span class="note">Fictional role-play. Open the phone (T) for jobs from your new crew.</span>']),200)}
+function topRankScene(fid){const f=FACTIONS[fid];setTimeout(()=>scene('★',rankName(fid),[f.league==='street'?`They stop calling you by your first name. In ${cityById(f.city).name} people lower their voice when you walk into the kebab shop. ${f.boss} pours two glasses of gira: „Dabar tu sprendi.“`
+  :f.league==='auto'?`At the night meet the whole car park goes quiet when your car rolls in. Phones come out. Tomorrow half of Lithuania will watch your drift on TikTok.`
+  :`The whole yard chants your name at break. Even the kids from the rival school nod when you pass.`,'<span class="note">This is a game. In real life gangs and street racing end careers, families and lives.</span>']),300)}
+
+/* ---------- boss race (auto) ---------- */
+function startBossRace(r){if(!P.inCar||CARS[P.inCar.model].kind==='bike'){log('You need a car for a race. Get in one (F).','bad');return}
+  const M={type:'race',boss:true,fac:P.faction,city:curCity().id,t0:now()};startRace(M,r);if(G.mission!==M)return;M.title=`Iššūkis: ${FACTIONS[P.faction].boss}`;M.pay=600;M.rep=90;
+  M.ai.forEach((a,i)=>{a.skill=i?.98:.94;a.model=i?'m5':'e46'});toast('🏁',M.title,'Beat the club boss on six checkpoints.')}
+
+/* ---------- holidays ---------- */
+const HOLIDAYS=[
+ {m:8,d:1,t:'Rugsėjo 1-oji',en:'Knowledge Day. Kids carry flowers to their teachers.',mood:4},
+ {m:10,d:1,t:'Vėlinės',en:'All Souls. Cemeteries glow with thousands of candles tonight.',mood:2},
+ {m:11,d:24,t:'Kūčios',en:'Christmas Eve: twelve meatless dishes, kūčiukai with poppy milk.',mood:10,gift:true},
+ {m:11,d:25,t:'Kalėdos',en:'Christmas. Linksmų Kalėdų!',mood:12,gift:true},
+ {m:0,d:1,t:'Naujieji metai',en:'New Year. Fireworks over every town.',mood:8},
+ {m:1,d:16,t:'Vasario 16-oji',en:'Restoration of the State Day, 1918. Flags on every building.',mood:8},
+ {m:2,d:4,t:'Kaziuko mugė',en:'St Casimir\'s fair in Vilnius: verbos, wooden spoons and riestainiai.',mood:8},
+ {m:2,d:11,t:'Kovo 11-oji',en:'Restoration of Independence, 1990.',mood:8},
+ {m:5,d:24,t:'Joninės',en:'Midsummer. Bonfires, wreaths and searching for the fern flower.',mood:15},
+ {m:6,d:6,t:'Valstybės diena',en:'Statehood Day. At 21:00 everyone sings Tautiška giesmė together.',mood:10},
+];
+function holidayToday(){const d=doyToDate(G.time.doy);return HOLIDAYS.find(h=>h.m===d.m&&h.d===d.d)}
+function holidayCheck(){const h=holidayToday();if(!h)return;toast('LT',h.t,h.en);setMood(h.mood);chron(`Celebrated ${h.t}.`);
+  if(h.gift&&P.age<24&&!G.flags['gift'+G.time.day]){G.flags['gift'+G.time.day]=1;const n=ri(10,40);P.money+=n;log(`A present from your family: ${eur(n)}.`,'good')}}
+
+/* ---------- ice: frozen lakes are walkable in winter ---------- */
+function iceCheck(){SOLID_FOOT[T.WATER]=WINTER?0:1;if(!WINTER&&P&&!P.inCar&&tileAt(tx(P.x),tx(P.y))===T.WATER){const[x,y]=freeSpotNear(P.x,P.y,t=>WALKABLE[t]||t===T.GRASS||t===T.SAND);P.x=x;P.y=y;log('The ice melted. You scrambled to the shore.','amb')}
+  ENT.peds.forEach(e=>{if(!WINTER&&tileAt(tx(e.x),tx(e.y))===T.WATER)e.dead=true})}
 
 /* =====================================================================
    MAIN LOOP
@@ -2482,7 +2526,7 @@ function keyAction(code){
   case 'KeyJ':playerPunch();break;
   case 'KeyH':if(P.inCar){SND.horn();ENT.peds.forEach(e=>{if(dist(e.x,e.y,P.x,P.y)<5*TS&&!e.hostile&&e.kind!=='police'){e.state='flee';e.t=1.5}})}break;
   case 'KeyM':openMap();break;case 'KeyQ':openQuests();break;case 'KeyT':openPhone();break;case 'KeyC':openSelf();break;case 'KeyI':openItems();break;case 'KeyL':openGloss();break;
-  case 'KeyN':toggleSound();break;case 'Escape':openMenu();break;
+  case 'KeyN':toggleSound();break;case 'Equal':case 'NumpadAdd':ZMUL=clamp(ZMUL*1.1,.55,1.7);resize();break;case 'Minus':case 'NumpadSubtract':ZMUL=clamp(ZMUL*.9,.55,1.7);resize();break;case 'Escape':openMenu();break;
   default:if(/^Digit[1-6]$/.test(code)){const k=HOTBAR[+code.slice(5)-1];if(k)useItem(k)}}}
 addEventListener('keydown',e=>{if(e.target&&e.target.tagName==='INPUT')return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
   if(!e.repeat)keyAction(e.code);if(running&&$('#modal').classList.contains('hidden'))keys.add(e.code)});
@@ -2490,6 +2534,7 @@ addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='KeyE')HOLD.lock=fa
 addEventListener('blur',()=>keys.clear());
 cv.addEventListener('mousedown',e=>{if(!running||paused)return;if(e.button===0)playerPunch()});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{if(!running)return;e.preventDefault();ZMUL=clamp(ZMUL*(e.deltaY>0?.9:1.1),.55,1.7);resize()},{passive:false});
 (function touchSetup(){const joy=$('#joy'),knob=joy.querySelector('i');let pid=null;
   const setKeys=()=>{['KeyW','KeyA','KeyS','KeyD'].forEach(k=>keys.delete(k));if(!JOY.on||!P||!P.inCar)return;if(JOY.y<-.3)keys.add('KeyW');if(JOY.y>.3)keys.add('KeyS');if(JOY.x<-.3)keys.add('KeyA');if(JOY.x>.3)keys.add('KeyD')};
   const mv=e=>{const r=joy.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);const L=Math.hypot(x,y);if(L>1){x/=L;y/=L}JOY.x=x;JOY.y=y;knob.style.transform=`translate(${x*40}px,${y*40}px)`;setKeys()};

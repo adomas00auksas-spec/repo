@@ -126,7 +126,7 @@ function keyAction(code){
   case 'KeyJ':playerPunch();break;
   case 'KeyH':if(P.inCar){SND.horn();ENT.peds.forEach(e=>{if(dist(e.x,e.y,P.x,P.y)<5*TS&&!e.hostile&&e.kind!=='police'){e.state='flee';e.t=1.5}})}break;
   case 'KeyM':openMap();break;case 'KeyQ':openQuests();break;case 'KeyT':openPhone();break;case 'KeyC':openSelf();break;case 'KeyI':openItems();break;case 'KeyL':openGloss();break;
-  case 'KeyN':toggleSound();break;case 'Escape':openMenu();break;
+  case 'KeyN':toggleSound();break;case 'Equal':case 'NumpadAdd':ZMUL=clamp(ZMUL*1.1,.55,1.7);resize();break;case 'Minus':case 'NumpadSubtract':ZMUL=clamp(ZMUL*.9,.55,1.7);resize();break;case 'Escape':openMenu();break;
   default:if(/^Digit[1-6]$/.test(code)){const k=HOTBAR[+code.slice(5)-1];if(k)useItem(k)}}}
 addEventListener('keydown',e=>{if(e.target&&e.target.tagName==='INPUT')return;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
   if(!e.repeat)keyAction(e.code);if(running&&$('#modal').classList.contains('hidden'))keys.add(e.code)});
@@ -134,6 +134,7 @@ addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='KeyE')HOLD.lock=fa
 addEventListener('blur',()=>keys.clear());
 cv.addEventListener('mousedown',e=>{if(!running||paused)return;if(e.button===0)playerPunch()});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{if(!running)return;e.preventDefault();ZMUL=clamp(ZMUL*(e.deltaY>0?.9:1.1),.55,1.7);resize()},{passive:false});
 (function touchSetup(){const joy=$('#joy'),knob=joy.querySelector('i');let pid=null;
   const setKeys=()=>{['KeyW','KeyA','KeyS','KeyD'].forEach(k=>keys.delete(k));if(!JOY.on||!P||!P.inCar)return;if(JOY.y<-.3)keys.add('KeyW');if(JOY.y>.3)keys.add('KeyS');if(JOY.x<-.3)keys.add('KeyA');if(JOY.x>.3)keys.add('KeyD')};
   const mv=e=>{const r=joy.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);const L=Math.hypot(x,y);if(L>1){x/=L;y/=L}JOY.x=x;JOY.y=y;knob.style.transform=`translate(${x*40}px,${y*40}px)`;setKeys()};

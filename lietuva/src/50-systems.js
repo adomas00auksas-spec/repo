@@ -10,7 +10,7 @@ function setMood(n){P.mood=clamp(P.mood+n,0,100)}
 function price(p,kind){let f=1;if(P.parent==='market'&&kind==='food')f=.7;if(P.parent==='mech'&&kind==='car')f=.6;if(P.job==='mechanic'&&kind==='car')f*=.85;return Math.round(p*f*100)/100}
 function pay(n){if(P.money<n){log(`Not enough money (need ${eur(n)}).`,'bad');SND.blip(200);return false}P.money-=n;SND.coin();return true}
 function gainRep(fid,n){if(!fid)return;const before=rankIdx(fid);P.rep[fid]=(P.rep[fid]||0)+n;const after=rankIdx(fid);
-  if(after>before){const f=FACTIONS[fid];toast(f.short.slice(0,3).toUpperCase(),'Naujas rangas: '+rankName(fid),`${f.name} now call you ${rankName(fid)}.`);SND.fanfare();chron(`Became ${rankName(fid)} in ${f.name}.`)}}
+  if(after>before){const f=FACTIONS[fid];toast(f.short.slice(0,3).toUpperCase(),'Naujas rangas: '+rankName(fid),`${f.name} now call you ${rankName(fid)}.`);SND.fanfare();chron(`Became ${rankName(fid)} in ${f.name}.`);if(after===RANKS[rankTable(f)].length-1)topRankScene(fid)}}
 function chron(t){G.hist.push(`${dateStr()}: ${t}`);if(G.hist.length>80)G.hist.shift()}
 function dateStr(){const d=doyToDate(G.time.doy);return `${d.m+1}/${d.d} (${P.age} m.)`}
 function doyToDate(doy){let m=0,d=doy%365;while(d>=MDAYS[m]){d-=MDAYS[m];m++}return{m,d:d+1}}
@@ -26,7 +26,7 @@ function tickTime(dt){G.time.min+=dt*2;if(G.time.min>=1440){G.time.min-=1440;new
   if(P.hp<P.maxHp&&P.food>40)P.hp=Math.min(P.maxHp,P.hp+dt*.4);
   if(P.hp<=0)wipeOut()}
 function newDay(){G.time.day++;G.time.doy=(G.time.doy+1)%365;G.time.dow=(G.time.dow+1)%7;
-  seasonCheck();G.weather=Math.random()<.22?(WINTER?'Sniegas':'Lietus'):Math.random()<.4?'Debesuota':'Giedra';
+  seasonCheck();holidayCheck();G.weather=Math.random()<.22?(WINTER?'Sniegas':'Lietus'):Math.random()<.4?'Debesuota':'Giedra';
   const b=doyToDate(G.time.doy);if(b.m===P.bm&&b.d===P.bd){P.age++;toast('🎂',`Gimtadienis! ${P.age} m.`,'Happy birthday. Su gimtadieniu!');chron(`Turned ${P.age}.`)}
   // allowance
   const cls=CLASSES.find(c=>c.id===P.cls);if(P.age<24){let a=cls.allow[P.age<10?0:P.age<16?1:2];if(P.parent==='office')a*=1.2;if(G.skipped>=3){a=Math.round(a*.3);log('Tamo told your parents you keep skipping school. Allowance cut.','bad')}P.money+=a;log(`Parents gave you pocket money: ${eur(a)}`,'good')}
@@ -101,6 +101,7 @@ function availableJobs(){const out=[],c=curCity(),mf=myFac(),age=P.age;
     }
     if(mf.league==='auto'){out.push({type:'race',fac:fid,title:'Gatvės lenktynės',desc:'Six checkpoints across the city against two club members. Fictional, closed-street racing only.',pay:`€${100+r*40}, rep +20`});
       out.push({type:'driftc',fac:fid,title:'Šoninio iššūkis',desc:'Score 6,000 drift points in 60 seconds. Handbrake (Space) to start a slide.',pay:`€${60+r*25}, rep +15`});
+      if(r>=3&&!G.flags.bossWin)out.push({type:'bossrace',fac:fid,title:`Iššūkis bosui`,desc:`Race ${mf.boss} and their best driver. Win and the whole club knows your name.`,pay:'€600, rep +90'});
       if(r>=2)out.push({type:'hwyrace',fac:fid,title:'Lenktynės tarp miestų',desc:'Race two club drivers along a highway to the next town. Fictional, closed highway.',pay:`€${300+r*80}, rep +40`});
       out.push({type:'meet',fac:fid,title:'Naktinis susitikimas',desc:'Bring your own car to the club meet spot between 21:00 and 03:00. Better tuning, more respect.',pay:'rep by car'})}
     if(mf.league==='school'||mf.type==='crew'){out.push({type:'tag',fac:fid,title:'Pažymėti teritoriją',desc:'Tag 3 walls near the rival hangout with a spray can (hold E).',pay:'€10, rep +12'});
@@ -124,6 +125,7 @@ function startMission(type){if(G.mission){log('Finish or cancel your current job
   case 'turf':{const d=rivalDistrict()||pick(DISTRICTS.filter(d=>!d.owner));if(!d)return;M.title='Užimti teritoriją';M.d=d.id;M.target={x:d.cx*TS,y:d.cy*TS,label:d.name};M.step=`Take ${d.name} (${cityById(d.city).name})`;M.pay=150;M.rep=25;break}
   case 'race':startRace(M,r);return;
   case 'hwyrace':startHwyRace(r);return;
+  case 'bossrace':startBossRace(r);return;
   case 'driftc':M.title='Šoninio iššūkis';M.need=6000;M.got=0;M.timer=60;M.step='Drift! 6,000 points';M.pay=60+r*25;M.rep=15;if(!P.inCar){log('Get in a car first (F).','bad');return}break;
   case 'meet':{const spot=POIS.find(p=>p.meet===fid)||POIS.find(p=>p.meet);M.title='Naktinis susitikimas';M.target={x:spot.x,y:spot.y,label:spot.name};M.step='Bring your car to the meet (21:00–03:00)';break}
   case 'tag':{const rivalSchool=mf.type==='crew'?null:POIS.find(p=>p.kind==='school'&&p.city===mf.city&&p.fac!==fid);const base=rivalSchool||{x:DISTRICTS.find(d=>d.owner==='gopai').cx*TS,y:DISTRICTS.find(d=>d.owner==='gopai').cy*TS};
@@ -171,7 +173,7 @@ function startRace(M,r,cps){const c=curCity();if(!P.inCar||CARS[P.inCar.model].k
 function tickRace(M,dt){if(M.count>0){M.count-=dt;M.step=M.count>0?Math.ceil(M.count)+'…':'Važiuojam!';if(P.inCar){P.inCar.vx*=.8;P.inCar.vy*=.8}return}
   M.timer+=dt;const me=P.inCar;if(!me){missionFail('You left the car.');return}
   if(dist(me.x,me.y,M.target.x,M.target.y)<70){M.i++;SND.blip(1000);if(M.i>=M.cps.length){const ahead=M.ai.filter(a=>a.cp>=M.cps.length).length;const place=ahead+1;
-      if(place===1){G.flags[M.hwy?'hwyWin':'raceWin']=true;missionDone(`1st place in ${M.timer.toFixed(1)}s`)}else{M.pay=place===2?30:0;M.rep=place===2?8:2;missionDone(`${place}. vieta`)}return}
+      if(place===1){G.flags[M.hwy?'hwyWin':'raceWin']=true;if(M.boss)G.flags.bossWin=true;missionDone(`1st place in ${M.timer.toFixed(1)}s`)}else{M.pay=place===2?30:0;M.rep=place===2?8:2;missionDone(`${place}. vieta`)}return}
     M.target=Object.assign({label:`Checkpoint ${M.i+1}/${M.cps.length}`},M.cps[M.i])}
   M.ai.forEach(a=>{if(a.cp>=M.cps.length){a.vx*=.95;a.vy*=.95;carMove(a,dt);return}const t=M.cps[a.cp];const st=carStats(a);const ang=Math.atan2(t.y-a.y,t.x-a.x);let da=((ang-a.ang+Math.PI*3)%(Math.PI*2))-Math.PI;
     const fx=Math.cos(a.ang),fy=Math.sin(a.ang),rx=-fy,ry=fx;let vF=a.vx*fx+a.vy*fy,vR=a.vx*rx+a.vy*ry;
@@ -220,9 +222,9 @@ function checkQuest(){let S=questSteps();let guard=0;while(G.qi<S.length&&S[G.qi
     else{toast('LT','Naujas gyvenimas · baigta','Your life is yours now. A new chapter starts based on the path you choose.');chron('Settled into a new life.')}
     S=questSteps()}}
 const GOALS=[
- {id:'gang',t:'Gangsteris',en:'Reach the top street rank',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k].league==='street'&&FACTIONS[k].type!=='crew'&&rankIdx(k)>=5)},
- {id:'auto',t:'Klubo legenda',en:'Top rank in a car club',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k].league==='auto'&&rankIdx(k)>=4)},
- {id:'school',t:'Mokyklos karalius',en:'Top rank in your school yard',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k].league==='school'&&rankIdx(k)>=3)},
+ {id:'gang',t:'Gangsteris',en:'Reach the top street rank',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k]&&FACTIONS[k].league==='street'&&FACTIONS[k].type!=='crew'&&rankIdx(k)>=5)},
+ {id:'auto',t:'Klubo legenda',en:'Top rank in a car club',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k]&&FACTIONS[k].league==='auto'&&rankIdx(k)>=4)},
+ {id:'school',t:'Mokyklos karalius',en:'Top rank in your school yard',ok:()=>Object.keys(P.rep).some(k=>FACTIONS[k]&&FACTIONS[k].league==='school'&&rankIdx(k)>=3)},
  {id:'travel',t:'Keliautojas',en:'Visit all 8 towns',ok:()=>Object.keys(P.visited).length>=8,prog:()=>Object.keys(P.visited).length+'/8'},
  {id:'sights',t:'Lankytinos vietos',en:'See 12 landmarks',ok:()=>Object.keys(P.landmarks).length>=12,prog:()=>Object.keys(P.landmarks).length+'/12'},
  {id:'rich',t:'Turtuolis',en:'Have €100,000',ok:()=>P.money>=100000,prog:()=>eur(P.money)},
