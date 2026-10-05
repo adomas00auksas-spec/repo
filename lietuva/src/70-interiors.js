@@ -205,12 +205,12 @@ function openPOI(p){
   const f=TPL[p.kind];const s=f&&!P.inCar?f(p):null;if(!s)return poiMenu(p);
   if(p.kind==='bar'&&P.age<13){log('„Vaikams čia ne vieta.“ The bartender sends you out.','bad');return}
   enterScene(s,p)}
-function enterScene(s,p){s.poi=p;s.ret={x:p.x,y:p.y+20};SCENE=s;ENT.bubbles=[];P.x=s.door*TS+16;P.y=(s.h-1)*TS+4;P.dir=3;keys.clear();fadeScreen();SND.door();
+function enterScene(s,p){s.poi=p;s.ret={x:p.x,y:p.y+20};SCENE=s;ENT.bubbles=[];$('#hud').classList.add('inside');P.x=s.door*TS+16;P.y=(s.h-1)*TS+4;P.dir=3;keys.clear();fadeScreen();SND.door();
   if(p.kind==='hq')G.flags.hqVisit=true;if(p.kind==='school'&&P.school===p.fac)G.flags.schoolVisit=true;
   if(!G.flags.intHint){G.flags.intHint=true;log('Inside: walk up to furniture or people and press <b>E</b> when a prompt shows. Walk out through the door at the bottom.','amb')}
   if(s.raid)toast('!!',`Būstinės reidas`,`${FACTIONS[s.raid].short} will not let you walk out. Knock them all out.`);
   $('#speedo').classList.add('hidden');PROMPT=null;showPrompt();updateZone()}
-function leaveScene(silent,keepPos){if(!SCENE)return;const r=SCENE.ret;SCENE=null;ENT.bubbles=[];if(!keepPos){P.x=r.x;P.y=r.y;P.dir=1}keys.clear();if(!silent){fadeScreen();SND.door()}updateZone();PROMPT=null;showPrompt();crewList().forEach(e=>{e.x=P.x+rnd(-24,24);e.y=P.y+rnd(6,26)});ENT.peds.forEach(e=>{if(e.kind==='dog'){e.x=P.x+16;e.y=P.y+10}})}
+function leaveScene(silent,keepPos){if(!SCENE)return;const r=SCENE.ret;SCENE=null;ENT.bubbles=[];$('#hud').classList.remove('inside');if(!keepPos){P.x=r.x;P.y=r.y;P.dir=1}keys.clear();if(!silent){fadeScreen();SND.door()}updateZone();PROMPT=null;showPrompt();crewList().forEach(e=>{e.x=P.x+rnd(-24,24);e.y=P.y+rnd(6,26)});ENT.peds.forEach(e=>{if(e.kind==='dog'){e.x=P.x+16;e.y=P.y+10}})}
 
 /* ---------- interior update ---------- */
 function iSolid(px,py){const s=SCENE,x=Math.floor(px/TS),y=Math.floor(py/TS);if(x<0||x>=s.w||y<0)return true;if(y>=s.h)return x!==s.door;const i=y*s.w+x;return s.grid[i]===1||s.solid[i]===1}
