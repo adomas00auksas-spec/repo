@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ukiyo: a life in old Edo</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3B2B1F">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
@@ -6400,7 +6404,7 @@ requestAnimationFrame(loop);
       if(G.season!==x.lastSeason){x.lastSeason=G.season;const h=composeHaiku();x.haiku.push(h);if(x.haiku.length>80)x.haiku.shift();lines.push(`You write in your journal: "${h.lines.join(' / ')}"`);}
       // weekly bounties
       if(!x.week||G.totalDays>=x.week.end){const unfinished=x.week&&x.week.goals.some(g=>!g.done);newWeek();lines.push(unfinished?'A new week. Last week’s bounties expired; fresh ones are posted (K).':'A new week, and new bounties are posted (K).');}
-      rivalDay(lines);letterDay(lines);seasonalDay(lines);eventsDay(lines);
+      rivalDay(lines);letterDay(lines);seasonalDay(lines);eventsDay(lines);wave5Day(lines);
       // ledger
       x.ledger.push({d:G.totalDays,m:Math.round(G.money),r:Math.round(G.rep),o:Math.round(G.mood)});if(x.ledger.length>240)x.ledger.shift();
     }catch(e){console.warn('expansion day hook',e);}
@@ -6637,9 +6641,251 @@ requestAnimationFrame(loop);
     <h4 style="margin:16px 0 6px">Keys</h4><table class="xp-table">${[['WASD / arrows','Walk'],['E or Space','Enter, talk, act'],['Q','Quests'],['M','Map'],['C','Your character'],['I','Belongings'],['J','Goals'],['K','Deeds & journal'],['P','Make a woodblock print'],['1 to 6','Use hotbar item'],['?','This list'],['Esc','Menu / close']].map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table>`;
   }
 
+  /* =====================================================================
+     WAVE 5: the Town tab (money-lender, rice market, apprentice, pets,
+     home shrine, wishes, gifts, typhoons, sword schools, matchmaking,
+     tournament, bounties, onsen) + minigames (Go, haiku contest, tea
+     ceremony), ghosts, weather moods, famous views, the Tōkaidō road,
+     epitaphs and the family tree.
+     ===================================================================== */
+  const ri2=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const dayOK=(k)=>{const x=X();x.daily=x.daily||{};return x.daily[k]!==G.totalDays;};
+  const useDay=(k)=>{X().daily[k]=G.totalDays;};
+  const spend=n=>{if(G.money<n)return false;G.money-=n;return true;};
+  const KNOWN=()=>Object.entries(G.rel||{});
+
+  /* ---------- sword schools ---------- */
+  const SCHOOLS={itto:{name:'Ittō-ryū',skill:'sword',d:'One cut decides everything. +15% sword training.'},niten:{name:'Niten Ichi-ryū',skill:'strength',d:'Musashi’s two-sword style. +15% strength training.'},yagyu:{name:'Yagyū Shinkage-ryū',skill:'tactics',d:'The shogun’s own school. +15% tactics training.'}};
+  const _skillGain=skillGain;
+  skillGain=function(k,amt){try{const s=G&&G.xp&&G.xp.school&&SCHOOLS[G.xp.school];if(s&&s.skill===k)amt*=1.15;if(G&&G.xp&&G.xp.pet&&k==='arts')amt*=1.05;}catch(e){}return _skillGain(k,amt);};
+
+  /* ---------- the Tōkaidō ---------- */
+  const TOKAIDO=['Nihonbashi','Shinagawa','Kawasaki','Kanagawa','Hodogaya','Totsuka','Fujisawa','Hiratsuka','Ōiso','Odawara','Hakone','Mishima','Numazu','Hara','Yoshiwara','Kanbara','Yui','Okitsu','Ejiri','Fuchū','Mariko','Okabe','Fujieda','Shimada','Kanaya','Nissaka','Kakegawa','Fukuroi','Mitsuke','Hamamatsu','Maisaka','Arai','Shirasuka','Futagawa','Yoshida','Goyu','Akasaka','Fujikawa','Okazaki','Chiryū','Narumi','Miya','Kuwana','Yokkaichi','Ishiyakushi','Shōno','Kameyama','Seki','Sakashita','Tsuchiyama','Minakuchi','Ishibe','Kusatsu','Ōtsu','Sanjō Ōhashi'];
+  const _travelDay=travelDay;
+  travelDay=function(){
+    const r=_travelDay.apply(this,arguments);
+    try{const x=X();x.tokaido=x.tokaido||0;if(x.tokaido<TOKAIDO.length){const before=x.tokaido;x.tokaido=Math.min(TOKAIDO.length,x.tokaido+3);
+      const names=TOKAIDO.slice(before,x.tokaido);toast('道','Post stations stamped',`${names.join(', ')} (${x.tokaido}/${TOKAIDO.length} of the Tōkaidō)`);}}catch(e){}
+    return r;
+  };
+
+  /* ---------- epitaphs ---------- */
+  function epitaph(){
+    const x=X();const d=Object.keys(x.deeds);
+    const lines=[[d.includes('gen4'),'Root of a great house.'],[d.includes('win50'),'No blade was faster.'],[d.includes('mon3'),'Richer than lords, and knew it.'],[d.includes('travelAll'),'Walked all of Japan.'],[d.includes('master'),'Mastered the way.'],[d.includes('haiku12'),'Lived in verse.'],[d.includes('kids3'),'Beloved by a full house.'],[G.money<0,'Owed half the ward, and was missed anyway.'],[d.includes('rep95'),'The whole ward wept.'],[true,'Lived, worked, and was remembered.']];
+    return lines.find(l=>l[0])[1];
+  }
+  const _checkDeath=checkDeath;
+  checkDeath=function(){
+    let ep=null;
+    try{if(G&&G.flags&&G.flags.dieNow&&!modalOpen()){ep={name:`${G.given} ${G.family||''}`.trim(),age:G.ageY,text:epitaph(),year:G.year};const L=legacy();L.epitaphs=L.epitaphs||[];L.epitaphs.unshift(ep);L.epitaphs=L.epitaphs.slice(0,20);saveLegacy(L);recordLife();}}catch(e){}
+    const r=_checkDeath.apply(this,arguments);
+    if(ep)setTimeout(()=>toast('墓',`Here lies ${ep.name}`,ep.text),1500);
+    return r;
+  };
+
+  /* ---------- daily world for wave 5 ---------- */
+  const GHOSTS=['At midnight a paper lantern floated down the lane by itself, its painted face grinning.','You saw a procession of foxes with lanterns crossing the fields: a kitsune wedding.','A woman by the willow asked you the way. When she turned, she had no face at all.','Something counted plates in the old well last night: one, two, three, all the way to nine, then sobbing.','An old umbrella hopped past your door on one leg, sticking out its tongue.','A child’s handball bounced down the empty street at dawn, and no child came after it.'];
+  function wave5Day(lines){
+    const x=X();
+    // ghosts
+    if(Math.random()<.03){x.ghosts=(x.ghosts||0)+1;lines.push('A strange night. '+pick(GHOSTS));}
+    // weather moods
+    if(G.weather==='snow'&&x.snowYear!==G.year){x.snowYear=G.year;G.mood=clamp(G.mood+5,0,100);lines.push('The first snow of the year. The whole ward goes quiet and white, and children run out to catch flakes.');}
+    else if(G.weather==='rain'&&Math.random()<.3){G.mood=clamp(G.mood-2,0,100);lines.push('Rain drums on the roof all morning. A day for staying near the brazier.');}
+    // pets
+    if(x.pet){x.pet.days++;G.money-=5;G.mood=clamp(G.mood+(x.pet.kind==='songbird'?2:1),0,100);if(Math.random()<.04)lines.push(x.pet.kind==='songbird'?`${x.pet.name} the songbird sang at dawn and woke the whole lane.`:`${x.pet.name} the goldfish circled its bowl, catching the morning light.`);}
+    // apprentice
+    if(x.app){const a=x.app;a.days++;G.money-=20;const earn=Math.round((30+a.level*15)*(.6+Math.random()*.8));G.money+=earn;a.total=(a.total||0)+earn;
+      a.loyalty=clamp(a.loyalty+(G.money<0?-3:.5),0,100);
+      if(a.days%20===0&&a.level<5){a.level++;lines.push(`Your apprentice ${a.name} is getting good. (Level ${a.level})`);}
+      if(a.loyalty<40&&Math.random()<.02){const st=Math.min(Math.max(0,G.money),ri2(100,500));G.money-=st;lines.push(`${a.name} vanished in the night with ${fmt(st)} mon from the cash box.`);x.app=null;}
+      else if(a.loyalty<15){lines.push(`Unpaid and unhappy, ${a.name} has left to work for someone else.`);x.app=null;}}
+    // money-lender
+    if(x.loan){const L=x.loan;if((G.totalDays-L.since)%7===0){L.owed=Math.round(L.owed*1.08);lines.push(`Interest on your loan: you now owe the money-lender ${fmt(L.owed)} mon.`);
+      if(L.owed>L.principal*2.5){const keys=Object.keys(G.items).filter(k=>G.items[k]>0&&!['katana','armor'].includes(k));if(keys.length){const k=pick(keys);const n=G.items[k];G.items[k]=0;lines.push(`The money-lender’s men took your ${(ITEMS[k]||{name:k}).name||k} (${n}) against your debt.`);L.owed=Math.max(0,L.owed-n*30);}G.rep=clamp(G.rep-2,0,100);}}}
+    // rice market
+    const rc=x.rice=x.rice||{p:100,held:0,paid:0,hist:[]};const base=100*[1.15,1.05,.8,1.0][G.season];
+    rc.p=Math.max(40,Math.round(rc.p*.85+base*.15+(Math.random()-.5)*12));rc.hist.push(rc.p);if(rc.hist.length>30)rc.hist.shift();
+    // home shrine streak
+    if(x.shrine&&G.totalDays-x.shrine.last>7&&x.shrine.streak>0){x.shrine.streak=0;lines.push('Dust gathers on your neglected home shrine. The household gods feel forgotten.');}
+    // wishes
+    if(x.wish&&G.totalDays>=x.wish.due){const w=x.wish;x.wish=null;
+      if(w.kind==='wealth'){G.money+=800;lines.push('Your Tanabata wish came true: a forgotten debt was repaid to you, 800 mon!');}
+      else if(w.kind==='love'){(G.fam||[]).forEach(f=>f.f=clamp((f.f||50)+10,0,100));G.mood=clamp(G.mood+10,0,100);lines.push('Your Tanabata wish came true: the whole household is warm and close this season.');}
+      else if(w.kind==='skill'){const b=Object.entries(G.skills).sort((a,b)=>b[1]-a[1])[0];if(b)G.skills[b[0]]=clamp(b[1]+3,0,100);lines.push(`Your Tanabata wish came true: a flash of insight in your ${b?b[0]:'craft'}.`);}
+      else{G.hp=maxHp();G.mood=clamp(G.mood+8,0,100);lines.push('Your Tanabata wish came true: you have never felt healthier.');}}
+    // typhoon
+    if(G.season===1&&G.day===SEASON_LEN-2&&x.tyYear!==G.year&&Math.random()<.35){x.tyYear=G.year;x.typhoon={day:G.totalDays+1,boarded:false};lines.push('Fishermen say a typhoon is coming tomorrow. Board up your house (Town tab) or risk losing goods.');}
+    else if(x.typhoon&&G.totalDays>=x.typhoon.day){const t=x.typhoon;x.typhoon=null;
+      if(t.boarded)lines.push('The typhoon roared all night, but your boarded-up house stood firm.');
+      else{const loss=Math.min(1500,Math.max(0,Math.round(G.money*.08)));G.money-=loss;G.mood=clamp(G.mood-10,0,100);const keys=Object.keys(G.items).filter(k=>G.items[k]>1);if(keys.length){const k=pick(keys);G.items[k]=Math.ceil(G.items[k]/2);}lines.push(`The typhoon tore through the ward. Rain soaked your goods and repairs cost ${fmt(loss)} mon.`);}}
+    // seasonal gift windows
+    if((G.season===1&&G.day===1)||(G.season===3&&G.day===Math.ceil(SEASON_LEN/2)))lines.push(G.season===1?'Ochūgen season: send midsummer gifts to neighbours (Town tab) for double friendship.':'Oseibo season: year-end gifts to neighbours (Town tab) are expected and remembered.');
+    if(G.season===1&&G.day===7)lines.push('Tanabata! Bamboo branches hung with paper wishes line the street. Write your own in the Town tab.');
+  }
+
+  /* ---------- famous views (photo mode in each city and season) ---------- */
+  const _photo=photo;
+  photo=function(){
+    _photo();
+    try{const x=X();x.views=x.views||{};const k=(G.city||'edo')+':'+G.season;give('print',1);
+      if(!x.views[k]){x.views[k]=1;const n=Object.keys(x.views).length;setTimeout(()=>toast('景','A new famous view',`${(CITY[G.city]||{name:'Edo'}).name} in ${SEASONS[G.season]}: ${n}/${Object.keys(CITY).length*4} views. The print is in your belongings to sell.`),900);}}catch(e){}
+  };
+
+  /* ---------- deeds for wave 5 ---------- */
+  DEEDS.push(
+    D('ghost3','幽','Things that go bump','Witness three strange nights.',()=>ratio(X().ghosts||0,3),600,true),
+    D('views12','景','Thirty-six views','Capture twelve famous views (a print in each city and season).',()=>ratio(Object.keys(X().views||{}).length,12),2500),
+    D('tokaido','道','Fifty-three stations','Pass every station of the Tōkaidō.',()=>ratio(X().tokaido||0,TOKAIDO.length),4000),
+    D('shrine30','祀','Faithful household','Make offerings at your home shrine 30 days in a row.',()=>ratio((X().shrine||{}).streak||0,30),1500),
+    D('pet100','鳥','A faithful companion','Keep a pet for 100 days.',()=>ratio((X().pet||{}).days||0,100),800),
+    D('ladder','覇','Champion of the ladder','Defeat all ten duelists of the tournament ladder.',()=>ratio(X().ladder||0,10),5000),
+    D('go1','碁','Black and white','Win a game of Go.',()=>ratio(X().goWins||0,1),600),
+    D('haikuwin','冠','Prize poet','Win a haiku contest with a perfect score.',()=>ratio(X().haikuPerfect||0,1),800),
+    D('tea','茶','Way of tea','Perform a flawless tea ceremony.',()=>ratio(X().teaPerfect||0,1),600),
+    D('rice','米','Rice baron','Make 2,000 mon profit on the rice exchange.',()=>ratio(X().riceProfit||0,2000),1500),
+    D('bounty3','賊','Bandit hunter','Collect three bandit bounties.',()=>ratio(X().bountiesDone||0,3),1500),
+  );
+
+  /* ---------- Town actions ---------- */
+  const LADDER=['Kojirō the Swallow','Iron-arm Denshichi','Ogura the Silent','Lady Tomoe of Kiso','Hayate Genba','The Red Ronin','Abbot Inshun','Itō the Elder','Yagyū Munenori','The Nameless Master'];
+  const BANDITS=['Kumasaka the Bear','One-eye Gonta','The Mountain Wolf','Ishikawa Goemon’s heir','Red-sash Jirokichi','The Ferry Ghost','Mamushi the Viper'];
+  const MATCH_M=['Seinosuke','Kinjirō','Takezō','Rihei','Bunzō','Hikozaemon'],MATCH_F=['Ohana','Osuzu','Kiku','Ochiyo','Otsuru','Sayo','Oine'];
+  const MATCH_T=[['diligent','works from dawn to dusk'],['kind','gentle with children and animals'],['thrifty','brings a dowry of savings'],['witty','makes the whole house laugh'],['pious','keeps the household gods content']];
+  function spouse(){return(G.fam||[]).find(f=>f.alive&&f.spouse);}
+  function ensureBounties(){const x=X();const wk=x.week?x.week.start:0;if(!x.bounty||x.bounty.wk!==wk){x.bounty={wk,list:BANDITS.slice().sort(()=>Math.random()-.5).slice(0,3).map((n,i)=>({name:n,skill:30+i*12+ri2(0,8),reward:400+i*400+ri2(0,3)*100,done:false}))};}return x.bounty;}
+
+  const riceState=()=>{const x=X();return x.rice=x.rice||{p:100,held:0,paid:0,hist:[]};};
+  const ACT={
+    offer(){if(!dayOK('shrine'))return'You already made today’s offering.';if(!spend(10))return'You need 10 mon for rice and sake.';useDay('shrine');const x=X();const s=x.shrine=x.shrine||{last:-9,streak:0};s.streak=G.totalDays-s.last===1?s.streak+1:1;s.last=G.totalDays;G.luck+=.1;G.mood=clamp(G.mood+2,0,100);return`You clap twice before the kamidana and offer rice and sake. (Streak: ${s.streak} days, luck up today)`;},
+    pet(kind){const x=X();if(x.pet)return'You already have a pet.';const cost=kind==='songbird'?300:150;if(!spend(cost))return`A ${kind} costs ${cost} mon.`;x.pet={kind,name:pick(kind==='songbird'?['Chiyo','Uguisu','Kotori','Haru']:['Kin','Benimaru','Akane','Tama']),days:0};return`You bring home ${x.pet.name} the ${kind}. Feeding costs 5 mon a day; it lifts your mood every morning.`;},
+    wish(kind){const x=X();if(!(G.season===1&&G.day>=7&&G.day<=8))return'Wishes are written at Tanabata (summer, day 7).';if(x.wish||x.wishYear===G.year)return'You already hung a wish this year.';x.wishYear=G.year;x.wish={kind,due:G.totalDays+ri2(8,18)};return'You tie your paper wish to the bamboo. The stars will see it.';},
+    gifts(){const x=X();const win=(G.season===1&&G.day<=6)||(G.season===3&&G.day>=Math.ceil(SEASON_LEN/2));if(!win)return'Gift seasons are early summer (ochūgen) and late winter (oseibo).';const key=G.year+':'+G.season;if(x.giftKey===key)return'You already sent gifts this season.';const ppl=KNOWN().slice(0,8);const cost=40*ppl.length;if(!ppl.length)return'You don’t know anyone well enough yet.';if(!spend(cost))return`Gifts for ${ppl.length} neighbours cost ${cost} mon.`;ppl.forEach(([,r])=>{r.f=clamp((r.f||0)+8,0,100);});x.giftKey=key;return`You send boxes of sweets and dried fish to ${ppl.length} neighbours. They will remember. (-${cost} mon)`;},
+    board(){const x=X();if(!x.typhoon)return'No storm is coming.';if(x.typhoon.boarded)return'Your house is already boarded up.';if(!spend(100))return'Planks and rope cost 100 mon.';x.typhoon.boarded=true;return'You nail planks over the shutters and tie down the roof. Let it come.';},
+    school(k){const x=X();if(x.school)return'You already follow a school.';if((G.skills.sword||0)<15)return'Schools only accept students with some sword skill (15+).';if(!spend(1000))return'The entrance fee is 1,000 mon.';x.school=k;return`You bow before the masters of ${SCHOOLS[k].name}. ${SCHOOLS[k].d}`;},
+    borrow(n){const x=X();n=+n;if(x.loan)return'Repay your current loan first.';G.money+=n;x.loan={principal:n,owed:n,since:G.totalDays};return`The money-lender counts out ${fmt(n)} mon. Interest is 8% a week. Don’t be late.`;},
+    repay(n){const x=X();if(!x.loan)return'You owe nothing.';const amt=n==='all'?x.loan.owed:Math.min(+n,x.loan.owed);if(!spend(amt))return`You need ${fmt(amt)} mon.`;x.loan.owed-=amt;if(x.loan.owed<=0){x.loan=null;return'Your debt is cleared. The money-lender looks almost disappointed.';}return`Paid ${fmt(amt)} mon. Still owed: ${fmt(x.loan.owed)} mon.`;},
+    riceBuy(n){const rc=riceState();n=+n;const cost=rc.p*n;if(!spend(cost))return`${n} bales cost ${fmt(cost)} mon.`;rc.held+=n;rc.paid+=cost;return`Bought ${n} bale${n>1?'s':''} at ${rc.p} mon.`;},
+    riceSell(n){const x=X(),rc=riceState();n=n==='all'?rc.held:Math.min(+n,rc.held);if(!n)return'You hold no rice.';const avg=rc.paid/rc.held;const got=rc.p*n;G.money+=got;rc.paid-=avg*n;rc.held-=n;const profit=Math.round(got-avg*n);x.riceProfit=Math.max(x.riceProfit||0,0)+Math.max(0,profit);return`Sold ${n} bale${n>1?'s':''} for ${fmt(got)} mon (${profit>=0?'profit':'loss'} ${fmt(Math.abs(profit))}).`;},
+    hire(){const x=X();if(x.app)return'You already have an apprentice.';if(!spend(500))return'Taking on an apprentice costs 500 mon.';x.app={name:pick(['Kichizō','Matsu','Sankichi','Oyoshi','Chōta','Okiku']),level:1,loyalty:60,days:0};return`${x.app.name} bows low and moves into the back room. Wages are 20 mon a day; they earn you money daily and improve with time.`;},
+    fire(){const x=X();if(!x.app)return'You have no apprentice.';const n=x.app.name;x.app=null;return`You send ${n} home with a small gift.`;},
+    onsen(){if(G.city!=='hakone')return'The famous hot springs are in Hakone. Travel there first.';if(!spend(300))return'A night at the onsen costs 300 mon.';G.hp=maxHp();G.energy=maxEnergy();G.mood=clamp(G.mood+15,0,100);G.t+=240;return'You soak in the steaming spring until every ache dissolves. Fully restored.';},
+    match(i){const x=X();if(spouse())return'You are already married.';const c=(x.cands||[])[+i];if(!c)return'Ask the go-between first.';const rel=c.sex==='f'?'wife':'husband';G.fam=G.fam||[];G.fam.push({id:'fam_m'+G.totalDays,rel,sex:c.sex,given:c.name,age:c.age,alive:true,f:65,spouse:1});if(c.trait==='thrifty')G.money+=1500;G.mood=clamp(G.mood+15,0,100);x.cands=null;try{chron(`${G.given} married ${c.name}.`,'deed');}catch(e){}return`A small ceremony, sake shared three times. ${c.name} joins your household.${c.trait==='thrifty'?' (+1,500 mon dowry)':''}`;},
+    gobetween(){const x=X();if(spouse())return'You are already married.';if(!spend(200))return'The go-between asks 200 mon for her trouble.';const sex=G.look.gender==='f'?'m':'f';x.cands=[0,1,2].map(()=>{const t=pick(MATCH_T);return{name:pick(sex==='f'?MATCH_F:MATCH_M),sex,age:Math.max(18,G.ageY+ri2(-6,3)),trait:t[0],td:t[1]};});return'The go-between unrolls three portraits for you.';},
+    duel(){const x=X();x.ladder=x.ladder||0;if(x.ladder>=10)return'You are champion. No one is left to challenge.';if(!dayOK('ladder'))return'One challenge a day. Rest.';useDay('ladder');const i=x.ladder;closeModal();
+      openDuel({foe:LADDER[i],skill:30+i*6.5,legend:i>=8,onEnd:win=>{if(win){x.ladder=i+1;const prize=300+i*250;G.money+=prize;rep(2+i);toast('覇',`Defeated ${LADDER[i]}`,`Rank ${i+1}/10 on the ladder. +${fmt(prize)} mon`);}else toast('覇',`${LADDER[i]} wins`,'Train and try again tomorrow.');}});return false;},
+    hunt(i){const b=ensureBounties().list[+i];if(!b||b.done)return'That bounty is gone.';if(!dayOK('hunt'))return'One hunt a day.';useDay('hunt');closeModal();
+      openDuel({foe:b.name,skill:b.skill,onEnd:win=>{if(win){b.done=true;X().bountiesDone=(X().bountiesDone||0)+1;G.money+=b.reward;rep(3);toast('賊','Bounty collected',`${b.name} is brought to the magistrate. +${fmt(b.reward)} mon`);}else toast('賊',`${b.name} escapes`,'You live to hunt another day.');}});return false;},
+    go(){openGo();return false;},
+    haiku(){const x=X();const key=G.year+':'+G.season;if(x.contestKey===key)return'The next haiku contest is next season.';x.contestKey=key;openContest();return false;},
+    tea(){if(!dayOK('tea'))return'You have already held a tea ceremony today.';if((G.energy||0)<10)return'You are too tired for the ceremony.';useDay('tea');openTea();return false;},
+  };
+
+  /* ---------- Town tab ---------- */
+  function townTab(msg){
+    const x=X();const sec=(k,title,body)=>`<div class="xp-bounty"><h4><span>${k} ${title}</span></h4>${body}</div>`;
+    const btn=(act,label,arg='')=>`<button class="chip" data-act="${act}" data-arg="${arg}" style="margin:6px 6px 0 0">${label}</button>`;
+    const small=t=>`<small style="display:block">${t}</small>`;
+    let h=msg?`<div class="xp-omi" style="display:block;font-size:14px">${esc(msg)}</div>`:'';
+    // minigames
+    h+=sec('遊','Pastimes',small('Go against townsfolk, the seasonal haiku contest, or a tea ceremony at home.')+btn('go','碁 Play Go')+btn('haiku','句 Haiku contest')+btn('tea','茶 Tea ceremony'));
+    // tournament & bounties
+    const ld=x.ladder||0;h+=sec('覇','Tournament ladder',small(ld>=10?'You are champion of the ladder.':`Next opponent: <b>${LADDER[ld]}</b> (rank ${ld+1}/10). One challenge a day.`)+(ld<10?btn('duel','Challenge'):''));
+    const bl=ensureBounties().list;h+=sec('賊','Wanted posters',bl.map((b,i)=>`${small(`${b.done?'✓ ':''}<b>${esc(b.name)}</b>, ${fmt(b.reward)} mon${b.done?' (collected)':''}`)}${b.done?'':btn('hunt','Hunt',i)}`).join(''));
+    // money
+    const L=x.loan;h+=sec('両','Money-lender',L?small(`You owe <b>${fmt(L.owed)}</b> mon (borrowed ${fmt(L.principal)}). 8% interest each week.`)+btn('repay','Repay 500',500)+btn('repay','Repay all','all'):small('Quick money, at 8% a week. Fall too far behind and his men take your things.')+btn('borrow','Borrow 1,000',1000)+btn('borrow','Borrow 5,000',5000));
+    const rc=riceState();const tr=rc.hist.length>3?rc.p-rc.hist[rc.hist.length-4]:0;
+    h+=sec('米','Dōjima rice exchange',small(`Price: <b>${rc.p} mon</b> a bale (${tr>0?'▲':tr<0?'▼':'–'}${Math.abs(tr)} over 3 days). You hold <b>${rc.held}</b> bale${rc.held===1?'':'s'}${rc.held?`, avg cost ${Math.round(rc.paid/rc.held)}`:''}. Rice is cheap after the autumn harvest and dear in spring.`)+btn('riceBuy','Buy 1',1)+btn('riceBuy','Buy 5',5)+btn('riceSell','Sell 1',1)+btn('riceSell','Sell all','all'));
+    const ap=x.app;h+=sec('弟','Apprentice',ap?small(`<b>${esc(ap.name)}</b>, level ${ap.level}, loyalty ${Math.round(ap.loyalty)}. Earned ${fmt(ap.total||0)} mon so far. Keep out of debt or they may leave.`)+btn('fire','Let them go'):small('An apprentice works for you every day for 20 mon in wages.')+btn('hire','Hire (500 mon)'));
+    // home
+    const s=x.shrine||{streak:0};h+=sec('祀','Home shrine',small(`Offer rice and sake daily for luck. Streak: ${s.streak} days.`)+btn('offer','Make an offering (10 mon)'));
+    h+=sec('鳥','Pets',x.pet?small(`${esc(x.pet.name)} the ${x.pet.kind}, with you ${x.pet.days} days.`):small('A companion lifts your mood every morning.')+btn('pet','Songbird (300)','songbird')+btn('pet','Goldfish (150)','goldfish'));
+    const sp=spouse();h+=sec('縁','Matchmaking',sp?small(`You are married to ${esc(sp.given)}.`):(x.cands?x.cands.map((c,i)=>small(`<b>${esc(c.name)}</b>, ${c.age}: ${esc(c.td)}.`)+btn('match',`Marry ${esc(c.name)}`,i)).join(''):small('A go-between can find you a match.')+btn('gobetween','Ask the go-between (200)')));
+    // seasons & dangers
+    h+=sec('笹','Seasonal',small('Tanabata wishes (summer, day 7): ')+btn('wish','Wealth','wealth')+btn('wish','Love','love')+btn('wish','Skill','skill')+btn('wish','Health','health')+small('Ochūgen and oseibo gifts to neighbours:')+btn('gifts','Send gifts')+(x.typhoon?small('<b>A typhoon is coming!</b>')+btn('board','Board up the house (100)'):''));
+    h+=sec('刀','Sword schools',x.school?small(`You follow ${SCHOOLS[x.school].name}. ${SCHOOLS[x.school].d}`):small('Entrance 1,000 mon, sword 15+.')+Object.entries(SCHOOLS).map(([k,v])=>btn('school',v.name,k)).join(''));
+    h+=sec('湯','Hot springs',small('Hakone’s onsen restore body and spirit completely.')+btn('onsen','Soak (300 mon)'));
+    return h;
+  }
+  function familyTab(){
+    const lin=G.lineage||[];const fam=(G.fam||[]);
+    let h=`<h4 style="margin:0 0 8px">The ${esc(G.family||'')} house</h4>`;
+    if(lin.length)h+=lin.map((l,i)=>`<div class="xp-bounty"><h4><span>Generation ${i+1}: ${esc(l.name)}</span></h4><small>${esc(l.text)}</small></div><div style="text-align:center;color:var(--tan)">│</div>`).join('');
+    h+=`<div class="xp-bounty done"><h4><span>Generation ${G.generation||1}: ${esc(G.given)} (you)</span><span>age ${G.ageY}</span></h4><small>${esc((RANKS[G.rank]||{name:''}).name)}, ${esc(tierName())}</small></div>`;
+    const grp=(t,list)=>list.length?`<h4 style="margin:12px 0 6px">${t}</h4><div class="xp-grid">${list.map(f=>`<div class="xp-deed ${f.alive?'':'locked'}"><div class="k">${f.sex==='f'?'女':'男'}</div><div><h4>${esc(f.given)}</h4><p>${esc(f.rel)}, ${f.alive?`age ${f.age}`:'passed away'}</p></div></div>`).join('')}</div>`:'';
+    h+=grp('Spouse',fam.filter(f=>f.spouse))+grp('Children',fam.filter(f=>f.child))+grp('Elders and kin',fam.filter(f=>!f.spouse&&!f.child));
+    const ep=legacy().epitaphs||[];if(ep.length)h+=`<h4 style="margin:14px 0 6px">Epitaphs of past lives</h4>`+ep.map(e=>`<div class="xp-haiku" style="font-size:15px">${esc(e.text)}<small>${esc(e.name)}, died aged ${e.age} in year ${e.year}</small></div>`).join('');
+    return h;
+  }
+
+  /* ---------- Go (9x9) ---------- */
+  let GO=null;const N=9;
+  const nb=i=>{const r=[],x=i%N,y=(i/N)|0;if(x>0)r.push(i-1);if(x<N-1)r.push(i+1);if(y>0)r.push(i-N);if(y<N-1)r.push(i+N);return r;};
+  function groupAt(b,i){const c=b[i],st=[i],seen=new Set([i]),libs=new Set();while(st.length){const j=st.pop();for(const k of nb(j)){if(b[k]===0)libs.add(k);else if(b[k]===c&&!seen.has(k)){seen.add(k);st.push(k);}}}return{stones:[...seen],libs};}
+  function tryPlay(b,i,c,ko){if(b[i])return null;const n=b.slice();n[i]=c;let cap=0;for(const k of nb(i)){if(n[k]===3-c){const g=groupAt(n,k);if(!g.libs.size){g.stones.forEach(s=>n[s]=0);cap+=g.stones.length;}}}if(!groupAt(n,i).libs.size)return null;const key=n.join('');if(key===ko)return null;return{b:n,cap};}
+  function goScore(b){let bl=0,wh=0;const seen=new Set();for(let i=0;i<N*N;i++){if(b[i]===1)bl++;else if(b[i]===2)wh++;else if(!seen.has(i)){const st=[i],reg=[i];seen.add(i);const touch=new Set();while(st.length){const j=st.pop();for(const k of nb(j)){if(b[k]===0&&!seen.has(k)){seen.add(k);st.push(k);reg.push(k);}else if(b[k])touch.add(b[k]);}}if(touch.size===1){if(touch.has(1))bl+=reg.length;else wh+=reg.length;}}}return{bl,wh:wh+2.5};}
+  function aiMove(){const g=GO;let best=null,bs=-1e9;for(let i=0;i<N*N;i++){const r=tryPlay(g.b,i,2,g.ko);if(!r)continue;const grp=groupAt(r.b,i);let s=r.cap*12+Math.min(grp.libs.size,4)*.8;
+      for(const k of nb(i)){if(g.b[k]===2&&groupAt(g.b,k).libs.size===1)s+=8;if(g.b[k]===1&&groupAt(g.b,k).libs.size===2)s+=3;}
+      if(grp.libs.size===1)s-=7;const x=i%N,y=(i/N)|0;s+=(4-Math.max(Math.abs(x-4),Math.abs(y-4)))*.35;
+      // don't fill own eyes
+      if(nb(i).every(k=>g.b[k]===2))s-=10;s+=Math.random()*.9;if(s>bs){bs=s;best={i,r};}}
+    if(!best||bs<-4){g.passes++;g.msg='Your opponent passes.';return;}
+    g.ko=g.b.join('');g.b=best.r.b;g.capW+=best.r.cap;g.passes=0;g.last=best.i;}
+  function openGo(){GO={b:Array(N*N).fill(0),ko:'',capB:0,capW:0,passes:0,moves:0,msg:'You play black. Surround territory and capture stones.',over:false,last:-1,foe:pick(['the old fan-maker','a monk from the temple','the tea-house owner','a ronin with time to kill'])};renderGo();}
+  function goEnd(){const g=GO;g.over=true;const s=goScore(g.b);const win=s.bl>s.wh;g.msg=`Game over. You ${s.bl} – ${g.foe} ${s.wh} (incl. 2.5 komi). ${win?'You win!':'You lose.'}`;if(win){X().goWins=(X().goWins||0)+1;rep(2);skillGain('tactics',2);G.money+=150;g.msg+=' +150 mon';}G.t+=90;}
+  function renderGo(){
+    const g=GO;const cell=34;
+    let grid='';for(let i=0;i<N*N;i++){const v=g.b[i];grid+=`<button data-go="${i}" aria-label="point ${i}" style="width:${cell}px;height:${cell}px;border:0;padding:0;background:transparent;position:relative;cursor:${v||g.over?'default':'pointer'}">${v?`<span style="position:absolute;inset:3px;border-radius:50%;background:${v===1?'radial-gradient(circle at 35% 30%,#555,#111)':'radial-gradient(circle at 35% 30%,#fff,#cfc8b8)'};box-shadow:0 1px 3px rgba(0,0,0,.4)${i===g.last?';outline:2px solid #a8432e':''}"></span>`:''}</button>`;}
+    const lines=`linear-gradient(#3b2b1f,#3b2b1f) 0 0/1px 100% repeat-x`;
+    openModal(`<div class="mhead"><div class="kanji">碁</div><div><h2>Go with ${esc(g.foe)}</h2><p>${esc(g.msg)}</p></div></div>
+      <div class="mbody" style="display:grid;place-items:center"><div style="position:relative;padding:${cell/2}px;background:#dcb36c;border-radius:4px;box-shadow:inset 0 0 0 2px #b08640">
+      <div style="position:absolute;inset:${cell/2+cell/2}px;background-image:repeating-linear-gradient(90deg,#3b2b1f 0 1px,transparent 1px ${cell}px),repeating-linear-gradient(0deg,#3b2b1f 0 1px,transparent 1px ${cell}px);width:${cell*(N-1)+1}px;height:${cell*(N-1)+1}px"></div>
+      <div style="position:relative;display:grid;grid-template-columns:repeat(${N},${cell}px)">${grid}</div></div>
+      <p style="font-size:13px;color:var(--ink-soft)">Captured: you ${g.capB}, them ${g.capW}. Two passes in a row end the game.</p></div>
+      <div class="mfoot">${g.over?'':'<button class="btn ghost" data-gopass>Pass</button>'}<button class="btn ghost" data-goback>Back to town</button></div>`,'xp');
+    const card=$('#mcard');
+    card.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{if(g.over)return;const i=+b.dataset.go;const r=tryPlay(g.b,i,1,g.ko);if(!r){g.msg='You cannot play there.';renderGo();return;}g.ko=g.b.join('');g.b=r.b;g.capB+=r.cap;g.passes=0;g.moves++;g.msg=r.cap?`You capture ${r.cap}!`:'Your move is placed.';try{sfx('click');}catch(e){}aiMove();if(g.passes>=2||g.moves>=60)goEnd();renderGo();});
+    const ps=card.querySelector('[data-gopass]');if(ps)ps.onclick=()=>{g.passes++;g.msg='You pass.';if(g.passes>=2){goEnd();renderGo();return;}aiMove();if(g.passes>=2)goEnd();renderGo();};
+    card.querySelector('[data-goback]').onclick=()=>openHub('town');
+  }
+
+  /* ---------- haiku contest ---------- */
+  const CONTEST=[
+    {q:'First line (five sounds, with a season word):',o:[['Plum blossoms open',1],['The plum tree blossoms brightly',0],['Plums',0]]},
+    {q:'Middle line (seven sounds):',o:[['the temple bell is ringing out loudly',0],['a crow lands on the old gate',1],['dawn bell',0]]},
+    {q:'Last line (five sounds, a quiet turn):',o:[['and then silence',0],['spring wind through the pines',1],['the wind is blowing the pine trees',0]]},
+    {q:'First line (five sounds, with a season word):',o:[['Autumn moon rising',1],['Moon',0],['The big autumn moon rises high',0]]},
+    {q:'Middle line (seven sounds):',o:[['my shadow walks beside me',1],['walking',0],['my long dark shadow is walking along with me',0]]},
+    {q:'Last line (five sounds, a quiet turn):',o:[['cold',0],['frost on the bridge rail',1],['there is frost on the old wooden bridge',0]]},
+  ];
+  let HC=null;
+  function openContest(){const set=Math.random()<.5?0:3;HC={qs:CONTEST.slice(set,set+3).map(q=>({q:q.q,o:q.o.slice().sort(()=>Math.random()-.5)})),i:0,score:0,picks:[]};renderContest();}
+  function renderContest(){
+    const c=HC;if(c.i>=3){const prize=[50,150,350,900][c.score];G.money+=prize;if(c.score===3){X().haikuPerfect=(X().haikuPerfect||0)+1;rep(4);}skillGain('arts',1+c.score);
+      const judge=['The judges smile politely and move on.','One judge nods. The others sip their tea.','"Very fine," says the eldest judge.','The judges set down their cups. "This one wins."'][c.score];
+      openModal(`<div class="mhead"><div class="kanji">冠</div><div><h2>The judges decide</h2><p>${judge}</p></div></div><div class="mbody"><div class="xp-haiku">${c.picks.map(esc).join('<br>')}<small>Score ${c.score}/3 · prize ${fmt(prize)} mon</small></div></div><div class="mfoot"><button class="btn" data-hback>Back to town</button></div>`,'xp');
+      $('#mcard').querySelector('[data-hback]').onclick=()=>openHub('town');return;}
+    const q=c.qs[c.i];
+    openModal(`<div class="mhead"><div class="kanji">句</div><div><h2>Haiku contest, round ${c.i+1} of 3</h2><p>${esc(q.q)} Five, seven, five sounds, and a season word, win the judges.</p></div></div><div class="mbody">${c.picks.length?`<div class="xp-haiku">${c.picks.map(esc).join('<br>')}</div>`:''}${q.o.map((o,j)=>`<button class="chip" data-hc="${j}" style="display:block;width:100%;text-align:left;margin:0 0 8px;font-family:var(--serif);font-size:17px">${esc(o[0])}</button>`).join('')}</div>`,'xp');
+    $('#mcard').querySelectorAll('[data-hc]').forEach(b=>b.onclick=()=>{const o=q.o[+b.dataset.hc];c.score+=o[1];c.picks.push(o[0]);c.i++;renderContest();});
+  }
+
+  /* ---------- tea ceremony ---------- */
+  const TEA=['Purify the scoop and bowl with the silk cloth','Scoop matcha into the bowl','Ladle hot water from the kettle','Whisk until the tea is frothy','Turn the bowl so its face looks at the guest','Present the bowl with a bow'];
+  let TC=null;
+  function openTea(){TC={order:TEA.map((t,i)=>i).sort(()=>Math.random()-.5),next:0,mistakes:0};renderTea();}
+  function renderTea(msg){
+    const t=TC;if(t.next>=TEA.length){const sc=Math.max(0,6-t.mistakes);const mult=G.rank==='teamaster'?2:1;G.mood=clamp(G.mood+sc*2,0,100);rep(Math.round(sc/2)*mult);skillGain('arts',1+sc/3);G.energy=clamp(G.energy-10,0,maxEnergy());G.t+=60;if(t.mistakes===0)X().teaPerfect=(X().teaPerfect||0)+1;
+      openModal(`<div class="mhead"><div class="kanji">茶</div><div><h2>${t.mistakes===0?'A flawless ceremony':'The ceremony ends'}</h2><p>${t.mistakes===0?'Your guest turns the bowl, drinks in three sips, and bows deeply.':`${t.mistakes} misstep${t.mistakes>1?'s':''}. Your guest is gracious about it.`}</p></div></div><div class="mbody"><p>Mood +${sc*2}, standing up, arts improved.</p></div><div class="mfoot"><button class="btn" data-tback>Back to town</button></div>`,'xp');
+      $('#mcard').querySelector('[data-tback]').onclick=()=>openHub('town');return;}
+    openModal(`<div class="mhead"><div class="kanji">茶</div><div><h2>Tea ceremony, step ${t.next+1} of 6</h2><p>${esc(msg||'Choose the next step of the ceremony, in the proper order.')}</p></div></div><div class="mbody">${t.order.map(i=>i<t.next?`<div class="chip on" style="display:block;margin:0 0 8px">✓ ${esc(TEA[i])}</div>`:`<button class="chip" data-tea="${i}" style="display:block;width:100%;text-align:left;margin:0 0 8px">${esc(TEA[i])}</button>`).join('')}<p style="font-size:12.5px;color:var(--ink-soft)">Missteps: ${t.mistakes}</p></div>`,'xp');
+    $('#mcard').querySelectorAll('[data-tea]').forEach(b=>b.onclick=()=>{const i=+b.dataset.tea;if(i===t.next){t.next++;renderTea('Correct. Your movements are calm and unhurried.');}else{t.mistakes++;renderTea('Not yet. Your guest politely looks away.');}});
+  }
+
   /* ---------- the hub panel ---------- */
   let TAB='deeds';
-  const TABS=[['deeds','Deeds'],['week','Bounties'],['rival','Rival'],['fortune','Fortune'],['haiku','Haiku'],['letters','Letters'],['stamps','Seals'],['album','Album'],['ledger','Ledger'],['almanac','Almanac'],['fame','Hall of fame'],['settings','Settings']];
+  const TABS=[['town','Town'],['deeds','Deeds'],['week','Bounties'],['rival','Rival'],['fortune','Fortune'],['haiku','Haiku'],['letters','Letters'],['stamps','Seals'],['album','Album'],['ledger','Ledger'],['almanac','Almanac'],['fame','Hall of fame'],['family','Family'],['settings','Settings']];
   function deedsTab(){
     const x=X();const got=DEEDS.filter(d=>x.deeds[d.id]).length;const L=legacy();const ever=Object.keys(L.deeds||{}).length;
     let h=`<div class="xp-sum"><div><b>${got}/${DEEDS.length}</b>this life</div><div><b>${ever}/${DEEDS.length}</b>across all lives</div><div><b>${fmt(DEEDS.filter(d=>x.deeds[d.id]).reduce((a,d)=>a+d.reward,0))}</b>mon earned from deeds</div></div><div class="xp-grid">`;
@@ -6711,9 +6957,9 @@ requestAnimationFrame(loop);
     if(!st.length)return h+'<p>Your stamp book is still blank.</p>';
     return h+`<div class="xp-grid">${st.map(s=>`<div class="xp-deed"><div class="k" style="background:#a8432e;border-radius:4px">${esc(s.k)}</div><div><h4>${esc(s.name)}</h4><p>${esc((CITY[s.city]||{name:''}).name)}, ${SEASONS[s.season]} of year ${s.year}</p></div></div>`).join('')}</div>`;
   }
-  function openHub(tab){
+  function openHub(tab,msg){
     if(!G)return;if(tab)TAB=tab;X();checkDeeds();checkBounties();
-    const body={deeds:deedsTab,week:weekTab,rival:rivalTab,fortune:fortuneTab,haiku:haikuTab,letters:lettersTab,stamps:stampsTab,album:albumTab,ledger:ledgerTab,almanac:almanacTab,fame:fameTab,settings:settingsTab}[TAB]();
+    const body=TAB==='town'?townTab(msg):TAB==='family'?familyTab():{deeds:deedsTab,week:weekTab,rival:rivalTab,fortune:fortuneTab,haiku:haikuTab,letters:lettersTab,stamps:stampsTab,album:albumTab,ledger:ledgerTab,almanac:almanacTab,fame:fameTab,settings:settingsTab}[TAB]();
     openModal(`<div class="mhead"><div class="kanji">功</div><div><h2>Deeds &amp; journal</h2><p>Your accomplishments, bounties, fortunes and poems. Press K anytime, P to make a print.</p></div></div>
       <div class="mbody"><div class="xp-tabs">${TABS.map(([k,n])=>`<button class="chip${TAB===k?' on':''}" data-xtab="${k}">${n}</button>`).join('')}<button class="chip" data-xphoto>絵 Make a print</button></div>${body}</div>
       <div class="mfoot"><button class="btn ghost" data-close>Close</button></div>`,'xp');
@@ -6723,6 +6969,7 @@ requestAnimationFrame(loop);
     card.querySelector('[data-close]').onclick=closeModal;
     card.querySelectorAll('[data-xscale]').forEach(b=>b.onclick=()=>{SET.scale=+b.dataset.xscale;applySettings();openHub('settings');});
     card.querySelectorAll('[data-xset]').forEach(b=>b.onchange=()=>{SET[b.dataset.xset]=b.checked;applySettings();});
+    card.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{let m;try{m=ACT[b.dataset.act](b.dataset.arg);}catch(e){console.warn(e);m='Something went wrong.';}if(m!==false){hudUpdate();openHub('town',m);}});
     const lc=card.querySelector('[data-xcard]');if(lc)lc.onclick=()=>{closeModal();setTimeout(lifeCard,60);};
     applySettings();
   }
@@ -6760,6 +7007,9 @@ requestAnimationFrame(loop);
   window.UKX={openHub,photo,checkDeeds,DEEDS};
 })();
 
+
+/* ---------- install as an app (works offline when served over http/https) ---------- */
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
 
 /* ---------- autosave: never lose a life to a closed tab ---------- */
 (function(){

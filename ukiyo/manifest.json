@@ -1,0 +1,10 @@
+{
+  "name": "Ukiyo: a life in old Edo",
+  "short_name": "Ukiyo",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#CDB38C",
+  "theme_color": "#3B2B1F",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
