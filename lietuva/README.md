@@ -1,7 +1,7 @@
 # Lietuva · Lietuvos gyvenimas
 
 A Lithuania life simulator, built in the same style as *Ukiyo: a life in old Edo*:
-a top-down illustrated open world, a big character creator, paper-card HUD, story
+top-down illustrated city maps with fast travel, a big character creator, paper-card HUD, story
 pop-ups and small minigames. One self-contained file: open `index.html` in a browser.
 
 > **Fictional role-play.** Every gang, cartel, crew, club and character is invented.
@@ -10,22 +10,26 @@ pop-ups and small minigames. One self-contained file: open `index.html` in a bro
 
 ## What's in it
 
-**Open world.** One continuous map in the real shape of Lithuania (border, Baltic coast,
-Curonian Spit and lagoon, Nemunas and Neris rivers, eastern lakes). Eight towns connected
-by real highway numbers (A1, A2, A8, A9, A11, A12, A13…):
+**Separate city maps, fast travel.** No longer one open world. Each place is its own map
+built from real coordinates (5 m per tile): named streets, rivers, parks, rail lines and
+landmarks sit where they are on the real map, and the blocks between them are filled
+by district type (old town, Soviet blocks, villas, industry, port). Travel between them by
+bus or train (stations in town), BlaBlaCar, taxi, your own car (fast travel or drive the
+highway map yourself) or the ferry to the Curonian Spit. Random travel events on the way.
 
-| Town | Landmarks in game |
+| Place | What's on the map |
 |---|---|
-| Vilnius | Cathedral and bell tower, Gediminas Tower, **Baltasis tiltas** (White Bridge, Centras hangout), TV tower, Akropolis car park |
-| Kaunas | Castle at the river confluence, Laisvės alėja, Žalgiris arena |
-| Klaipėda | Theatre Square, sailing ship Meridianas, port cranes, container terminal, ferry to the spit |
-| Šiauliai | Sundial square; Hill of Crosses in the fields north of town |
-| Panevėžys | Miltinis Drama Theatre, Cido arena |
-| Alytus | Parachute tower, a "farm" in the border forest |
-| Palanga | The pier, Amber Museum |
-| Nida | Parnidis dune and sundial, ferry pier |
+| Vilnius | Old Town (Pilies g., Rotušė, Aušros Vartai, Užupis angel), Cathedral and belfry, Gediminas Tower, Gedimino pr. with trolleybuses, Seimas, **Baltasis tiltas** (centriniai hangout), Europa towers, Neris and Vilnia, Bernardinai garden chess tables |
+| Kaunas | Old Town, castle at the confluence, Laisvės alėja, Žalgiris arena, Nemunas and Neris |
+| Klaipėda | Old Town, Theatre Square, Meridianas, port cranes, the Dangė, ferry to Smiltynė |
+| Šiauliai | Sundial square, Vilniaus g. pedestrian street, lakes |
+| Panevėžys | Laisvės a., Miltinis theatre, Nevėžis |
+| Alytus | Parachute tower, Nemunas bend |
+| Palanga | Basanavičiaus g., the pier, Amber Museum, beach |
+| Nida | Parnidis dune, lagoon pier, pines |
 
-Plus Trakai Island Castle on its lake between Vilnius and Kaunas.
+Plus Trakai, the Hill of Crosses and a border forest as small locations. Maps are hand-traced
+approximations of the real layout (no map data was downloaded).
 
 **Character creator.** Name (Lithuanian surnames switch form by gender: Kazlauskas → Kazlauskaitė),
 starting age (6, 13, 16, 24, 30), home town, family class (lower, middle, upper, wealthy),
@@ -88,6 +92,28 @@ Hiding indoors makes the police lose interest faster (except inside the police s
 - Quiet folk background tune (menu to toggle), rain makes roads slippery.
 - Mouse wheel or +/− to zoom.
 
+## People on the street
+
+- **Marozai:** Adidas tracksuits, silver chains, squat by the kiosk and speak Russian ("Есть закурить?"). Talk your way out, pay up or run.
+- **Centriniai:** hang out at the White Bridge, smoke and drink, buy everything from **barygos** (contraband cigarettes and vodka only). A Drip seller there sells **rapper clothes**: oversized hoodies, chains, grills, designer bags, white sneakers.
+- **Rajono Rėksnys** (a parody street ranter) shouts at everyone in Vilnius; win a word battle against him.
+- **Naktinis Šikšnosparnis**, a 40-year-old in a homemade bat costume who helps the police at night: patrols, a bike thief, a lost wallet.
+- Lots of angry people: queue-jumpers, a grandmother with a cane, drivers honking, a neighbour drilling on Sunday.
+- What you wear changes how people react (marozas, centrinis, rapper, metal, office).
+
+## Life
+
+Phone apps (jobs, Skelbk.lt classifieds with scams, Fotogramas, health, messages), Regitra driving theory and practical exam, army service, emigration and Norway building jobs, school exams and šimtadienis, clubs with bouncers, a kiosk job, car market haggling, family events, prison, an epilogue of your life.
+
+## Minigames and atmosphere
+
+- Chess puzzles with pensioners in Bernardinai garden (mate in one).
+- Haggling with grandmothers at the market; mushroom picking in forests (June–September), sold at the market. Do not eat the musmirė.
+- Cooking cepelinai at home (stove), 3x3 yard basketball, a bottle race against a kid from entrance 5.
+- Festivals: Kaziuko mugė stalls on Pilies g. (March), Joninės bonfires and the fern flower at midnight (June 23–24), the Christmas tree on Cathedral Square (December).
+- Basketball game nights: streets go quiet, horns and shouting on a win.
+- Car radio (**R**): pop, news, Russian chanson, metal. Potholes and road works in every city.
+
 ## Editing the game
 
 The playable file `index.html` is generated. Edit the parts in `src/` and run `./build.sh`.
@@ -96,12 +122,12 @@ The playable file `index.html` is generated. Edit the parts in `src/` and run `.
 
 WASD / arrows move · Shift sprint (turbo in tuned cars) · **E** talk, enter, hold to tag ·
 **F** get in/out of a vehicle · **J** or click punch · **Space** handbrake · H horn ·
-M map · Q quests · T phone (jobs) · C character · I items · L dictionary · 1–6 hotbar.
+R car radio · M map · Q quests · T phone (jobs) · C character · I items · L dictionary · 1–6 hotbar.
 On phones: joystick plus on-screen buttons.
 
 ## Ideas for next versions
 
-- Basketball league at Žalgiris arena; Kaziuko mugė and Joninės festival days.
+- Real OpenStreetMap street data when the network allows it.
 - Ice fishing on the frozen lagoon.
 - Police chases with roadblocks; a lawyer you can pay.
 - Family events: siblings, parents ageing, your own family at 24+.

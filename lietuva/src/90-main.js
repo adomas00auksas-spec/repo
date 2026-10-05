@@ -15,18 +15,18 @@ function update(dt){
   if(!P.inCar){for(const c of ENT.cars){const sp=Math.hypot(c.vx,c.vy)||(c.cur||0);if(sp<130)continue;if(dist(c.x,c.y,P.x,P.y)<20&&P.inv_t<=0){hurtPlayer(sp/18,c);P.inv_t=.8;shake(6)}}}
   for(const f of ENT.fx){f.life-=dt;if(f.k==='spark'){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=300*dt}else{f.r+=dt*14}}ENT.fx=ENT.fx.filter(f=>f.life>0);
   for(const b of ENT.bubbles)b.life-=dt;ENT.bubbles=ENT.bubbles.filter(b=>b.life>0);
-  updateHeat(dt);tickMission(dt);tickCustomMission(dt);lifeTick(dt);specialsTick(dt);angryTick(dt);viceTick(dt);
+  updateHeat(dt);tickMission(dt);tickCustomMission(dt);lifeTick(dt);specialsTick(dt);angryTick(dt);viceTick(dt);radioTick(dt);potholeTick(dt);tickBottleWar(dt);
   acc1+=dt;acc2+=dt;acc3+=dt;
   if(acc1>.25){acc1=0;populate();PROMPT=findPrompt();showPrompt()}
   musicTick(dt);brawlTick(dt);
   roadTick();
-  if(acc2>1){acc2=0;roadblockTick();meetTick();checkQuest();checkGoals();checkVisits();tickEvents();hudUpdate();updateZone()}
+  if(acc2>1){acc2=0;roadblockTick();meetTick();checkQuest();checkGoals();checkVisits();tickEvents();mushroomTick();festTick();gameNightTick();hudUpdate();updateZone()}
   if(acc3>60){acc3=0;saveGame(true)}
   // hold-to-act
   if(PROMPT&&PROMPT.hold&&PROMPT.hold.dur>0&&keys.has('KeyE')&&!HOLD.lock){HOLD.t+=dt;$('#hold').classList.remove('hidden');$('#holdI').style.width=(HOLD.t/PROMPT.hold.dur*100)+'%';
     if(HOLD.t>=PROMPT.hold.dur){HOLD.t=0;HOLD.lock=true;$('#hold').classList.add('hidden');PROMPT.hold.fn();PROMPT=findPrompt();showPrompt()}}
   else{HOLD.t=0;$('#hold').classList.add('hidden')}
-  if(P.inCar){const sp=Math.hypot(P.inCar.vx,P.inCar.vy);$('#spV').innerHTML=`${Math.round(sp*.34)}<small>km/h</small>`;$('#spD').textContent=DRIFT.cur>100?`ŠONINIS ${Math.round(DRIFT.cur)}`:(G.mission&&G.mission.type==='driftc'?`${Math.round(G.mission.got)}/${G.mission.need}`:'')}
+  if(P.inCar){const sp=Math.hypot(P.inCar.vx,P.inCar.vy);$('#spV').innerHTML=`${Math.round(sp*.34)}<small>km/h</small>`;$('#spD').textContent=DRIFT.cur>100?`ŠONINIS ${Math.round(DRIFT.cur)}`:(G.mission&&G.mission.type==='driftc'?`${Math.round(G.mission.got)}/${G.mission.need}`:(P.radio?'📻 '+RADIO[P.radio].n:''))}
 }
 function showPrompt(){const el=$('#prompt');if(!PROMPT||paused){el.classList.add('hidden');return}el.classList.remove('hidden');el.querySelector('kbd').textContent=PROMPT.key;$('#promptTxt').textContent=PROMPT.text}
 
@@ -108,7 +108,9 @@ function drawPickup(k){const t=performance.now()/300,b=Math.sin(t+k.x)*2;ctx.fil
   else if(k.k==='cash'){ctx.fillStyle='#7FB77E';ctx.fillRect(k.x-7,k.y-8+b,14,8);ctx.fillStyle='#3E6B3D';ctx.fillRect(k.x-2,k.y-6+b,4,4)}
   else if(k.k==='amber'){ctx.fillStyle='#E8961C';ctx.beginPath();ctx.ellipse(k.x,k.y-5+b,5,4,.4,0,7);ctx.fill();ctx.fillStyle='rgba(255,240,180,.7)';ctx.fillRect(k.x-2,k.y-7+b,2,2)}
   else if(k.k==='kontra'){if(k.balloon){ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(k.x,k.y-10);ctx.lineTo(k.x+6,k.y-40);ctx.stroke();ctx.fillStyle='#F2F2EE';ctx.beginPath();ctx.arc(k.x+6,k.y-50+b,12,0,7);ctx.fill()}
-    ctx.fillStyle='#A8865A';ctx.fillRect(k.x-9,k.y-12,18,12);ctx.strokeStyle='#6E5434';ctx.strokeRect(k.x-9,k.y-12,18,12)}}
+    ctx.fillStyle='#A8865A';ctx.fillRect(k.x-9,k.y-12,18,12);ctx.strokeStyle='#6E5434';ctx.strokeRect(k.x-9,k.y-12,18,12)}
+  else if(k.k==='mush')drawMushroom(k);
+  else if(k.k==='fern'){const g=.5+Math.sin(t*2)*.3;ctx.fillStyle=`rgba(255,230,120,${g*.5})`;ctx.beginPath();ctx.arc(k.x,k.y-8,14,0,7);ctx.fill();ctx.fillStyle='#F7D7E8';for(let a=0;a<5;a++){ctx.beginPath();ctx.arc(k.x+Math.cos(a*1.26)*4,k.y-8+b+Math.sin(a*1.26)*4,3,0,7);ctx.fill()}ctx.fillStyle='#F2C230';ctx.beginPath();ctx.arc(k.x,k.y-8+b,2,0,7);ctx.fill()}}
 function drawArrow(t){const sx=(t.x-cam.x)*ZOOM,sy=(t.y-cam.y)*ZOOM;if(sx>40&&sy>40&&sx<VW-40&&sy<VH-40)return;
   const cx=VW/2,cy=VH/2,a=Math.atan2(sy-cy,sx-cx);const m=56,ex=clamp(cx+Math.cos(a)*VW,m,VW-m),ey=clamp(cy+Math.sin(a)*VH,m+60,VH-m-80);
   ctx.save();ctx.translate(ex,ey);ctx.fillStyle='#B5332B';ctx.strokeStyle='#F7F8F4';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,20,0,7);ctx.fill();ctx.stroke();
@@ -133,6 +135,7 @@ function keyAction(code){
   case 'KeyE':if(PROMPT&&PROMPT.fn)PROMPT.fn();break;
   case 'KeyF':if(SCENE)break;if(P.inCar)exitCar();else{const c=nearestCar(46);if(c)enterCar(c)}break;
   case 'KeyJ':playerPunch();break;
+  case 'KeyR':radioCycle();break;
   case 'KeyH':if(P.inCar){SND.horn();ENT.peds.forEach(e=>{if(dist(e.x,e.y,P.x,P.y)<5*TS&&!e.hostile&&e.kind!=='police'){e.state='flee';e.t=1.5}})}break;
   case 'KeyM':openMap();break;case 'KeyQ':openQuests();break;case 'KeyT':openPhone();break;case 'KeyC':openSelf();break;case 'KeyI':openItems();break;case 'KeyL':openGloss();break;
   case 'KeyN':toggleSound();break;case 'Equal':case 'NumpadAdd':ZMUL=clamp(ZMUL*1.1,.55,1.7);resize();break;case 'Minus':case 'NumpadSubtract':ZMUL=clamp(ZMUL*.9,.55,1.7);resize();break;case 'Escape':openMenu();break;

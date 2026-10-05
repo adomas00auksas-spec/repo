@@ -1067,6 +1067,7 @@ function loadMap(id,opt){opt=opt||{};initDistricts();
     (D.pois||[]).forEach(q=>{const[x,y]=pr.p(q.at);const b=freeBuildingT(null,null,2,[x,y])||buildAt(Math.round(x),Math.round(y));addPOI({id},q.kind,q.name,b,{})});
     if(id==='pasienis'){const f=POIS.find(p=>p.hq==='pasienio');if(f&&f.b)f.b.hqColor=FACTIONS.pasienio.color}}
   buildMinimap();if(typeof refreshOverlay==='function')refreshOverlay();
+  if(MAP.kind==='city'){cityAtmosphere();placeChess()}
   return MAP}
 
 /* ---------- minimap base ---------- */
@@ -1295,6 +1296,7 @@ function drawBuilding(g,b,night){
 const POI_LABEL={fuel:'DEGALINĖ',shop:'MAKSI',kebab:'KEBABAI',cafe:'KAVINĖ',bus:'AUTOBUSŲ STOTIS',garage:'AUTOSERVISAS',police:'POLICIJA',hospital:'LIGONINĖ',gym:'SPORTO KLUBAS',market:'TURGUS',office:'VERSLO CENTRAS',bar:'BARAS',school:'MOKYKLA',hq:'',home:'NAMAI'};
 const POI_COL={fuel:'#B5332B',shop:'#C1272D',kebab:'#B9770E',cafe:'#6B4E33',bus:'#1F618D',garage:'#26343A',police:'#1F3E8C',hospital:'#B5332B',gym:'#1D2724',market:'#1E6B4A',office:'#35484F',bar:'#5B2C6F',school:'#1E6B4A',hq:'#1D2724',home:'#E2A11B'};
 function drawDecor(g,d){
+  if(d.k==='cone'||d.k==='works'||d.k==='fstall'||d.k==='fire'||d.k==='xtree')return drawFunDecor(g,d);
   if(d.k==='ship'){const x=d.x,y=d.y;g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(x+80,y+30,82,14,0,0,7);g.fill();
     g.fillStyle='#F4F1E8';g.beginPath();g.moveTo(x,y+20);g.lineTo(x+150,y+16);g.lineTo(x+168,y+26);g.lineTo(x+150,y+36);g.lineTo(x,y+34);g.fill();g.fillStyle='#2B3A42';g.fillRect(x,y+30,150,4);
     g.strokeStyle='#6B4E33';g.lineWidth=3;[30,75,120].forEach(mx=>{g.beginPath();g.moveTo(x+mx,y+26);g.lineTo(x+mx,y-50);g.stroke();g.fillStyle='rgba(244,241,232,.9)';g.fillRect(x+mx-14,y-44,28,18);g.fillRect(x+mx-12,y-22,24,14)})}
@@ -1547,7 +1549,9 @@ function updatePlayer(dt){
     if(k.k==='bottle'){give('bottle',1);SND.blip(880);missionEvent('bottle')}
     else if(k.k==='cash'){P.money+=k.v;SND.coin();log(`+${eur(k.v)}`,'good')}
     else if(k.k==='amber'){give('amber',1);SND.blip(660);log('Found a piece of amber on the beach. Sell it at a market (turgus).','amb')}
-    else if(k.k==='kontra'){give('kontra',k.n||1);SND.blip(520);missionEvent('kontra')}}}
+    else if(k.k==='kontra'){give('kontra',k.n||1);SND.blip(520);missionEvent('kontra')}
+    else if(k.k==='mush'){give(k.mush,1);SND.blip(720);log(`Radai grybą: ${ITEMS[k.mush].n}.${k.mush==='musmire'?' Gražus, bet nuodingas.':' Turguje nupirks.'}`,'amb')}
+    else if(k.k==='fern'){give('papartis',1);setMood(30);P.money+=100;SND.fanfare();toast('🌸','Paparčio žiedas!','You found the legendary fern flower. Luck and +€100.');chron('Found the fern flower on Joninės night.')}}}
   ENT.pickups=ENT.pickups.filter(k=>!k.got);
 }
 
@@ -1650,6 +1654,7 @@ function roadPointIn(city,near,dmin,dmax){const c=cityById(city);for(let k=0;k<2
 function curCity(){return (cityAtPx(P.x,P.y)||nearestCity(P.x,P.y))}
 function availableJobs(){const out=[],c=curCity(),mf=myFac(),age=P.age;
   if(age<13){out.push({type:'bottles',title:'Butelių medžioklė',desc:'Collect 10 empty bottles around the yards and return them at a taromatas (Maksi shop). 10 ct each.',pay:'€1 + 10 ct/bottle'});
+    out.push({type:'bottlewar',title:'Butelių karas',desc:'Race Benas from entrance 5: first to grab 5 bottles in the yard wins.',pay:'€2 + glory'});
     out.push({type:'errand',title:'Mamos užduotis',desc:'Mum needs kibinai from the Maksi shop. Buy one and bring it home.',pay:'€3 + ice cream money'})}
   if(age>=13)out.push({type:'courier',title:'Kurjeris: cepelinai',desc:'Pick up an order from a café and deliver it before it gets cold. Bike or car.',pay:'€8–18'});
   if(age>=18)out.push({type:'norway',title:'Statybos Norvegijoje',desc:'Three months on a building site near Bergen. Big money, lots of rain.',pay:'€6,400'});
@@ -1674,6 +1679,7 @@ function availableJobs(){const out=[],c=curCity(),mf=myFac(),age=P.age;
 function startMission(type){if(G.mission){log('Finish or cancel your current job first (Q).','bad');return}
   const c=curCity(),mf=myFac(),fid=P.faction,r=mf?rankIdx(fid):0;let M={type,fac:fid,city:c.id,t0:now()};
   const rivalDistrict=()=>{const ds=DISTRICTS.filter(d=>d.city===MAP.id&&d.cnt&&d.owner&&d.owner!==fid&&FACTIONS[d.owner].league==='street'&&!d.peace);return ds.length?pick(ds):null};
+  if(type==='bottlewar'){startBottleWar();return}
   switch(type){
   case 'bottles':M.title='Butelių medžioklė';M.need=10;M.start=has('bottle');M.step='Collect bottles';break;
   case 'errand':M.title='Mamos užduotis';M.step='Buy kibinai at Maksi';M.target=nearestPOI('shop');break;
@@ -1713,7 +1719,7 @@ function tickMission(dt){const M=G.mission;if(!M)return;
   const me=P.inCar||P,at=t=>t&&(!t.map||t.map===MAP.id)&&dist(me.x,me.y,t.x,t.y)<(P.inCar?60:40);
   switch(M.type){
   case 'bottles':M.step=`Bottles: ${Math.min(has('bottle'),M.need)}/${M.need}`;if(has('bottle')>=M.need&&!M.full){M.full=true;M.target=nearestPOI('shop');M.step='Return them at the Maksi taromatas'}break;
-  case 'errand':if(has('kibinas')&&!M.bought){M.bought=true;const h=POIS.find(p=>p.id===P.home);M.target={x:h.x,y:h.y,label:'Namai'};M.step='Bring the kibinai home'}if(M.bought&&at(M.target)&&has('kibinas')){give('kibinas',-1);M.pay=3;missionDone('Mum says ačiū')}break;
+  case 'errand':if(has('kibinas')&&(!M.bought||!M.target)){M.bought=true;const h=POIS.find(p=>p.id===P.home);M.target=h?{x:h.x,y:h.y,label:'Namai'}:null;M.step=h?'Bring the kibinai home':'Go back to your home town'}if(M.bought&&M.target&&at(M.target)&&has('kibinas')){give('kibinas',-1);M.pay=3;missionDone('Mum says ačiū')}break;
   case 'courier':case 'taxi':if(!M.picked&&at(M.target)){if(M.type==='taxi'&&!P.inCar)break;M.picked=true;M.target=M.dest;M.step=M.type==='taxi'?'Drive to the destination':'Deliver the order';SND.blip(700);if(M.type==='taxi')bubble(P.inCar,'Labas, į '+pick(['centrą','stotį','Akropolį','namus'])+', prašau.')}
     else if(M.picked&&at(M.target)){if(M.type==='taxi'&&!P.inCar)break;missionDone(M.type==='taxi'?'Passenger: „Ačiū!“':'Customer: „Dar šilti!“')}break;
   case 'stogas':if(at(M.target)){M.i++;SND.coin();log(`${M.target.label}: the owner pays up, scowling.`);if(M.i>=M.list.length){missionDone();crime(1,'Racketeering')}else{M.target=M.list[M.i];M.step=`Shops: ${M.i}/${M.list.length}`}}break;
@@ -1827,6 +1833,8 @@ function poiMenu(p){
     if(p.kind==='kiosk')h+=act('🚬 Cigaretės','Legal cigarettes, €5.50. ID checked.','€5,50',()=>{if(P.age<18){log('Kioskininkė: „Parodyk pasą! Kiek tau metų?!“ No sale.','bad');setMood(-2);return}if(pay(5.5)){give('cigs',1)}});
     if(p.kind==='shop'){const b=has('bottle');h+=act('Taromatas',`Return empty bottles, 10 ct each. You have ${b}.`,`Priduoti (${eur(b*.1)})`,()=>{const n=has('bottle');if(!n)return;give('bottle',-n);P.money+=n*.1;P.stats.bottles=(P.stats.bottles||0)+n;SND.coin();G.flags.tara=true;
       const M=G.mission;if(M&&M.type==='bottles'){M.pay=1;missionDone(`${n} bottles`)}log(`Taromatas: ${n} × €0.10`,'good');poiMenu(p)},!b)}
+    const mushIds=Object.keys(P.inv).filter(k=>ITEMS[k]&&ITEMS[k].mush&&ITEMS[k].sell&&P.inv[k]>0);if(p.kind==='market'&&mushIds.length){const tot=mushIds.reduce((a,k)=>a+ITEMS[k].sell*P.inv[k],0);h+=act('Parduoti grybus',`Sell mushrooms: ${mushIds.map(k=>ITEMS[k].n+' ×'+P.inv[k]).join(', ')}.`,eur(tot),()=>{mushIds.forEach(k=>give(k,-P.inv[k]));P.money+=tot;SND.coin();poiMenu(p)})}
+    if(p.kind==='market')h+=act('Derėtis su močiute','Cheese, pickles and a kibinas. Haggle the price down — but respect your elders.','Derėtis',()=>{closeModal();setTimeout(haggleFood,30)});
     const fishIds=Object.keys(P.inv).filter(k=>ITEMS[k]&&ITEMS[k].fish&&P.inv[k]>0);if(p.kind==='market'&&fishIds.length){const tot=fishIds.reduce((a,k)=>a+ITEMS[k].sell*P.inv[k],0);h+=act('Parduoti žuvį',`Sell your catch: ${fishIds.map(k=>ITEMS[k].n+' ×'+P.inv[k]).join(', ')}.`,eur(tot),()=>{fishIds.forEach(k=>give(k,-P.inv[k]));P.money+=tot;SND.coin();poiMenu(p)})}
     if(p.kind==='market'&&!P.dog)h+=act('Šuniukas iš prieglaudos','A volunteer from the animal shelter has puppies that need a home. Free, just love it.','Priglausti',()=>{adoptDog();poiMenu(p)});
     if(p.kind==='market'&&has('amber'))h+=act('Parduoti gintarą',`Sell amber, €15 a piece. You have ${has('amber')}.`,'Parduoti',()=>{const n=has('amber');give('amber',-n);P.money+=n*15;SND.coin();poiMenu(p)});
@@ -1951,6 +1959,7 @@ function openItems(){let h=mHead('D','Daiktai','Belongings')+'<div class="mbody"
   ids.forEach(id=>{const it=ITEMS[id];h+=act(`${it.ic} ${it.n} ×${P.inv[id]}`,it.en,it.food||it.heal||it.energy?'Naudoti':it.gear?(P.gear.bat?'Nusiimti':'Pasiimti'):'—',()=>{useItem(id);openItems()},!(it.food||it.heal||it.energy||it.gear))});
   openModal(h+'</div>')}
 function useItem(id){const it=ITEMS[id];if(!it||!has(id))return;if(it.read){give(id,-1);const f=pick(LORE);log(`Laikraštis: ${esc(G.news[0]||f[0])} <i>${esc(G.news[0]?'':f[1])}</i>`,'amb');return}if(it.smoke||it.drink){give(id,-1);setMood(it.mood);vice(it);log(it.smoke?'You smoke. Cough.':'Glug. The world gets wobbly.','amb');renderHotbar();return}if(id==='ledai')G.flags.ateIce=true;
+  if(it.poison){give(id,-1);P.hp=Math.max(5,P.hp-40);P.hitFlash=.3;SND.hit(.4);setMood(-15);log('You ate a musmirė. Very bad idea. Pilvas skauda, pasaulis sukasi.','bad');renderHotbar();return}
   if(it.gear){P.gear.bat=!P.gear.bat;log(P.gear.bat?'Bat in hand.':'Bat away.');renderHotbar();return}
   if(it.food||it.heal||it.energy||it.mood){give(id,-1);if(it.food)P.food=Math.min(100,P.food+it.food);if(it.heal)P.hp=Math.min(P.maxHp,P.hp+it.heal);if(it.energy)P.energy=Math.min(100,P.energy+it.energy);if(it.mood)setMood(it.mood);SND.blip(600);log(`${it.n}: ${pick(['skanu!','nu jo.','gerai.'])}`)}}
 function openGloss(){let h=mHead('Aa','Žodynėlis','Little dictionary of words you hear in the game')+'<div class="mbody"><div class="gloss">';
@@ -2023,6 +2032,7 @@ function findPrompt(){
   let best=null,bd=46;
   POIS.forEach(p=>{const d=dist(p.x,p.y,P.x,P.y);if(d<bd){bd=d;best={key:'E',text:poiPrompt(p),fn:()=>openPOI(p)}}});
   for(const e of ENT.peds){if(e.ko>0||e.ride)continue;const d=dist(e.x,e.y,P.x,P.y);if(d<30&&d<bd){bd=d;best={key:'E',text:e.name?`${e.name}${e.special==='drip'?' · drabužiai':e.special==='baryga'?' · „ko reikia?“':''}`:'Kalbėti · talk',fn:()=>talkTo(e)}}}
+  if(!best){const fp=funTalkDecor();if(fp)best=fp}
   if(!best){const ep=extraPrompt();if(ep)best=ep}
   const c=nearestCar(40);if(c&&!best)return{key:'F',text:c.owned!==undefined?`Sėsti · ${CARS[c.model].name}`:CARS[c.model].kind==='bike'?'Sėsti ant dviračio':P.age<16?'Per jaunas vairuoti':'Pavogti automobilį · steal',car:c};
   return best}
@@ -2171,13 +2181,13 @@ function tplHome(p){const cls=P.cls,big={low:[10,8],mid:[13,9],upper:[15,10],ric
     R.add(s,'sofa',1,2,3,1,{col:'#7A5A3A',act:homeTV,label:'Sofa: watch TV'});R.add(s,'sekcija',5,2,3,1);R.add(s,'tv',8,2,1,1,{crt:true,act:homeTV,label:'Žiūrėti TV · watch TV'});
     R.zone(s,2,3,3,2,'carpet');R.add(s,'rug',2,3,3,2,{solid:false,col:'#8E3B3B'});
     R.add(s,'bed',1,5,2,2,{col:'#6E7FA0',act:homeSleep,label:'Lova · sleep'});R.add(s,'table',4,5,2,1,{chairs:true});
-    R.add(s,'fridge',8,4,1,1,{act:homeEat,label:'Šaldytuvas · eat'});R.add(s,'stove',8,5,1,1);R.add(s,'wardrobe',8,6,1,1,{act:openWardrobe,label:'Spinta · wardrobe'});
+    R.add(s,'fridge',8,4,1,1,{act:homeEat,label:'Šaldytuvas · eat'});R.add(s,'stove',8,5,1,1,{act:cookCepelinai,label:'Viryklė · virti cepelinus'});R.add(s,'wardrobe',8,6,1,1,{act:openWardrobe,label:'Spinta · wardrobe'});
   }else if(cls==='mid'){
     R.wallV(s,7,2,7,[5]);R.deco(s,'window',2,1,2);R.deco(s,'wallrug',4,1,2);R.deco(s,'window',9,1,2);R.deco(s,'calendar',11,1);
     R.add(s,'tv',2,2,3,1,{act:homeTV,label:'Žiūrėti TV · watch TV'});R.zone(s,2,3,3,2,'carpet');R.add(s,'rug',2,3,3,2,{solid:false,col:'#3E5F7A'});
     R.add(s,'sofa',2,5,3,1,{col:'#5B6B73',act:homeTV,label:'Sofa: watch TV'});R.add(s,'sekcija',5,2,2,1);R.add(s,'plant',1,2);R.add(s,'plant',6,7);
     R.add(s,'bed',10,2,2,2,{col:'#C46A2A',act:homeSleep,label:'Lova · sleep'});R.add(s,'desk',8,2,2,1,{pc:true,act:homePC,label:'Kompiuteris · computer'});
-    R.add(s,'wardrobe',11,6,1,2,{act:openWardrobe,label:'Spinta · wardrobe'});R.add(s,'fridge',1,6,1,1,{act:homeEat,label:'Šaldytuvas · eat'});R.add(s,'stove',1,7,1,1);R.add(s,'table',8,6,2,1,{chairs:true});
+    R.add(s,'wardrobe',11,6,1,2,{act:openWardrobe,label:'Spinta · wardrobe'});R.add(s,'fridge',1,6,1,1,{act:homeEat,label:'Šaldytuvas · eat'});R.add(s,'stove',1,7,1,1,{act:cookCepelinai,label:'Viryklė · virti cepelinus'});R.add(s,'table',8,6,2,1,{chairs:true});
   }else if(cls==='upper'){
     R.wallV(s,10,2,8,[4,5]);R.deco(s,'window',2,1,3);R.deco(s,'painting',6,1);R.deco(s,'window',11,1,3);R.deco(s,'calendar',8,1);
     R.add(s,'kitchen',1,2,4,1,{act:homeEat,label:'Virtuvė · cook and eat'});R.add(s,'island',2,4,3,1);R.add(s,'tv',6,2,3,1,{flat:true,act:homeTV,label:'Žiūrėti TV · watch TV'});
@@ -2585,7 +2595,7 @@ function seasonCheck(){const m=doyToDate(G.time.doy).m;const w=m===11||m<=1;if(w
 
 /* ---------- prompts outdoors that are not POIs ---------- */
 function extraPrompt(){if(P.inCar)return null;
-  for(const d of DECOR){if(d.k==='hoop'&&dist(d.x,d.y,P.x,P.y)<50)return{key:'E',text:'Krepšinis · shoot hoops',fn:()=>openHoops(sc=>{if(P.faction&&FACTIONS[P.faction].league==='school')gainRep(P.faction,Math.ceil(sc/2))})}}
+  for(const d of DECOR){if(d.k==='hoop'&&dist(d.x,d.y,P.x,P.y)<50)return{key:'E',text:'Krepšinis · hoops / 3x3',fn:()=>choice('🏀','Kiemo aikštelė','A few kids are already shooting. Mėtyti vienam ar žaisti 3x3?',[{l:'Mėtyti baudas',fn:()=>openHoops(sc=>{if(P.faction&&FACTIONS[P.faction].league==='school')gainRep(P.faction,Math.ceil(sc/2))})},{l:'3x3 iki 7',fn:()=>setTimeout(streetBall,30)},{l:'Ne dabar',fn:()=>{}}])}}
   if(has('meskere')){const w=waterNear();if(w)return{key:'E',text:'Žvejoti · fish',fn:()=>openFishing(w)}}
   const gd=nearGenericDoor();if(gd)return{key:'E',text:{sov:'Laiptinė · stairwell',mall:'Prekybos centras · mall',church:'Bažnyčia · church'}[gd.b.kind],fn:()=>{const[s,p]=genericScene(gd.b);enterScene(s,p)}};
   return null}
@@ -3056,7 +3066,7 @@ function queueEvent(p){if(Math.random()>.25)return false;choice('🛒','Eilė pr
   {l:'„Ponia, čia eilė!“',fn:()=>{if(Math.random()<.5){log('„Jaunimas visai be gėdos!“ But she goes to the back.','good');poiMenu(p)}else{log('The whole queue takes her side. Embarrassing.','bad');setMood(-5);poiMenu(p)}}}]);return true}
 
 /* ---------- talk hooks ---------- */
-function specialTalk(e){if(e.special==='reksnys')return reksnysTalk(e),true;if(e.special==='bat')return batTalk(e),true;if(e.special==='baryga')return barygaTalk(e),true;if(e.special==='drip')return openRepShop(),true;
+function specialTalk(e){if(e.special==='chessman')return chessPuzzle(),true;if(e.special==='rivalkid')return bubble(e,pick(['Netrukdyk!','Mano buteliai!','Mama sakė, kad laimėsiu.'])),true;if(e.special==='reksnys')return reksnysTalk(e),true;if(e.special==='bat')return batTalk(e),true;if(e.special==='baryga')return barygaTalk(e),true;if(e.special==='drip')return openRepShop(),true;
   if(e.special==='tourist'){const l=pick(TOURIST_LINES);choice('📷','Turistas',`„${l[0]}“<br><i>${l[1]}</i>`,[{l:'Parodyti kelią',fn:()=>{const tip=ri(1,5);P.money+=tip;bubble(e,'Thank you! Ačiū!');log(`You point the way. Tip: ${eur(tip)}.`,'good')}},{l:'„No English…“',fn:()=>{}}]);return true}
   if(e.special==='metal'){const l=pick(METAL_LINES);bubble(e,l[0]);log(`Metalistas: „${esc(l[0])}“ <i>${esc(l[1])}</i>`);if(styleOf()==='metal')setMood(4);return true}
   if(e.special==='centras'||e.fac==='centras'){const l=pick(CENTRAS_LINES);bubble(e,l[0]);log(`Centrinis: „${esc(l[0])}“ <i>${esc(l[1])}</i>`);const st=styleOf();if(st==='rep'){P.respect=(P.respect||0)+1;if(P.owned&&Object.keys(P.owned).some(k=>k.startsWith('fake_')&&P.look[k.slice(5)])&&Math.random()<.25){bubble(e,'Feikas, bičas!');setMood(-5)}}else if(st==='maroz'){bubble(e,'Ką, marozas?');setMood(-2)}return true}
@@ -3208,6 +3218,105 @@ Object.assign(POI_HANDLERS,LIFE_HANDLERS);TPL.club=tplClub;
 let LIC_T=0;function lifeTick(dt){tickExam(dt);LIC_T-=dt;if(LIC_T<=0&&P.inCar&&!P.license&&CARS[P.inCar.model].kind!=='bike'&&MAP.kind!=='road'){LIC_T=40;if(ENT.peds.some(e=>e.kind==='police'&&dist(e.x,e.y,P.x,P.y)<9*TS)||ENT.cars.some(c=>c.ai==='police'&&dist(c.x,c.y,P.x,P.y)<10*TS)){crime(1,'Driving without a licence')}}}
 
 /* =====================================================================
+   FUN — minigames, festivals, car radio and street atmosphere.
+   ===================================================================== */
+
+/* ---------- chess puzzles with pensioners (mate in one, all verified) ---------- */
+const CHESS=[
+ {t:'Mat per vieną ėjimą: baltieji',en:'White to move and mate in one',pos:{g1:'K',a1:'R',g8:'k',f7:'p',g7:'p',h7:'p'},sol:['a1','a8'],hint:'Back rank.'},
+ {t:'Mat per vieną ėjimą: baltieji',en:'White to move and mate in one',pos:{e1:'K',h5:'Q',c4:'B',e8:'k',d8:'q',f8:'b',d7:'p',f7:'p',e5:'p',c6:'n'},sol:['h5','f7'],hint:'The weakest square is f7.'},
+ {t:'Mat per vieną ėjimą: baltieji',en:'White to move and mate in one',pos:{f6:'K',h1:'R',f8:'k'},sol:['h1','h8'],hint:'The king has no squares left.'}];
+const PIECE={K:'♔',Q:'♕',R:'♖',B:'♗',N:'♘',P:'♙',k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+function chessPuzzle(){const n=G.flags.chessN||0;if(n>=CHESS.length){log('„Tu jau viską išsprendei. Ateik rytoj su savo šachmatais.“','amb');return}const pz=CHESS[n];let sel=null;
+  openModal(mHead('♞','Šachmatai Bernardinų sode',`${pz.t} · ${pz.en}`)+`<div class="mbody" style="text-align:center"><canvas id="chb" width="400" height="400" style="width:min(400px,100%);border-radius:6px;cursor:pointer"></canvas><p id="chr" class="note">Pensioner Algirdas: „Nu, jaunuoli, rodyk, ką moki.“ Click a white piece, then its target square.</p></div><div class="mfoot"><button class="btn ghost" onclick="log('Hint: ${pz.hint.replace(/'/g,'')}','amb')">Užuomina</button><button class="btn" onclick="closeModal()">Baigti</button></div>`);
+  const c=$('#chb'),g=c.getContext('2d'),S=50,F='abcdefgh';const sq=k=>[F.indexOf(k[0]),8-(+k[1])];
+  const draw=()=>{for(let y=0;y<8;y++)for(let x=0;x<8;x++){g.fillStyle=(x+y)%2?'#B58863':'#F0D9B5';g.fillRect(x*S,y*S,S,S)}if(sel){const[x,y]=sq(sel);g.fillStyle='rgba(226,161,27,.6)';g.fillRect(x*S,y*S,S,S)}
+    g.font='40px serif';g.textAlign='center';g.textBaseline='middle';Object.entries(pz.pos).forEach(([k,p])=>{const[x,y]=sq(k);g.fillStyle=p===p.toUpperCase()?'#fff':'#111';g.strokeStyle=p===p.toUpperCase()?'#111':'#fff';g.lineWidth=1;g.fillText(PIECE[p],x*S+S/2,y*S+S/2+2);g.strokeText(PIECE[p],x*S+S/2,y*S+S/2+2)})};
+  draw();c.onclick=e=>{const r=c.getBoundingClientRect(),x=Math.floor((e.clientX-r.left)/r.width*8),y=Math.floor((e.clientY-r.top)/r.height*8);const k=F[x]+(8-y);
+    if(!sel){const p=pz.pos[k];if(p&&p===p.toUpperCase()){sel=k;draw()}return}
+    if(sel===pz.sol[0]&&k===pz.sol[1]){pz.pos[k]=pz.pos[sel];delete pz.pos[sel];sel=null;draw();$('#chr').innerHTML='<b>Matas!</b> „Oho! Iš kur tu toks?“ +€5, the pensioners respect you.';P.money+=5;setMood(8);G.flags.chessN=n+1;SND.fanfare()}
+    else{sel=null;draw();$('#chr').textContent='„Ne ne ne. Pagalvok dar.“ (Not that one.)';SND.blip(220)}}}
+
+/* ---------- haggling with market grandmothers ---------- */
+Object.assign(ITEMS,{suris:{n:'Kaimiškas sūris',en:'Farmer\'s cheese with honey',ic:'🧀',food:30,price:5},agurkai:{n:'Rauginti agurkai',en:'Pickled cucumbers',ic:'🥒',food:12,mood:3,price:3},
+ baravykas:{n:'Baravykas',en:'Porcini mushroom. Market price €4',ic:'🍄',price:0,sell:4,mush:1},voveraite:{n:'Voveraitė',en:'Chanterelle. Market price €2',ic:'🍄',price:0,sell:2,mush:1},musmire:{n:'Musmirė',en:'Fly agaric. Poisonous! Do not eat',ic:'🍄',price:0,sell:0,mush:1,poison:1},
+ riestainis:{n:'Riestainis',en:'Bagel ring from Kaziuko mugė',ic:'🥯',food:15,mood:6,price:2},verba:{n:'Verba',en:'Dried-flower palm from Kaziuko mugė',ic:'💐',mood:10,price:4},papartis:{n:'Paparčio žiedas',en:'The legendary fern flower. Luck forever',ic:'🌸',price:0}});
+function haggleFood(){let price=14,round=0;const next=()=>choice('🥒','Derybos su močiute',`„Krepšelis: sūris, agurkai ir kibinas. <b>${eur(price)}</b>, vaikeli, pigiau nerasi.“`,[
+  {l:'Pirkti',fn:()=>{if(pay(price)){give('suris',1);give('agurkai',1);give('kibinas',1);log(`Bought the basket for ${eur(price)}.`,'good');if(price<=9)log('The grandmother mutters: „Tikras žydas…“ (you haggled hard).','amb')}}},
+  {l:'„O už dešimt?“',fn:()=>{round++;if(Math.random()<.15*round){log('„Eik iš čia, nemoki gerbti senų žmonių!“ She refuses to sell.','bad');setMood(-3);return}price=Math.max(8,price-ri(1,2));next()}},{l:'Ačiū, ne',fn:()=>{}}]);next()}
+
+/* ---------- mushrooms (border forest and city forests) ---------- */
+function forestTiles(){if(MAP.forest)return MAP.forest;const out=[];for(let y=0;y<H;y+=2)for(let x=0;x<W;x+=2)if(TL[idx(x,y)]===T.FOREST)out.push(x,y);MAP.forest=out;return out}
+function forestNear(px,py,rmax){const f=forestTiles(),X=tx(px),Y=tx(py),c=[];for(let i=0;i<f.length;i+=2)if(Math.abs(f[i]-X)<rmax&&Math.abs(f[i+1]-Y)<rmax)c.push(i);if(!c.length)return null;const i=pick(c);return[f[i],f[i+1]]}
+function mushroomTick(){if(SCENE||MAP.kind==='road')return;const m=doyToDate(G.time.doy).m;if(m<6||m>9)return;
+  if(ENT.pickups.filter(k=>k.mush).length<8){const t=forestNear(P.x,P.y,18);if(t){const r=Math.random();ENT.pickups.push({k:'mush',mush:r<.3?'baravykas':r<.75?'voveraite':'musmire',x:t[0]*TS+rnd(6,26),y:t[1]*TS+rnd(6,26)})}}}
+function drawMushroom(k){const c=k.mush==='musmire'?'#C1272D':k.mush==='baravykas'?'#7A4B2A':'#E2A11B';ctx.fillStyle='#F2EEE6';ctx.fillRect(k.x-2,k.y-6,4,6);ctx.fillStyle=c;ctx.beginPath();ctx.arc(k.x,k.y-6,5,Math.PI,0);ctx.fill();if(k.mush==='musmire'){ctx.fillStyle='#fff';ctx.fillRect(k.x-2,k.y-9,1.5,1.5);ctx.fillRect(k.x+1,k.y-8,1.5,1.5)}}
+
+/* ---------- cooking cepelinai at home ---------- */
+function cookCepelinai(){if(G.flags.cookDay===G.time.day)return log('Enough cepelinai for today. Mum says so.','amb');const steps=['Nutarkuoti bulves','Nuspausti tarkius','Įdėti mėsos įdaro','Suformuoti cepeliną','Virti 25 minutes','Užpilti spirgučių padažu'];let i=0,errs=0;
+  const next=()=>{if(i>=steps.length){G.flags.cookDay=G.time.day;const n=errs===0?3:errs<3?2:1;give('cepelinai',n);setMood(10);skipHours(2);log(errs===0?'Perfect cepelinai! Mum says they are better than grandma\'s (do not tell grandma).':`${n} cepelinai. ${errs} mistakes, but edible.`,'good');return}
+    const opts=[steps[i],...steps.filter((_,k)=>k!==i).sort(()=>Math.random()-.5).slice(0,2)].sort(()=>Math.random()-.5);
+    choice('🥔',`Cepelinai · ${i+1}/${steps.length}`,'What comes next? Ką darome toliau?',opts.map(o=>({l:o,fn:()=>{if(o===steps[i])i++;else{errs++;log('„Ne, ne taip!“ says mum.','bad')}next()}})))};next()}
+
+/* ---------- bottle race (kids) ---------- */
+function startBottleWar(){const pts=[];for(let k=0;k<9;k++){const t=randomTileNear(P.x,P.y,3,12,t=>t===T.YARD||t===T.PARK||t===T.WALK);if(t){const b={k:'bottle',x:t[0]*TS+16,y:t[1]*TS+16,keep:true,war:true};ENT.pickups.push(b);pts.push(b)}}
+  const t=randomTileNear(P.x,P.y,2,4,t=>WALKABLE[t]);const rival=spawnPed('kid',t[0]*TS+16,t[1]*TS+16,null,{keep:true,special:'rivalkid',name:'Benas iš 5 laiptinės'});
+  G.mission={type:'bottlewar',custom:true,title:'Butelių karas',rival,mine:0,his:0,start:has('bottle'),step:'First to 5 bottles wins!',pay:2};bubble(rival,'Visi buteliai mano!')}
+function tickBottleWar(dt){const M=G.mission;if(!M||M.type!=='bottlewar')return;M.mine=has('bottle')-M.start;const r=M.rival;const left=ENT.pickups.filter(k=>k.war&&!k.got);
+  if(left.length){let best=left[0],bd=1e9;left.forEach(k=>{const d=dist(k.x,k.y,r.x,r.y);if(d<bd){bd=d;best=k}});const a=Math.atan2(best.y-r.y,best.x-r.x);moveCircle(r,Math.cos(a)*75*dt,Math.sin(a)*75*dt,6,SOLID_FOOT);r.anim+=dt*10;r.dir=Math.abs(Math.cos(a))>Math.abs(Math.sin(a))?(Math.cos(a)>0?0:2):(Math.sin(a)>0?1:3);if(bd<14){best.got=true;M.his++;bubble(r,M.his+'!')}}
+  M.target=left[0]?{x:left[0].x,y:left[0].y,label:'Butelis'}:null;M.step=`Tu ${M.mine} : ${M.his} Benas`;
+  if(M.mine>=5){ENT.pickups=ENT.pickups.filter(k=>!k.war);r.keep=false;missionDone('Benas: „Rytoj atsirevanšuosiu!“')}else if(M.his>=5||!left.length&&M.mine<5){ENT.pickups=ENT.pickups.filter(k=>!k.war);r.keep=false;missionFail('Benas collected more bottles.')}}
+
+/* ---------- 3x3 street basketball ---------- */
+function streetBall(){let me=0,them=0,turn=0,pos=0,dir=1,zone=rnd(25,65),run=true;const zw=13;
+  openModal(mHead('🏀','Kiemo krepšinis 3x3','First to 7. Press SPACE or tap when the marker is in the green.')+`<div class="mbody mg"><p id="sbS" style="font:900 34px var(--display);text-align:center;margin:0">0 : 0</p><div class="mgbar"><div class="zone2" style="left:${zone}%;width:${zw}%"></div><div class="mark" id="sbm"></div></div><p id="sbR" class="note" style="font-size:15px">Tavo kamuolys.</p></div><div class="mfoot"><button class="btn green" id="sbB">Mesti</button><button class="btn ghost" onclick="HOOP.run=false;closeModal()">Baigti</button></div>`);
+  const shot=()=>{if(!run)return;const ok=pos>=zone&&pos<=zone+zw;if(ok){me++;SND.blip(900)}else SND.blip(250);let msg2=ok?'Taiklu!':'Pro šalį.';
+    if(Math.random()<.52+(P.age>=16?.03:0)){them++;msg2+=' Varžovas pataiko.'}else msg2+=' Varžovas prameta.';$('#sbS').textContent=`${me} : ${them}`;$('#sbR').textContent=msg2;zone=rnd(20,70);$('.zone2').style.left=zone+'%';
+    if(me>=7||them>=7){run=false;HOOP.run=false;const w=me>them;$('#sbR').textContent=w?'Laimėjai! Kiemas tavo. Kaip Saboniui!':'Pralaimėjai. Revanšas rytoj.';setMood(w?14:-3);P.energy-=12;if(w){P.respect=(P.respect||0)+2;G.flags.hoops4=true;if(P.faction&&FACTIONS[P.faction].league==='school')gainRep(P.faction,8)}}};
+  $('#sbB').onclick=shot;HOOP.shoot=shot;HOOP.run=true;const tick=()=>{if(!HOOP.run||!$('#sbm'))return;pos+=dir*1.8;if(pos>100||pos<0)dir*=-1;$('#sbm').style.left=pos+'%';requestAnimationFrame(tick)};tick()}
+
+/* ---------- festivals ---------- */
+const FESTS=[{m:2,d0:4,d1:6,id:'kaziuko',t:'Kaziuko mugė',map:'vilnius'},{m:5,d0:23,d1:24,id:'jonines',t:'Joninės'},{m:11,d0:1,d1:31,id:'kaledos',t:'Kalėdų eglė',map:'vilnius'}];
+function festNow(){const d=doyToDate(G.time.doy);return FESTS.filter(f=>f.m===d.m&&d.d>=f.d0&&d.d<=f.d1)}
+function festTick(){if(SCENE)return;const fs=festNow();fs.forEach(f=>{if(f.map&&f.map!==MAP.id)return;const key='fest_'+f.id+'_'+MAP.id+'_'+G.time.day;if(G.flags[key])return;G.flags[key]=1;
+  if(f.id==='kaziuko'){const st=STREETS.find(s=>s.name==='Pilies g.')||STREETS.find(s=>s.ped);if(st)walkLine(st.pts,5,(x,y,nx,ny)=>{for(const sg of[-1,1]){const X=Math.round(x+nx*sg*(st.w+.5)),Y=Math.round(y+ny*sg*(st.w+.5));if(inb(X,Y)&&WALKABLE[TL[idx(X,Y)]])DECOR.push({k:'fstall',x:X*TS,y:Y*TS,fest:1})}});toast('🌿','Kaziuko mugė','St Casimir\'s fair fills Pilies street: verbos, riestainiai, wooden spoons. Watch your wallet!')}
+  if(f.id==='jonines'){PARKSFIRE();toast('🔥','Joninės','Bonfires in the parks tonight. They say a fern flower blooms in the forest at midnight.')}
+  if(f.id==='kaledos'){const c=POIS.find(p=>p.name==='Vilniaus katedra');if(c)DECOR.push({k:'xtree',x:c.x+120,y:c.y+40,fest:1});toast('🎄','Kalėdų eglė','The famous Christmas tree is up on Cathedral Square.')}})}
+function PARKSFIRE(){for(let k=0;k<6;k++){const t=randomTileNear(P.x,P.y,6,40,t=>t===T.PARK||t===T.SAND);if(t)DECOR.push({k:'fire',x:t[0]*TS+16,y:t[1]*TS+16,fest:1})}
+  const t=forestNear(P.x,P.y,9999);if(t)ENT.pickups.push({k:'fern',x:t[0]*TS+16,y:t[1]*TS+16,keep:true})}
+function festStallTalk(){choice('🌿','Kaziuko mugė','A wooden stall full of verbos, riestainiai and hand-carved spoons.',[{l:'Riestainis €2',fn:()=>{if(pay(2))give('riestainis',1)}},{l:'Verba €4',fn:()=>{if(pay(4))give('verba',1)}},{l:'Tik pažiūrėti',fn:()=>{if(Math.random()<.2){const n=Math.min(15,P.money);P.money-=n;log(`A pickpocket got you for ${eur(n)}!`,'bad')}}}])}
+/* basketball nights */
+function gameNightTick(){if(!['vilnius','kaunas'].includes(MAP.id))return;const h=G.time.min/60;const gn=(G.time.day*7+3)%4===0;if(!gn)return;
+  if(h>=18&&h<21&&ENT.peds.filter(e=>e.fan).length<6){const t=randomTileNear(P.x,P.y,8,20,t=>WALKABLE[t]);if(t){const e=spawnPed('civ',t[0]*TS+16,t[1]*TS+16,null,{fan:true});e.lk.outfit='#1E8A4A';e.lk.vest='#F7F8F4';e.lines=[['Žalgiris! Žalgiris!','Žalgiris! Žalgiris!'],['Šiandien laimėsim!','We win tonight!']]}}
+  if(h>=21&&!G.flags['game'+G.time.day]){G.flags['game'+G.time.day]=1;const w=Math.random()<.65;toast('🏀',w?'Žalgiris laimėjo!':'Žalgiris pralaimėjo',w?'Car horns all over town. Strangers hug in the street.':'Silence in the bars. Tomorrow everyone is a coach.');setMood(w?8:-3);
+    ENT.peds.filter(e=>e.fan).forEach(e=>bubble(e,w?'VALIO!!!':'Teisėjas nupirktas!'))}}
+
+/* ---------- car radio ---------- */
+const RADIO=[{n:'Išjungta'},{n:'Gintaras FM',sub:'popsas',scale:[261.6,293.7,329.6,392,440,523.3],pat:[0,2,4,5,4,2,1,3,4,2],dj:['„Gintaras FM: geriausi lietuviški hitai!“','„Ir vėl – Mėnulio takas!“']},
+ {n:'Žinių radijas',sub:'žinios',talk:1,dj:['„Degalai brangsta jau trečią savaitę.“','„Kamštis Geležinio Vilko gatvėje.“','„Orai: lietus visoje Lietuvoje.“','„Seimas vėl nesutaria dėl biudžeto.“','„Žalgiris pasirašė naują žaidėją.“']},
+ {n:'Retro Rus FM',sub:'rusiška estrada',scale:[220,246.9,261.6,293.7,329.6,349.2],pat:[0,2,3,4,3,2,0,5,4,3],dj:['„Ретро хиты для настоящих пацанов!“ (marozai nod along)']},
+ {n:'Metalas FM',sub:'metalas',scale:[82.4,98,110,123.5,146.8],pat:[0,0,2,0,3,2,0,4],sq:1,dj:['„Garsiau! Metalas FM!“']}];
+let RADIO_T=0;
+function radioCycle(){if(!P.inCar)return;P.radio=((P.radio||0)+1)%RADIO.length;const r=RADIO[P.radio];toast('📻',r.n,r.sub||'');if(r.dj)log(pick(r.dj),'amb');if(P.radio===3&&styleOf()==='maroz')setMood(4);if(P.radio===4&&styleOf()==='metal')setMood(4)}
+function radioTick(dt){if(!P.inCar||!P.radio||!SND.on||!SND.ctx)return;const r=RADIO[P.radio];RADIO_T-=dt;if(RADIO_T>0)return;
+  if(r.talk){RADIO_T=12;log('📻 '+pick(r.dj),'amb');return}RADIO_T=r.sq?.22:.3;MUSIC.step++;const n=r.pat[MUSIC.step%r.pat.length];SND.tone(r.scale[n],r.sq?.2:.28,r.sq?'sawtooth':'triangle',r.sq?.03:.035);if(MUSIC.step%8===0&&r.dj&&Math.random()<.1)log('📻 '+pick(r.dj),'amb')}
+
+/* ---------- street atmosphere: potholes and road works in cities ---------- */
+function cityAtmosphere(){if(MAP.kind!=='city'||MAP.atmo)return;MAP.atmo=true;SR=mulberry(hashStr(MAP.id+'atmo'));
+  STREETS.forEach(s=>{if(s.ped||s.rail)return;if(sr()<.35)walkLine(s.pts,sri(25,60),(x,y,nx,ny)=>{if(sr()<.4)DECOR.push({k:'pothole',x:x*TS+16+nx*sr(-s.w*12,s.w*12),y:y*TS+16+ny*sr(-s.w*12,s.w*12)})});
+    if(s.main&&sr()<.18){const i=sri(0,s.pts.length-2),p=s.pts[i];for(let k=0;k<6;k++)DECOR.push({k:'cone',x:(p[0]+k*.8)*TS+16,y:(p[1]+k*.3)*TS+16});DECOR.push({k:'works',x:p[0]*TS+16,y:p[1]*TS-10})}})}
+let BUMP_T=0;
+function potholeTick(dt){BUMP_T-=dt;if(!P.inCar||BUMP_T>0)return;const c=P.inCar,sp=Math.hypot(c.vx,c.vy);if(sp<120)return;for(const d of DECOR){if(d.k!=='pothole')continue;if(Math.abs(d.x-c.x)<14&&Math.abs(d.y-c.y)<14){BUMP_T=.8;shake(sp/60);c.hp-=1.5;SND.hit(.3);if(Math.random()<.4)bubble(c,pick(['Duobė!','Ach, tos duobės…','Kur žiūri savivaldybė?!']));break}}}
+function drawFunDecor(g,d){if(d.k==='cone'){g.fillStyle='#E2621B';g.beginPath();g.moveTo(d.x,d.y-14);g.lineTo(d.x+6,d.y);g.lineTo(d.x-6,d.y);g.fill();g.fillStyle='#fff';g.fillRect(d.x-3,d.y-8,6,2)}
+  else if(d.k==='works'){g.fillStyle='#E2A11B';g.fillRect(d.x-16,d.y-14,32,14);g.fillStyle='#1D2724';g.font='800 8px sans-serif';g.textAlign='center';g.fillText('REMONTAS',d.x,d.y-4);g.textAlign='left'}
+  else if(d.k==='fstall'){g.fillStyle='#8C6A3C';g.fillRect(d.x,d.y-6,30,14);g.fillStyle=['#C0392B','#3E8E5E','#E2A11B'][(d.x/32|0)%3];g.fillRect(d.x-2,d.y-22,34,8);g.fillStyle='#F2EEE6';for(let k=0;k<4;k++)g.fillRect(d.x+3+k*7,d.y-4,4,6)}
+  else if(d.k==='fire'){const t=performance.now()/120;g.fillStyle='#5A3E28';g.fillRect(d.x-10,d.y-2,20,4);g.fillStyle='#E2621B';g.beginPath();g.moveTo(d.x-8,d.y);g.lineTo(d.x,d.y-18-Math.sin(t)*4);g.lineTo(d.x+8,d.y);g.fill();g.fillStyle='#F2C230';g.beginPath();g.moveTo(d.x-4,d.y);g.lineTo(d.x,d.y-10-Math.cos(t)*3);g.lineTo(d.x+4,d.y);g.fill()}
+  else if(d.k==='xtree'){g.fillStyle='#2D5532';for(let k=0;k<4;k++){g.beginPath();g.moveTo(d.x,d.y-140+k*25);g.lineTo(d.x+28+k*10,d.y-80+k*25);g.lineTo(d.x-28-k*10,d.y-80+k*25);g.fill()}const t=performance.now()/400|0;for(let k=0;k<18;k++){g.fillStyle=['#E2A11B','#C1272D','#F7F8F4'][(k+t)%3];g.fillRect(d.x-30+hash2(k,1)*60,d.y-120+hash2(k,2)*110,3,3)}g.fillStyle='#F2C230';g.beginPath();g.arc(d.x,d.y-142,5,0,7);g.fill()}}
+function funTalkDecor(){for(const d of DECOR){if(d.k==='fstall'&&dist(d.x+15,d.y,P.x,P.y)<36)return{key:'E',text:'Kaziuko mugės prekystalis',fn:festStallTalk};if(d.k==='chess'&&dist(d.x+13,d.y,P.x,P.y)<40)return{key:'E',text:'Šachmatai su pensininkais',fn:chessPuzzle}}return null}
+function placeChess(){const D=CITYDATA[MAP.id];if(!D||!D.chess||MAP.chessPlaced)return;MAP.chessPlaced=true;const[x,y]=MAP.pr.p(D.chess);const t=nearestTile(Math.round(x),Math.round(y),t=>t===T.PARK||WALKABLE[t]);if(!t)return;
+  DECOR.push({k:'chess',x:t[0]*TS,y:t[1]*TS+10});for(let k=0;k<2;k++){const e=spawnPed('elder',t[0]*TS+(k?44:-14),t[1]*TS+18,null,{keep:true,name:k?'Pensininkas Algirdas':'Pensininkas Vytautas',idle:true,special:'chessman'});e.lk.cap='#3B3F45'}}
+
+/* =====================================================================
    MAIN LOOP
    ===================================================================== */
 let acc1=0,acc2=0,acc3=0,lastT=performance.now();
@@ -3223,18 +3332,18 @@ function update(dt){
   if(!P.inCar){for(const c of ENT.cars){const sp=Math.hypot(c.vx,c.vy)||(c.cur||0);if(sp<130)continue;if(dist(c.x,c.y,P.x,P.y)<20&&P.inv_t<=0){hurtPlayer(sp/18,c);P.inv_t=.8;shake(6)}}}
   for(const f of ENT.fx){f.life-=dt;if(f.k==='spark'){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=300*dt}else{f.r+=dt*14}}ENT.fx=ENT.fx.filter(f=>f.life>0);
   for(const b of ENT.bubbles)b.life-=dt;ENT.bubbles=ENT.bubbles.filter(b=>b.life>0);
-  updateHeat(dt);tickMission(dt);tickCustomMission(dt);lifeTick(dt);specialsTick(dt);angryTick(dt);viceTick(dt);
+  updateHeat(dt);tickMission(dt);tickCustomMission(dt);lifeTick(dt);specialsTick(dt);angryTick(dt);viceTick(dt);radioTick(dt);potholeTick(dt);tickBottleWar(dt);
   acc1+=dt;acc2+=dt;acc3+=dt;
   if(acc1>.25){acc1=0;populate();PROMPT=findPrompt();showPrompt()}
   musicTick(dt);brawlTick(dt);
   roadTick();
-  if(acc2>1){acc2=0;roadblockTick();meetTick();checkQuest();checkGoals();checkVisits();tickEvents();hudUpdate();updateZone()}
+  if(acc2>1){acc2=0;roadblockTick();meetTick();checkQuest();checkGoals();checkVisits();tickEvents();mushroomTick();festTick();gameNightTick();hudUpdate();updateZone()}
   if(acc3>60){acc3=0;saveGame(true)}
   // hold-to-act
   if(PROMPT&&PROMPT.hold&&PROMPT.hold.dur>0&&keys.has('KeyE')&&!HOLD.lock){HOLD.t+=dt;$('#hold').classList.remove('hidden');$('#holdI').style.width=(HOLD.t/PROMPT.hold.dur*100)+'%';
     if(HOLD.t>=PROMPT.hold.dur){HOLD.t=0;HOLD.lock=true;$('#hold').classList.add('hidden');PROMPT.hold.fn();PROMPT=findPrompt();showPrompt()}}
   else{HOLD.t=0;$('#hold').classList.add('hidden')}
-  if(P.inCar){const sp=Math.hypot(P.inCar.vx,P.inCar.vy);$('#spV').innerHTML=`${Math.round(sp*.34)}<small>km/h</small>`;$('#spD').textContent=DRIFT.cur>100?`ŠONINIS ${Math.round(DRIFT.cur)}`:(G.mission&&G.mission.type==='driftc'?`${Math.round(G.mission.got)}/${G.mission.need}`:'')}
+  if(P.inCar){const sp=Math.hypot(P.inCar.vx,P.inCar.vy);$('#spV').innerHTML=`${Math.round(sp*.34)}<small>km/h</small>`;$('#spD').textContent=DRIFT.cur>100?`ŠONINIS ${Math.round(DRIFT.cur)}`:(G.mission&&G.mission.type==='driftc'?`${Math.round(G.mission.got)}/${G.mission.need}`:(P.radio?'📻 '+RADIO[P.radio].n:''))}
 }
 function showPrompt(){const el=$('#prompt');if(!PROMPT||paused){el.classList.add('hidden');return}el.classList.remove('hidden');el.querySelector('kbd').textContent=PROMPT.key;$('#promptTxt').textContent=PROMPT.text}
 
@@ -3316,7 +3425,9 @@ function drawPickup(k){const t=performance.now()/300,b=Math.sin(t+k.x)*2;ctx.fil
   else if(k.k==='cash'){ctx.fillStyle='#7FB77E';ctx.fillRect(k.x-7,k.y-8+b,14,8);ctx.fillStyle='#3E6B3D';ctx.fillRect(k.x-2,k.y-6+b,4,4)}
   else if(k.k==='amber'){ctx.fillStyle='#E8961C';ctx.beginPath();ctx.ellipse(k.x,k.y-5+b,5,4,.4,0,7);ctx.fill();ctx.fillStyle='rgba(255,240,180,.7)';ctx.fillRect(k.x-2,k.y-7+b,2,2)}
   else if(k.k==='kontra'){if(k.balloon){ctx.strokeStyle='#888';ctx.beginPath();ctx.moveTo(k.x,k.y-10);ctx.lineTo(k.x+6,k.y-40);ctx.stroke();ctx.fillStyle='#F2F2EE';ctx.beginPath();ctx.arc(k.x+6,k.y-50+b,12,0,7);ctx.fill()}
-    ctx.fillStyle='#A8865A';ctx.fillRect(k.x-9,k.y-12,18,12);ctx.strokeStyle='#6E5434';ctx.strokeRect(k.x-9,k.y-12,18,12)}}
+    ctx.fillStyle='#A8865A';ctx.fillRect(k.x-9,k.y-12,18,12);ctx.strokeStyle='#6E5434';ctx.strokeRect(k.x-9,k.y-12,18,12)}
+  else if(k.k==='mush')drawMushroom(k);
+  else if(k.k==='fern'){const g=.5+Math.sin(t*2)*.3;ctx.fillStyle=`rgba(255,230,120,${g*.5})`;ctx.beginPath();ctx.arc(k.x,k.y-8,14,0,7);ctx.fill();ctx.fillStyle='#F7D7E8';for(let a=0;a<5;a++){ctx.beginPath();ctx.arc(k.x+Math.cos(a*1.26)*4,k.y-8+b+Math.sin(a*1.26)*4,3,0,7);ctx.fill()}ctx.fillStyle='#F2C230';ctx.beginPath();ctx.arc(k.x,k.y-8+b,2,0,7);ctx.fill()}}
 function drawArrow(t){const sx=(t.x-cam.x)*ZOOM,sy=(t.y-cam.y)*ZOOM;if(sx>40&&sy>40&&sx<VW-40&&sy<VH-40)return;
   const cx=VW/2,cy=VH/2,a=Math.atan2(sy-cy,sx-cx);const m=56,ex=clamp(cx+Math.cos(a)*VW,m,VW-m),ey=clamp(cy+Math.sin(a)*VH,m+60,VH-m-80);
   ctx.save();ctx.translate(ex,ey);ctx.fillStyle='#B5332B';ctx.strokeStyle='#F7F8F4';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,20,0,7);ctx.fill();ctx.stroke();
@@ -3341,6 +3452,7 @@ function keyAction(code){
   case 'KeyE':if(PROMPT&&PROMPT.fn)PROMPT.fn();break;
   case 'KeyF':if(SCENE)break;if(P.inCar)exitCar();else{const c=nearestCar(46);if(c)enterCar(c)}break;
   case 'KeyJ':playerPunch();break;
+  case 'KeyR':radioCycle();break;
   case 'KeyH':if(P.inCar){SND.horn();ENT.peds.forEach(e=>{if(dist(e.x,e.y,P.x,P.y)<5*TS&&!e.hostile&&e.kind!=='police'){e.state='flee';e.t=1.5}})}break;
   case 'KeyM':openMap();break;case 'KeyQ':openQuests();break;case 'KeyT':openPhone();break;case 'KeyC':openSelf();break;case 'KeyI':openItems();break;case 'KeyL':openGloss();break;
   case 'KeyN':toggleSound();break;case 'Equal':case 'NumpadAdd':ZMUL=clamp(ZMUL*1.1,.55,1.7);resize();break;case 'Minus':case 'NumpadSubtract':ZMUL=clamp(ZMUL*.9,.55,1.7);resize();break;case 'Escape':openMenu();break;

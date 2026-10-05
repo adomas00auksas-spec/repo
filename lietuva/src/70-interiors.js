@@ -42,13 +42,13 @@ function tplHome(p){const cls=P.cls,big={low:[10,8],mid:[13,9],upper:[15,10],ric
     R.add(s,'sofa',1,2,3,1,{col:'#7A5A3A',act:homeTV,label:'Sofa: watch TV'});R.add(s,'sekcija',5,2,3,1);R.add(s,'tv',8,2,1,1,{crt:true,act:homeTV,label:'Žiūrėti TV · watch TV'});
     R.zone(s,2,3,3,2,'carpet');R.add(s,'rug',2,3,3,2,{solid:false,col:'#8E3B3B'});
     R.add(s,'bed',1,5,2,2,{col:'#6E7FA0',act:homeSleep,label:'Lova · sleep'});R.add(s,'table',4,5,2,1,{chairs:true});
-    R.add(s,'fridge',8,4,1,1,{act:homeEat,label:'Šaldytuvas · eat'});R.add(s,'stove',8,5,1,1);R.add(s,'wardrobe',8,6,1,1,{act:openWardrobe,label:'Spinta · wardrobe'});
+    R.add(s,'fridge',8,4,1,1,{act:homeEat,label:'Šaldytuvas · eat'});R.add(s,'stove',8,5,1,1,{act:cookCepelinai,label:'Viryklė · virti cepelinus'});R.add(s,'wardrobe',8,6,1,1,{act:openWardrobe,label:'Spinta · wardrobe'});
   }else if(cls==='mid'){
     R.wallV(s,7,2,7,[5]);R.deco(s,'window',2,1,2);R.deco(s,'wallrug',4,1,2);R.deco(s,'window',9,1,2);R.deco(s,'calendar',11,1);
     R.add(s,'tv',2,2,3,1,{act:homeTV,label:'Žiūrėti TV · watch TV'});R.zone(s,2,3,3,2,'carpet');R.add(s,'rug',2,3,3,2,{solid:false,col:'#3E5F7A'});
     R.add(s,'sofa',2,5,3,1,{col:'#5B6B73',act:homeTV,label:'Sofa: watch TV'});R.add(s,'sekcija',5,2,2,1);R.add(s,'plant',1,2);R.add(s,'plant',6,7);
     R.add(s,'bed',10,2,2,2,{col:'#C46A2A',act:homeSleep,label:'Lova · sleep'});R.add(s,'desk',8,2,2,1,{pc:true,act:homePC,label:'Kompiuteris · computer'});
-    R.add(s,'wardrobe',11,6,1,2,{act:openWardrobe,label:'Spinta · wardrobe'});R.add(s,'fridge',1,6,1,1,{act:homeEat,label:'Šaldytuvas · eat'});R.add(s,'stove',1,7,1,1);R.add(s,'table',8,6,2,1,{chairs:true});
+    R.add(s,'wardrobe',11,6,1,2,{act:openWardrobe,label:'Spinta · wardrobe'});R.add(s,'fridge',1,6,1,1,{act:homeEat,label:'Šaldytuvas · eat'});R.add(s,'stove',1,7,1,1,{act:cookCepelinai,label:'Viryklė · virti cepelinus'});R.add(s,'table',8,6,2,1,{chairs:true});
   }else if(cls==='upper'){
     R.wallV(s,10,2,8,[4,5]);R.deco(s,'window',2,1,3);R.deco(s,'painting',6,1);R.deco(s,'window',11,1,3);R.deco(s,'calendar',8,1);
     R.add(s,'kitchen',1,2,4,1,{act:homeEat,label:'Virtuvė · cook and eat'});R.add(s,'island',2,4,3,1);R.add(s,'tv',6,2,3,1,{flat:true,act:homeTV,label:'Žiūrėti TV · watch TV'});

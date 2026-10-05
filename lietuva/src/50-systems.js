@@ -88,6 +88,7 @@ function roadPointIn(city,near,dmin,dmax){const c=cityById(city);for(let k=0;k<2
 function curCity(){return (cityAtPx(P.x,P.y)||nearestCity(P.x,P.y))}
 function availableJobs(){const out=[],c=curCity(),mf=myFac(),age=P.age;
   if(age<13){out.push({type:'bottles',title:'Butelių medžioklė',desc:'Collect 10 empty bottles around the yards and return them at a taromatas (Maksi shop). 10 ct each.',pay:'€1 + 10 ct/bottle'});
+    out.push({type:'bottlewar',title:'Butelių karas',desc:'Race Benas from entrance 5: first to grab 5 bottles in the yard wins.',pay:'€2 + glory'});
     out.push({type:'errand',title:'Mamos užduotis',desc:'Mum needs kibinai from the Maksi shop. Buy one and bring it home.',pay:'€3 + ice cream money'})}
   if(age>=13)out.push({type:'courier',title:'Kurjeris: cepelinai',desc:'Pick up an order from a café and deliver it before it gets cold. Bike or car.',pay:'€8–18'});
   if(age>=18)out.push({type:'norway',title:'Statybos Norvegijoje',desc:'Three months on a building site near Bergen. Big money, lots of rain.',pay:'€6,400'});
@@ -112,6 +113,7 @@ function availableJobs(){const out=[],c=curCity(),mf=myFac(),age=P.age;
 function startMission(type){if(G.mission){log('Finish or cancel your current job first (Q).','bad');return}
   const c=curCity(),mf=myFac(),fid=P.faction,r=mf?rankIdx(fid):0;let M={type,fac:fid,city:c.id,t0:now()};
   const rivalDistrict=()=>{const ds=DISTRICTS.filter(d=>d.city===MAP.id&&d.cnt&&d.owner&&d.owner!==fid&&FACTIONS[d.owner].league==='street'&&!d.peace);return ds.length?pick(ds):null};
+  if(type==='bottlewar'){startBottleWar();return}
   switch(type){
   case 'bottles':M.title='Butelių medžioklė';M.need=10;M.start=has('bottle');M.step='Collect bottles';break;
   case 'errand':M.title='Mamos užduotis';M.step='Buy kibinai at Maksi';M.target=nearestPOI('shop');break;
@@ -151,7 +153,7 @@ function tickMission(dt){const M=G.mission;if(!M)return;
   const me=P.inCar||P,at=t=>t&&(!t.map||t.map===MAP.id)&&dist(me.x,me.y,t.x,t.y)<(P.inCar?60:40);
   switch(M.type){
   case 'bottles':M.step=`Bottles: ${Math.min(has('bottle'),M.need)}/${M.need}`;if(has('bottle')>=M.need&&!M.full){M.full=true;M.target=nearestPOI('shop');M.step='Return them at the Maksi taromatas'}break;
-  case 'errand':if(has('kibinas')&&!M.bought){M.bought=true;const h=POIS.find(p=>p.id===P.home);M.target={x:h.x,y:h.y,label:'Namai'};M.step='Bring the kibinai home'}if(M.bought&&at(M.target)&&has('kibinas')){give('kibinas',-1);M.pay=3;missionDone('Mum says ačiū')}break;
+  case 'errand':if(has('kibinas')&&(!M.bought||!M.target)){M.bought=true;const h=POIS.find(p=>p.id===P.home);M.target=h?{x:h.x,y:h.y,label:'Namai'}:null;M.step=h?'Bring the kibinai home':'Go back to your home town'}if(M.bought&&M.target&&at(M.target)&&has('kibinas')){give('kibinas',-1);M.pay=3;missionDone('Mum says ačiū')}break;
   case 'courier':case 'taxi':if(!M.picked&&at(M.target)){if(M.type==='taxi'&&!P.inCar)break;M.picked=true;M.target=M.dest;M.step=M.type==='taxi'?'Drive to the destination':'Deliver the order';SND.blip(700);if(M.type==='taxi')bubble(P.inCar,'Labas, į '+pick(['centrą','stotį','Akropolį','namus'])+', prašau.')}
     else if(M.picked&&at(M.target)){if(M.type==='taxi'&&!P.inCar)break;missionDone(M.type==='taxi'?'Passenger: „Ačiū!“':'Customer: „Dar šilti!“')}break;
   case 'stogas':if(at(M.target)){M.i++;SND.coin();log(`${M.target.label}: the owner pays up, scowling.`);if(M.i>=M.list.length){missionDone();crime(1,'Racketeering')}else{M.target=M.list[M.i];M.step=`Shops: ${M.i}/${M.list.length}`}}break;

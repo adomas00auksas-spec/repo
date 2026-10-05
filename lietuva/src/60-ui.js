@@ -27,6 +27,8 @@ function poiMenu(p){
     if(p.kind==='kiosk')h+=act('🚬 Cigaretės','Legal cigarettes, €5.50. ID checked.','€5,50',()=>{if(P.age<18){log('Kioskininkė: „Parodyk pasą! Kiek tau metų?!“ No sale.','bad');setMood(-2);return}if(pay(5.5)){give('cigs',1)}});
     if(p.kind==='shop'){const b=has('bottle');h+=act('Taromatas',`Return empty bottles, 10 ct each. You have ${b}.`,`Priduoti (${eur(b*.1)})`,()=>{const n=has('bottle');if(!n)return;give('bottle',-n);P.money+=n*.1;P.stats.bottles=(P.stats.bottles||0)+n;SND.coin();G.flags.tara=true;
       const M=G.mission;if(M&&M.type==='bottles'){M.pay=1;missionDone(`${n} bottles`)}log(`Taromatas: ${n} × €0.10`,'good');poiMenu(p)},!b)}
+    const mushIds=Object.keys(P.inv).filter(k=>ITEMS[k]&&ITEMS[k].mush&&ITEMS[k].sell&&P.inv[k]>0);if(p.kind==='market'&&mushIds.length){const tot=mushIds.reduce((a,k)=>a+ITEMS[k].sell*P.inv[k],0);h+=act('Parduoti grybus',`Sell mushrooms: ${mushIds.map(k=>ITEMS[k].n+' ×'+P.inv[k]).join(', ')}.`,eur(tot),()=>{mushIds.forEach(k=>give(k,-P.inv[k]));P.money+=tot;SND.coin();poiMenu(p)})}
+    if(p.kind==='market')h+=act('Derėtis su močiute','Cheese, pickles and a kibinas. Haggle the price down — but respect your elders.','Derėtis',()=>{closeModal();setTimeout(haggleFood,30)});
     const fishIds=Object.keys(P.inv).filter(k=>ITEMS[k]&&ITEMS[k].fish&&P.inv[k]>0);if(p.kind==='market'&&fishIds.length){const tot=fishIds.reduce((a,k)=>a+ITEMS[k].sell*P.inv[k],0);h+=act('Parduoti žuvį',`Sell your catch: ${fishIds.map(k=>ITEMS[k].n+' ×'+P.inv[k]).join(', ')}.`,eur(tot),()=>{fishIds.forEach(k=>give(k,-P.inv[k]));P.money+=tot;SND.coin();poiMenu(p)})}
     if(p.kind==='market'&&!P.dog)h+=act('Šuniukas iš prieglaudos','A volunteer from the animal shelter has puppies that need a home. Free, just love it.','Priglausti',()=>{adoptDog();poiMenu(p)});
     if(p.kind==='market'&&has('amber'))h+=act('Parduoti gintarą',`Sell amber, €15 a piece. You have ${has('amber')}.`,'Parduoti',()=>{const n=has('amber');give('amber',-n);P.money+=n*15;SND.coin();poiMenu(p)});
@@ -151,6 +153,7 @@ function openItems(){let h=mHead('D','Daiktai','Belongings')+'<div class="mbody"
   ids.forEach(id=>{const it=ITEMS[id];h+=act(`${it.ic} ${it.n} ×${P.inv[id]}`,it.en,it.food||it.heal||it.energy?'Naudoti':it.gear?(P.gear.bat?'Nusiimti':'Pasiimti'):'—',()=>{useItem(id);openItems()},!(it.food||it.heal||it.energy||it.gear))});
   openModal(h+'</div>')}
 function useItem(id){const it=ITEMS[id];if(!it||!has(id))return;if(it.read){give(id,-1);const f=pick(LORE);log(`Laikraštis: ${esc(G.news[0]||f[0])} <i>${esc(G.news[0]?'':f[1])}</i>`,'amb');return}if(it.smoke||it.drink){give(id,-1);setMood(it.mood);vice(it);log(it.smoke?'You smoke. Cough.':'Glug. The world gets wobbly.','amb');renderHotbar();return}if(id==='ledai')G.flags.ateIce=true;
+  if(it.poison){give(id,-1);P.hp=Math.max(5,P.hp-40);P.hitFlash=.3;SND.hit(.4);setMood(-15);log('You ate a musmirė. Very bad idea. Pilvas skauda, pasaulis sukasi.','bad');renderHotbar();return}
   if(it.gear){P.gear.bat=!P.gear.bat;log(P.gear.bat?'Bat in hand.':'Bat away.');renderHotbar();return}
   if(it.food||it.heal||it.energy||it.mood){give(id,-1);if(it.food)P.food=Math.min(100,P.food+it.food);if(it.heal)P.hp=Math.min(P.maxHp,P.hp+it.heal);if(it.energy)P.energy=Math.min(100,P.energy+it.energy);if(it.mood)setMood(it.mood);SND.blip(600);log(`${it.n}: ${pick(['skanu!','nu jo.','gerai.'])}`)}}
 function openGloss(){let h=mHead('Aa','Žodynėlis','Little dictionary of words you hear in the game')+'<div class="mbody"><div class="gloss">';
@@ -223,6 +226,7 @@ function findPrompt(){
   let best=null,bd=46;
   POIS.forEach(p=>{const d=dist(p.x,p.y,P.x,P.y);if(d<bd){bd=d;best={key:'E',text:poiPrompt(p),fn:()=>openPOI(p)}}});
   for(const e of ENT.peds){if(e.ko>0||e.ride)continue;const d=dist(e.x,e.y,P.x,P.y);if(d<30&&d<bd){bd=d;best={key:'E',text:e.name?`${e.name}${e.special==='drip'?' · drabužiai':e.special==='baryga'?' · „ko reikia?“':''}`:'Kalbėti · talk',fn:()=>talkTo(e)}}}
+  if(!best){const fp=funTalkDecor();if(fp)best=fp}
   if(!best){const ep=extraPrompt();if(ep)best=ep}
   const c=nearestCar(40);if(c&&!best)return{key:'F',text:c.owned!==undefined?`Sėsti · ${CARS[c.model].name}`:CARS[c.model].kind==='bike'?'Sėsti ant dviračio':P.age<16?'Per jaunas vairuoti':'Pavogti automobilį · steal',car:c};
   return best}

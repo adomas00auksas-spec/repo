@@ -77,7 +77,7 @@ function seasonCheck(){const m=doyToDate(G.time.doy).m;const w=m===11||m<=1;if(w
 
 /* ---------- prompts outdoors that are not POIs ---------- */
 function extraPrompt(){if(P.inCar)return null;
-  for(const d of DECOR){if(d.k==='hoop'&&dist(d.x,d.y,P.x,P.y)<50)return{key:'E',text:'Krepšinis · shoot hoops',fn:()=>openHoops(sc=>{if(P.faction&&FACTIONS[P.faction].league==='school')gainRep(P.faction,Math.ceil(sc/2))})}}
+  for(const d of DECOR){if(d.k==='hoop'&&dist(d.x,d.y,P.x,P.y)<50)return{key:'E',text:'Krepšinis · hoops / 3x3',fn:()=>choice('🏀','Kiemo aikštelė','A few kids are already shooting. Mėtyti vienam ar žaisti 3x3?',[{l:'Mėtyti baudas',fn:()=>openHoops(sc=>{if(P.faction&&FACTIONS[P.faction].league==='school')gainRep(P.faction,Math.ceil(sc/2))})},{l:'3x3 iki 7',fn:()=>setTimeout(streetBall,30)},{l:'Ne dabar',fn:()=>{}}])}}
   if(has('meskere')){const w=waterNear();if(w)return{key:'E',text:'Žvejoti · fish',fn:()=>openFishing(w)}}
   const gd=nearGenericDoor();if(gd)return{key:'E',text:{sov:'Laiptinė · stairwell',mall:'Prekybos centras · mall',church:'Bažnyčia · church'}[gd.b.kind],fn:()=>{const[s,p]=genericScene(gd.b);enterScene(s,p)}};
   return null}

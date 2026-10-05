@@ -248,6 +248,7 @@ function loadMap(id,opt){opt=opt||{};initDistricts();
     (D.pois||[]).forEach(q=>{const[x,y]=pr.p(q.at);const b=freeBuildingT(null,null,2,[x,y])||buildAt(Math.round(x),Math.round(y));addPOI({id},q.kind,q.name,b,{})});
     if(id==='pasienis'){const f=POIS.find(p=>p.hq==='pasienio');if(f&&f.b)f.b.hqColor=FACTIONS.pasienio.color}}
   buildMinimap();if(typeof refreshOverlay==='function')refreshOverlay();
+  if(MAP.kind==='city'){cityAtmosphere();placeChess()}
   return MAP}
 
 /* ---------- minimap base ---------- */

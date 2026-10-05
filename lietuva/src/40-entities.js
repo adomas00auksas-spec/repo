@@ -232,7 +232,9 @@ function updatePlayer(dt){
     if(k.k==='bottle'){give('bottle',1);SND.blip(880);missionEvent('bottle')}
     else if(k.k==='cash'){P.money+=k.v;SND.coin();log(`+${eur(k.v)}`,'good')}
     else if(k.k==='amber'){give('amber',1);SND.blip(660);log('Found a piece of amber on the beach. Sell it at a market (turgus).','amb')}
-    else if(k.k==='kontra'){give('kontra',k.n||1);SND.blip(520);missionEvent('kontra')}}}
+    else if(k.k==='kontra'){give('kontra',k.n||1);SND.blip(520);missionEvent('kontra')}
+    else if(k.k==='mush'){give(k.mush,1);SND.blip(720);log(`Radai grybą: ${ITEMS[k.mush].n}.${k.mush==='musmire'?' Gražus, bet nuodingas.':' Turguje nupirks.'}`,'amb')}
+    else if(k.k==='fern'){give('papartis',1);setMood(30);P.money+=100;SND.fanfare();toast('🌸','Paparčio žiedas!','You found the legendary fern flower. Luck and +€100.');chron('Found the fern flower on Joninės night.')}}}
   ENT.pickups=ENT.pickups.filter(k=>!k.got);
 }
 

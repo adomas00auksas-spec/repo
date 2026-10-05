@@ -216,6 +216,7 @@ function drawBuilding(g,b,night){
 const POI_LABEL={fuel:'DEGALINĖ',shop:'MAKSI',kebab:'KEBABAI',cafe:'KAVINĖ',bus:'AUTOBUSŲ STOTIS',garage:'AUTOSERVISAS',police:'POLICIJA',hospital:'LIGONINĖ',gym:'SPORTO KLUBAS',market:'TURGUS',office:'VERSLO CENTRAS',bar:'BARAS',school:'MOKYKLA',hq:'',home:'NAMAI'};
 const POI_COL={fuel:'#B5332B',shop:'#C1272D',kebab:'#B9770E',cafe:'#6B4E33',bus:'#1F618D',garage:'#26343A',police:'#1F3E8C',hospital:'#B5332B',gym:'#1D2724',market:'#1E6B4A',office:'#35484F',bar:'#5B2C6F',school:'#1E6B4A',hq:'#1D2724',home:'#E2A11B'};
 function drawDecor(g,d){
+  if(d.k==='cone'||d.k==='works'||d.k==='fstall'||d.k==='fire'||d.k==='xtree')return drawFunDecor(g,d);
   if(d.k==='ship'){const x=d.x,y=d.y;g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(x+80,y+30,82,14,0,0,7);g.fill();
     g.fillStyle='#F4F1E8';g.beginPath();g.moveTo(x,y+20);g.lineTo(x+150,y+16);g.lineTo(x+168,y+26);g.lineTo(x+150,y+36);g.lineTo(x,y+34);g.fill();g.fillStyle='#2B3A42';g.fillRect(x,y+30,150,4);
     g.strokeStyle='#6B4E33';g.lineWidth=3;[30,75,120].forEach(mx=>{g.beginPath();g.moveTo(x+mx,y+26);g.lineTo(x+mx,y-50);g.stroke();g.fillStyle='rgba(244,241,232,.9)';g.fillRect(x+mx-14,y-44,28,18);g.fillRect(x+mx-12,y-22,24,14)})}
