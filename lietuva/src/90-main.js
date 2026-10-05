@@ -18,7 +18,8 @@ function update(dt){
   updateHeat(dt);tickMission(dt);
   acc1+=dt;acc2+=dt;acc3+=dt;
   if(acc1>.25){acc1=0;populate();PROMPT=findPrompt();showPrompt()}
-  if(acc2>1){acc2=0;checkQuest();checkGoals();checkVisits();tickEvents();hudUpdate();updateZone()}
+  musicTick(dt);brawlTick(dt);
+  if(acc2>1){acc2=0;roadblockTick();meetTick();checkQuest();checkGoals();checkVisits();tickEvents();hudUpdate();updateZone()}
   if(acc3>60){acc3=0;saveGame(true)}
   // hold-to-act
   if(PROMPT&&PROMPT.hold&&PROMPT.hold.dur>0&&keys.has('KeyE')&&!HOLD.lock){HOLD.t+=dt;$('#hold').classList.remove('hidden');$('#holdI').style.width=(HOLD.t/PROMPT.hold.dur*100)+'%';

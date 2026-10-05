@@ -196,8 +196,9 @@ function fadeScreen(){const d=document.createElement('div');d.style.cssText='pos
 function garageCar(p){if(P.inCar&&P.inCar.owned!==undefined)return P.inCar;let best=null,bd=10*TS;ENT.cars.forEach(c=>{if(c.owned===undefined)return;const d=dist(c.x,c.y,p.x,p.y);if(d<bd){bd=d;best=c}});return best}
 
 /* ---------- enter / leave ---------- */
-const TPL={home:tplHome,shop:tplShop,kebab:tplKebab,cafe:tplCafe,market:tplMarket,bar:tplBar,garage:tplGarage,police:tplPolice,hospital:tplHospital,gym:tplGym,school:tplSchool,office:tplOffice,bus:tplBus,hq:tplHQ,landmark:tplLandmark};
+const TPL={fuel:tplFuel,home:tplHome,shop:tplShop,kebab:tplKebab,cafe:tplCafe,market:tplMarket,bar:tplBar,garage:tplGarage,police:tplPolice,hospital:tplHospital,gym:tplGym,school:tplSchool,office:tplOffice,bus:tplBus,hq:tplHQ,landmark:tplLandmark};
 function openPOI(p){
+  if(!isOpen(p.kind)&&!(p.kind==='garage'&&G.biz&&G.biz.includes(p.id))){log(closedMsg(p.kind),'bad');return}
   if(p.kind==='landmark'&&p.hq)return poiMenu(p);
   const f=TPL[p.kind];const s=f&&!P.inCar?f(p):null;if(!s)return poiMenu(p);
   if(p.kind==='bar'&&P.age<13){log('„Vaikams čia ne vieta.“ The bartender sends you out.','bad');return}
@@ -229,7 +230,7 @@ function updateInterior(dt){const s=SCENE;
   if(s.raid&&!s.raidDone&&s.peds.filter(e=>e.angry).every(e=>e.ko>0)){s.raidDone=true;raidWon(s.raid)}
   tickMission(dt);
   acc1+=dt;acc2+=dt;if(acc1>.2){acc1=0;PROMPT=findPromptI();showPrompt()}if(acc2>1){acc2=0;checkQuest();checkGoals();hudUpdate();updateZone()}
-  ENGINE.target=0}
+  musicTick(dt);ENGINE.target=0}
 function updateIPed(e,dt){if(e.ko>0){e.ko-=dt;if(e.ko<=0){e.ko=0;e.hp=e.maxhp*.5;e.angry=false}return}
   e.cd-=dt;e.talk-=dt;if(e.punch>0)e.punch-=dt;let vx=0,vy=0;const pd=dist(e.x,e.y,P.x,P.y);
   if(e.angry&&P.age>=13){const a=Math.atan2(P.y-e.y,P.x-e.x);if(pd>22){vx=Math.cos(a)*105;vy=Math.sin(a)*105}else if(e.cd<=0){e.cd=rnd(.8,1.2);e.punch=.2;hurtPlayer(e.kind==='school'?ri(4,7):ri(6,12),e)}}

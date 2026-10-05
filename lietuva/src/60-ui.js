@@ -154,6 +154,7 @@ function useItem(id){const it=ITEMS[id];if(!it||!has(id))return;if(id==='ledai')
 function openGloss(){let h=mHead('Aa','Žodynėlis','Little dictionary of words you hear in the game')+'<div class="mbody"><div class="gloss">';
   GLOSS.forEach(([a,b])=>h+=`<div><b>${esc(a)}</b>${esc(b)}</div>`);openModal(h+'</div></div>',true)}
 function openMenu(){openModal(mHead('≡','Meniu','')+`<div class="mbody">${act('Išsaugoti','Save to this browser.','Saugoti',()=>{saveGame();log('Saved.','good')})}
+  ${act('Muzika',`Background folk tune: ${MUSIC.on?'on':'off'}.`,MUSIC.on?'Išjungti':'Įjungti',()=>{MUSIC.on=!MUSIC.on;openMenu()})}
   ${act('Valdymas','WASD/arrows move · Shift sprint (turbo in tuned cars) · E talk/enter/hold to tag · F car in/out · J or click punch · Space handbrake · H horn · M map · Q quests · T phone · C self · I items · L dictionary · 1–6 hotbar','—',()=>{},true)}
   ${act('Į pradžią','Back to the title screen. Unsaved progress since the last save is lost.','Išeiti',()=>{saveGame();location.reload()})}</div>`)}
 
@@ -217,7 +218,7 @@ function findPrompt(){
   if(!best){const ep=extraPrompt();if(ep)best=ep}
   const c=nearestCar(40);if(c&&!best)return{key:'F',text:c.owned!==undefined?`Sėsti · ${CARS[c.model].name}`:CARS[c.model].kind==='bike'?'Sėsti ant dviračio':P.age<16?'Per jaunas vairuoti':'Pavogti automobilį · steal',car:c};
   return best}
-function poiPrompt(p){const m={home:'Namai',shop:'Parduotuvė',kebab:'Kebabinė',cafe:'Kavinė',bus:'Autobusų stotis',garage:'Autoservisas',police:'Policija',hospital:'Ligoninė',gym:'Sporto klubas',market:'Turgus',office:'Verslo centras',bar:'Baras',school:p.name,hq:p.name,ferry:p.name,landmark:p.name};return m[p.kind]||p.name}
+function poiPrompt(p){if(G&&HOURS[p.kind]&&!isOpen(p.kind))return (p.kind==='school'?p.name:{shop:'Parduotuvė',cafe:'Kavinė',bar:'Baras',market:'Turgus',office:'Verslo centras',gym:'Sporto klubas',garage:'Autoservisas',bus:'Autobusų stotis'}[p.kind]||p.name)+' · uždaryta';const m={fuel:'Degalinė',home:'Namai',shop:'Parduotuvė',kebab:'Kebabinė',cafe:'Kavinė',bus:'Autobusų stotis',garage:'Autoservisas',police:'Policija',hospital:'Ligoninė',gym:'Sporto klubas',market:'Turgus',office:'Verslo centras',bar:'Baras',school:p.name,hq:p.name,ferry:p.name,landmark:p.name};return m[p.kind]||p.name}
 function talkTo(e){if(e.talk>0)return;e.talk=4;let line;
   if(e.kind==='gang'){line=pick(TALK_GANG);const f=FACTIONS[e.fac];if(!P.faction&&P.age>=f.minAge){const hq=POIS.find(p=>p.hq===e.fac);if(hq){G.way={x:hq.x,y:hq.y,label:hq.name};log(`„Nori būti savas? Ateik į būstinę.“ <i>Want in? Come to HQ.</i> (waypoint set)`,'amb')}}}
   else if(e.kind==='police')line=['Laba diena. Viskas gerai?','Good afternoon. Everything OK?'];

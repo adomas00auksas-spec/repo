@@ -179,3 +179,57 @@ function holidayCheck(){const h=holidayToday();if(!h)return;toast('LT',h.t,h.en)
 /* ---------- ice: frozen lakes are walkable in winter ---------- */
 function iceCheck(){SOLID_FOOT[T.WATER]=WINTER?0:1;if(!WINTER&&P&&!P.inCar&&tileAt(tx(P.x),tx(P.y))===T.WATER){const[x,y]=freeSpotNear(P.x,P.y,t=>WALKABLE[t]||t===T.GRASS||t===T.SAND);P.x=x;P.y=y;log('The ice melted. You scrambled to the shore.','amb')}
   ENT.peds.forEach(e=>{if(!WINTER&&tileAt(tx(e.x),tx(e.y))===T.WATER)e.dead=true})}
+
+/* ---------- opening hours ---------- */
+const HOURS={shop:[7,23],cafe:[8,22],bar:[16,4],market:[7,15],office:[8,18],school:[7,17],gym:[6,23],garage:[8,19],bus:[5,24],hospital:[0,24],police:[0,24],kebab:[0,24],fuel:[0,24]};
+function isOpen(kind){const h=HOURS[kind];if(!h)return true;const t=G.time.min/60;return h[0]<h[1]?t>=h[0]&&t<h[1]:t>=h[0]||t<h[1]}
+function closedMsg(kind){const h=HOURS[kind];return `Uždaryta. Open ${h[0]}:00–${h[1]%24}:00.${kind==='shop'?' The kebab shop never closes.':''}`}
+
+/* ---------- petrol stations (degalinės) on highways ---------- */
+Object.assign(ITEMS,{hotdog:{n:'Dešrainis iš degalinės',en:'Petrol-station hot dog. A Lithuanian road-trip classic',ic:'🌭',food:30,price:2.5},kava:{n:'Kava',en:'Coffee to go',ic:'☕',energy:25,price:1.8}});
+function placeFuel(){HWYS.filter(h=>/^A/.test(h.name)&&h.pts.length>3).forEach(h=>{let done=false;const mid=Math.floor(h.pts.length/2);for(const i of[mid,mid-1,mid+1]){if(done||i<1||i>=h.pts.length-1)continue;const[ax,ay]=h.pts[i],[bx,by]=h.pts[i+1];const L=Math.hypot(bx-ax,by-ay),nx=-(by-ay)/L,ny=(bx-ax)/L;
+  for(const side of[1,-1]){const cx=Math.round(ax+nx*side*6),cy=Math.round(ay+ny*side*6);let ok=true;
+    for(let y=cy-3;y<=cy+3&&ok;y++)for(let x=cx-3;x<=cx+3;x++){const t=tileAt(x,y);if(CITYA[idx(x,y)]||t===T.WATER||t===T.SEA||t===T.ABROAD||t===T.BUILD||t===T.HWY||t===T.BRIDGE){ok=false;break}}
+    if(!ok)continue;for(let y=cy-3;y<=cy+3;y++)for(let x=cx-3;x<=cx+3;x++){setT(x,y,T.LOT);RES[idx(x,y)]=1}
+    paintLine([[ax,ay],[cx,cy]],1.2,(x,y)=>{const t=TL[idx(x,y)];if(t!==T.HWY&&t!==T.BRIDGE&&t!==T.LOT){TL[idx(x,y)]=T.HWY}});
+    const b=addB({x:cx-2,y:cy-3,w:4,h:2,kind:'mall',ht:30,fac:'#E9EDE6',roof:'#B5332B',city:null});
+    const p={id:'fuel_'+h.name+'_'+POIS.length,kind:'fuel',name:'Degalinė „Kelias“ · '+h.name,city:nearestCity(cx*TS,cy*TS).id,b,x:cx*TS+16,y:(cy-1)*TS+14};b.poi=p;POIS.push(p);DECOR.push({k:'pumps',x:(cx-2)*TS,y:(cy+1)*TS});done=true;break}}})}
+function tplFuel(p){const s=mkRoom(12,8,{floor:'shop',wall:'#E9EDE6',title:p.name,sub:'Degalinė'});R.deco(s,'sign',4,1,4,{txt:'KELIAS',col:'#B5332B'});
+  R.add(s,'counter',2,3,4,1,{reg:true,act:()=>openShopList('Degalinė',['hotdog','kava','gira','energ','kibinas','bandage']),label:'Kasa · hot dogs and coffee'});
+  R.ped(s,'staff',3,2,{name:'Kasininkas',lk:staffLook('#B5332B',{female:false}),lines:[line('Dešrainio su garstyčiomis?','Hot dog with mustard?'),line('Kuri kolonėlė?','Which pump?')]});
+  R.add(s,'shelf',7,3,4,1,{seed:3});R.add(s,'fridgeShop',8,5,3,1);R.add(s,'cooler',1,6,1,1,{act:()=>{const c=garageCar(p);if(!c)return log('Park your car outside first.','bad');if(!pay(8))return;c.hp=Math.min(100,(c.hp||100)+30);if(c.owned!==undefined)P.cars[c.owned].hp=c.hp;log('Car wash and a quick check: condition +30%.','good')},label:'Plovykla · car wash (€8)'});
+  R.ped(s,'civ',6,6,{lines:[line('Iki Klaipėdos dar du šimtai kilometrų…','Two hundred more km to Klaipėda…')]});return s}
+
+/* ---------- music (sutartinės-style pentatonic) ---------- */
+const MUSIC={on:true,t:0,step:0};
+function musicTick(dt){if(!SND.on||!MUSIC.on||!SND.ctx||paused&&!SCENE)return;MUSIC.t-=dt;if(MUSIC.t>0)return;const night=nightLevel()>.3;MUSIC.t=night?.75:.5;
+  const scale=[146.8,174.6,196,220,261.6,293.7,349.2,392];const pat=[0,2,4,3,2,4,5,4,3,1,2,0];const n=pat[MUSIC.step%pat.length];MUSIC.step++;
+  if(Math.random()<.18)return;SND.tone(scale[n]*(SCENE?1:1),night?1.2:.9,'triangle',SCENE?.025:.03);if(MUSIC.step%4===0)SND.tone(scale[0]/2,1.4,'sine',.03)}
+
+/* ---------- roadblocks ---------- */
+function roadblockTick(){if(P.heat<4||!P.inCar||SCENE)return;if(ENT.cars.some(c=>c.ai==='block'))return;const c=P.inCar,sp=Math.hypot(c.vx,c.vy);if(sp<150)return;
+  const ux=c.vx/sp,uy=c.vy/sp,ax=c.x+ux*20*TS,ay=c.y+uy*20*TS;if(!DRIVE[tileAt(tx(ax),tx(ay))])return;const pa=Math.atan2(uy,ux)+Math.PI/2;
+  for(const s of[-1,1])ENT.cars.push({type:'car',ai:'block',model:'police',x:ax+Math.cos(pa)*26*s,y:ay+Math.sin(pa)*26*s,ang:pa,vx:0,vy:0,hp:200,siren:true,keep:false});
+  log('★ Kelio užtvara! Police roadblock ahead.','bad')}
+
+/* ---------- gang-vs-gang street brawls ---------- */
+let BRAWL_T=40;
+function brawlTick(dt){BRAWL_T-=dt;if(BRAWL_T>0||SCENE)return;BRAWL_T=rnd(50,110);const c=cityAtPx(P.x,P.y);if(!c||P.age<13)return;
+  const owners=[...new Set(DISTRICTS.filter(d=>d.city===c.id&&d.owner&&FACTIONS[d.owner].league==='street').map(d=>d.owner))];
+  const pool=owners.length>=2?owners:owners.concat(Object.keys(FACTIONS).filter(k=>FACTIONS[k].type==='cartel'));if(pool.length<2)return;
+  const a=pick(pool),b=pick(pool.filter(x=>x!==a));const t=randomTileNear(P.x,P.y,9,16,t=>WALKABLE[t]);if(!t)return;const X=t[0]*TS+16,Y=t[1]*TS+16;
+  for(let k=0;k<3;k++){spawnPed('gang',X-30+rnd(-16,16),Y+rnd(-20,20),a,{enemyFac:b,keep:true,brawlT:45});spawnPed('gang',X+30+rnd(-16,16),Y+rnd(-20,20),b,{enemyFac:a,keep:true,brawlT:45})}
+  log(`${FACTIONS[a].short} ir ${FACTIONS[b].short} muštynės netoliese! <i>A street brawl nearby.</i>${P.faction===a||P.faction===b?' Help your crew!':''}`,'amb')}
+function brawlUpdate(e,dt){e.brawlT-=dt;if(e.brawlT<=0){e.enemyFac=null;e.keep=false;e.state='flee';e.t=4;return false}
+  let tgt=null,bd=9*TS;for(const o of ENT.peds){if(o.fac!==e.enemyFac||o.ko>0)continue;const d=dist(o.x,o.y,e.x,e.y);if(d<bd){bd=d;tgt=o}}if(!tgt)return false;
+  const a=Math.atan2(tgt.y-e.y,tgt.x-e.x);if(bd>22){e.anim+=dt*10;e.dir=Math.abs(Math.cos(a))>Math.abs(Math.sin(a))?(Math.cos(a)>0?0:2):(Math.sin(a)>0?1:3);moveCircle(e,Math.cos(a)*100*dt,Math.sin(a)*100*dt,7,SOLID_FOOT)}
+  else if(e.cd<=0){e.cd=rnd(.8,1.3);e.punch=.2;tgt.hp-=ri(6,12);fxBurst(tgt.x,tgt.y-20,'#fff');if(tgt.hp<=0){tgt.ko=rnd(20,30);tgt.state='ko'}}
+  if(e.punch>0)e.punch-=dt;e.cd-=dt;return true}
+
+/* ---------- night car meets ---------- */
+function meetTick(){const h=G.time.min/60,night=h>=22||h<3;POIS.forEach(p=>{if(!p.meet)return;const near=dist(p.x,p.y,P.x,P.y)<22*TS;
+  if(night&&near&&!p.meetOn){p.meetOn=true;const f=FACTIONS[p.meet];for(let k=0;k<6;k++){const t=randomTileNear(p.x,p.y,1,6,t=>t===T.LOT);if(!t)continue;const m=pick(['e36','e46','audi80','golf','e39','m5','w124']);
+      ENT.cars.push({type:'car',ai:'parked',model:m,color:Math.random()<.5?f.color:pick(PAINTS),neon:true,x:t[0]*TS+16,y:t[1]*TS+16,ang:pick([0,Math.PI/2,Math.PI,-Math.PI/2]),vx:0,vy:0,hp:100,meetCar:p.id})}
+    for(let k=0;k<6;k++){const t=randomTileNear(p.x,p.y,1,6,t=>t===T.LOT);if(t){const e=spawnPed('civ',t[0]*TS+16,t[1]*TS+16,null,{meetPed:p.id,lines:[line('Kokia čia mašina, E46?','What is that, an E46?')]});e.lk.vest=f.color;e.idle=true}}
+    if(!P.faction||FACTIONS[P.faction].league!=='auto')log(`Naktinis susitikimas: ${f.name} are meeting at ${p.name}.`,'amb')}
+  if((!night||!near)&&p.meetOn){p.meetOn=false;ENT.cars=ENT.cars.filter(c=>c.meetCar!==p.id||c===P.inCar);ENT.peds=ENT.peds.filter(e=>e.meetPed!==p.id)}})}

@@ -67,13 +67,13 @@ function enterCar(c){const m=CARS[c.model];
     if(c.ai==='traffic'||c.ai==='hwy'){const drv=spawnPed('civ',c.x+24,c.y,null);drv.state='flee';drv.t=5;bubble(drv,'Vagis!');crime(1,'Carjacking')}
     else if(Math.random()<.5)crime(1,'Car theft');
     log(`Stole a ${m.name}. It is not yours, police may notice.`,'amb')}
-  c.ai=null;c.vx=c.vx||0;c.vy=c.vy||0;P.inCar=c;SND.door();$('#speedo').classList.remove('hidden');$('#spN').textContent=m.name}
+  c.ai=null;c.vx=c.vx||0;c.vy=c.vy||0;P.inCar=c;SND.door();$('#speedo').classList.remove('hidden');$('#hud').classList.add('driving');$('#spN').textContent=m.name}
 function exitCar(force){const c=P.inCar;if(!c)return;if(!force&&Math.hypot(c.vx,c.vy)>60){log('Slow down first.','');return}
   c.ai='parked';c.vx*=.2;c.vy*=.2;P.inCar=null;const a=c.ang+Math.PI/2;let ok=false;
   for(const s of[1,-1,2,-2]){const nx=c.x+Math.cos(a)*22*s,ny=c.y+Math.sin(a)*22*s;if(!blocked(nx,ny,8,SOLID_FOOT)){P.x=nx;P.y=ny;ok=true;break}}
   if(!ok){P.x=c.x;P.y=c.y}
   if(c.owned!==undefined){P.cars[c.owned].pos={x:c.x,y:c.y,ang:c.ang}}
-  bankDrift();SND.door();$('#speedo').classList.add('hidden');ENGINE.target=0}
+  bankDrift();SND.door();$('#speedo').classList.add('hidden');$('#hud').classList.remove('driving');ENGINE.target=0}
 function ownedCarEntity(i){return ENT.cars.find(c=>c.owned===i)}
 function spawnOwnedCar(i,x,y,ang){const oc=P.cars[i];let c=ownedCarEntity(i);if(c){c.x=x;c.y=y;c.ang=ang||0;c.vx=c.vy=0;return c}
   c={type:'car',ai:'parked',owned:i,model:oc.model,color:oc.color,tune:oc.tune,neon:!!(oc.tune&&oc.tune.neon),x,y,ang:ang||0,vx:0,vy:0,hp:oc.hp||100};ENT.cars.push(c);return c}

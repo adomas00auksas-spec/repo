@@ -197,8 +197,8 @@ function drawBuilding(g,b,night){
     g.fillStyle='#2B2622';g.fillRect(p.x-7,py+ph-14,14,14)}
   if(b.school){g.fillStyle='#fff';g.font='800 12px "Big Shoulders Display",sans-serif';}
 }
-const POI_LABEL={shop:'MAKSI',kebab:'KEBABAI',cafe:'KAVINĖ',bus:'AUTOBUSŲ STOTIS',garage:'AUTOSERVISAS',police:'POLICIJA',hospital:'LIGONINĖ',gym:'SPORTO KLUBAS',market:'TURGUS',office:'VERSLO CENTRAS',bar:'BARAS',school:'MOKYKLA',hq:'',home:'NAMAI'};
-const POI_COL={shop:'#C1272D',kebab:'#B9770E',cafe:'#6B4E33',bus:'#1F618D',garage:'#26343A',police:'#1F3E8C',hospital:'#B5332B',gym:'#1D2724',market:'#1E6B4A',office:'#35484F',bar:'#5B2C6F',school:'#1E6B4A',hq:'#1D2724',home:'#E2A11B'};
+const POI_LABEL={fuel:'DEGALINĖ',shop:'MAKSI',kebab:'KEBABAI',cafe:'KAVINĖ',bus:'AUTOBUSŲ STOTIS',garage:'AUTOSERVISAS',police:'POLICIJA',hospital:'LIGONINĖ',gym:'SPORTO KLUBAS',market:'TURGUS',office:'VERSLO CENTRAS',bar:'BARAS',school:'MOKYKLA',hq:'',home:'NAMAI'};
+const POI_COL={fuel:'#B5332B',shop:'#C1272D',kebab:'#B9770E',cafe:'#6B4E33',bus:'#1F618D',garage:'#26343A',police:'#1F3E8C',hospital:'#B5332B',gym:'#1D2724',market:'#1E6B4A',office:'#35484F',bar:'#5B2C6F',school:'#1E6B4A',hq:'#1D2724',home:'#E2A11B'};
 function drawDecor(g,d){
   if(d.k==='ship'){const x=d.x,y=d.y;g.fillStyle='rgba(0,0,0,.25)';g.beginPath();g.ellipse(x+80,y+30,82,14,0,0,7);g.fill();
     g.fillStyle='#F4F1E8';g.beginPath();g.moveTo(x,y+20);g.lineTo(x+150,y+16);g.lineTo(x+168,y+26);g.lineTo(x+150,y+36);g.lineTo(x,y+34);g.fill();g.fillStyle='#2B3A42';g.fillRect(x,y+30,150,4);
@@ -208,6 +208,7 @@ function drawDecor(g,d){
   else if(d.k==='play'){const x=d.x,y=d.y;g.strokeStyle='#C0392B';g.lineWidth=3;g.beginPath();g.moveTo(x,y+20);g.lineTo(x,y-10);g.lineTo(x+40,y-10);g.lineTo(x+40,y+20);g.stroke();
     g.strokeStyle='#555';g.lineWidth=1;g.beginPath();g.moveTo(x+14,y-10);g.lineTo(x+14,y+8);g.moveTo(x+26,y-10);g.lineTo(x+26,y+8);g.stroke();g.fillStyle='#2D5DA8';g.fillRect(x+12,y+8,16,3);
     g.fillStyle='#E5D5A6';g.fillRect(x+56,y,30,22)}
+  else if(d.k==='pumps'){const x=d.x,y=d.y;g.fillStyle='#E9EDE6';g.fillRect(x-8,y-40,TS*4+16,10);g.fillStyle='#B5332B';g.fillRect(x-8,y-32,TS*4+16,4);[0,2].forEach(k=>{g.fillStyle='#C9CED1';g.fillRect(x+16+k*TS,y-24,14,26);g.fillStyle='#1E6B4A';g.fillRect(x+18+k*TS,y-20,10,6)})}
   else if(d.k==='hoop'){const x=d.x,y=d.y;g.fillStyle='#C8603A';g.fillRect(x-40,y-30,80,60);g.strokeStyle='rgba(255,255,255,.7)';g.lineWidth=2;g.strokeRect(x-38,y-28,76,56);
     g.beginPath();g.arc(x,y,10,0,7);g.stroke();g.fillStyle='#ddd';g.fillRect(x-2,y-48,4,20);g.fillStyle='#fff';g.fillRect(x-10,y-52,20,10);g.strokeStyle='#E2621B';g.beginPath();g.arc(x,y-40,5,0,7);g.stroke()}
 }

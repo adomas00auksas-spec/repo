@@ -46,7 +46,7 @@ function populate(dt){
   const px=P.x,py=P.y,c=cityAtPx(px,py),night=isNight(),pc=P.inCar;
   // despawn far
   ENT.peds=ENT.peds.filter(e=>e.keep||dist(e.x,e.y,px,py)<38*TS);
-  ENT.cars=ENT.cars.filter(e=>e.owned!==undefined||e.keep||dist(e.x,e.y,px,py)<44*TS);
+  ENT.cars=ENT.cars.filter(e=>e.owned!==undefined||e.keep||dist(e.x,e.y,px,py)<44*TS&&!(e.ai==='block'&&P.heat<=0));
   ENT.pickups=ENT.pickups.filter(e=>e.keep||dist(e.x,e.y,px,py)<40*TS);
   const civ=ENT.peds.filter(e=>!e.keep).length;
   const want=c?(night?16:28):6;
@@ -63,7 +63,7 @@ function populate(dt){
     if(c){const t=randomTileNear(px,py,14,30,(t,x,y)=>{const i=idx(x,y);if(!DRIVE[t]||MXA[i]<0)return false;const mx=MXA[i],my=MYA[i];return (mx<2)!==(my<2)});
       if(t){const i=idx(t[0],t[1]),mx=MXA[i],my=MYA[i];let dir,x=t[0]*TS+16,y=t[1]*TS+16;
         if(mx<2){const ix=t[0]-mx;dir=mx===0?1:3;x=(dir===1?ix:ix+1)*TS+16}else{const iy=t[1]-my;dir=my===1?0:2;y=(dir===0?iy+1:iy)*TS+16}
-        if(!ENT.cars.some(o=>dist(o.x,o.y,x,y)<70)){const m=pick(TRAFFIC_MODELS);ENT.cars.push({type:'car',ai:'traffic',model:m,color:Math.random()<.5?CARS[m].col:pick(PAINTS),x,y,ang:dir*Math.PI/2,vx:0,vy:0,dir,sp:rnd(110,160),hp:100,taxi:m==='prius'&&Math.random()<.6})}}}
+        if(!ENT.cars.some(o=>dist(o.x,o.y,x,y)<90)){const m=c.R>=30&&Math.random()<.07?'bus':pick(TRAFFIC_MODELS);ENT.cars.push({type:'car',ai:'traffic',model:m,color:Math.random()<.5?CARS[m].col:pick(PAINTS),x,y,ang:dir*Math.PI/2,vx:0,vy:0,dir,sp:rnd(110,160),hp:100,taxi:m==='prius'&&Math.random()<.6})}}}
     else spawnHwyCar(px,py)}
   // parked cars along city curbs
   if(c&&ENT.cars.filter(e=>e.ai==='parked'&&e.owned===undefined).length<8){const t=randomTileNear(px,py,12,26,(t,x,y)=>t===T.LOT||(t===T.ROAD&&MXA[idx(x,y)]>=2&&MYA[idx(x,y)]===0&&false));
@@ -114,7 +114,7 @@ function carMove(c,dt){const m=CARS[c.model],r=m.kind==='bike'?7:Math.min(14,m.w
 function updateTraffic(c,dt){
   const DIRV=[[1,0],[0,1],[-1,0],[0,-1]];const[dx,dy]=DIRV[c.dir];
   // obstacle check
-  let block=false;const ax=c.x+dx*44,ay=c.y+dy*44;
+  let block=false;const look=CARS[c.model].len/2+22;const ax=c.x+dx*look,ay=c.y+dy*look;
   if(P.inCar){if(dist(ax,ay,P.inCar.x,P.inCar.y)<36)block=true}else if(dist(ax,ay,P.x,P.y)<30)block=true;
   if(!block)for(const o of ENT.cars){if(o!==c&&dist(ax,ay,o.x,o.y)<34){block=true;break}}
   if(!block)for(const e of ENT.peds){if(!e.ko&&dist(ax,ay,e.x,e.y)<22){block=true;break}}
@@ -151,6 +151,7 @@ function updatePolice(c,dt){const tgt=P.inCar||P;const a=Math.atan2(tgt.y-c.y,tg
 function carCollisions(){const cs=ENT.cars;for(let i=0;i<cs.length;i++)for(let j=i+1;j<cs.length;j++){const a=cs[i],b=cs[j];const ma=CARS[a.model],mb=CARS[b.model];
   const ra=ma.kind==='bike'?9:ma.len*.42,rb=mb.kind==='bike'?9:mb.len*.42,d=dist(a.x,a.y,b.x,b.y);if(d>=ra+rb||d===0)continue;
   const nx=(b.x-a.x)/d,ny=(b.y-a.y)/d,ov=(ra+rb-d)/2;
+  if(a.ai==='block'){a.vx=a.vy=0}if(b.ai==='block'){b.vx=b.vy=0}
   const am=a.ai==='parked'||a.ai==='traffic'||a.ai==='hwy',bm=b.ai==='parked'||b.ai==='traffic'||b.ai==='hwy';
   a.x-=nx*ov*(am&&!bm?.3:1);a.y-=ny*ov*(am&&!bm?.3:1);b.x+=nx*ov*(bm&&!am?.3:1);b.y+=ny*ov*(bm&&!am?.3:1);
   const rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;if(rv<0){const imp=-rv*.8;a.vx-=nx*imp*.5;a.vy-=ny*imp*.5;b.vx+=nx*imp*.5;b.vy+=ny*imp*.5;
@@ -161,6 +162,7 @@ function carCollisions(){const cs=ENT.cars;for(let i=0;i<cs.length;i++)for(let j
 /* ---------- peds ---------- */
 function updatePed(e,dt){
   if(e.kind==='crew'){updateCrew(e,dt);return}
+  if(e.enemyFac&&!(e.ko>0)&&!e.angry&&brawlUpdate(e,dt))return;
   if(e.ko>0){e.ko-=dt;if(e.ko<=0){if(e.kind==='police'||Math.random()<.5){e.ko=0;e.hp=e.maxhp*.5;e.state='flee';e.t=4}else e.dead=true}return}
   e.cd-=dt;e.talk-=dt;const pd=dist(e.x,e.y,P.x,P.y),pin=!!P.inCar;
   // hostility

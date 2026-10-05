@@ -108,6 +108,7 @@ function genWorld(){
     let ok=true;for(let yy=y-1;yy<y+4;yy++)for(let xx=x-1;xx<x+5;xx++){const t=tileAt(xx,yy);if(t!==T.GRASS&&t!==T.FIELD)ok=false}
     if(!ok)continue;addB({x,y,w:3,h:2,ht:30,kind:'house',fac:spick(['#E9E2D0','#D8CFB8','#C9D1C7']),roof:spick(['#7B3B2E','#4E5A3E','#5B4A3A'])});
     if(SR()<.6)addB({x:x+3,y:y-1,w:2,h:2,ht:26,kind:'barn',fac:'#8A6A4A',roof:'#5C5148'})}
+  placeFuel();
   buildMinimap();
 }
 
