@@ -111,6 +111,7 @@ input[type=text],textarea{font:500 15px var(--body);padding:9px 10px;border:1px 
 .mbtn{background:rgba(22,38,56,.94);border:1px solid var(--steel);color:var(--chalk);border-radius:4px;padding:8px 6px;font:700 12px var(--cond);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:7px;position:relative}
 .mbtn:hover{border-color:var(--hazard)}
 .mbtn svg{width:18px;height:18px;flex:none;stroke:var(--hazard);fill:none;stroke-width:1.8}
+.mbtn .sl{display:none}
 .mbtn kbd{margin-left:auto;font:500 10px var(--mono);color:var(--fog)}
 .mbtn .badge{position:absolute;top:-6px;right:-6px;background:var(--rust);color:#fff;font:700 11px var(--mono);border-radius:9px;padding:1px 6px}
 .tracker{position:absolute;top:186px;left:12px;width:262px;padding:11px 13px}
@@ -139,8 +140,8 @@ input[type=text],textarea{font:500 15px var(--body);padding:9px 10px;border:1px 
   .plaque{min-width:0;width:calc(50vw - 18px);padding:8px 10px}.plaque .ttl{font-size:17px}.plaque .co{display:none}
   .plaque .money{font-size:15px}.speed button{padding:3px 0}
   .stats{width:calc(50vw - 18px);padding:8px 10px}.bar{grid-template-columns:52px 1fr 28px;font-size:10px;letter-spacing:.04em}
-  .menu{top:auto;bottom:calc(36px + env(safe-area-inset-bottom,0px));right:8px;left:8px;width:auto;grid-template-columns:repeat(6,1fr);gap:3px}
-  .mbtn{flex-direction:column;gap:2px;padding:6px 2px;font-size:10px}.mbtn kbd{display:none}
+  .menu{top:auto;bottom:calc(36px + env(safe-area-inset-bottom,0px));right:8px;left:8px;width:auto;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
+  .mbtn{flex-direction:column;gap:2px;padding:6px 1px;font-size:9px;letter-spacing:.02em;min-width:0}.mbtn > span:not(.badge){max-width:100%;overflow:hidden;text-overflow:ellipsis}.mbtn kbd{display:none}.mbtn .ll{display:none}.mbtn .sl{display:block}
   .tracker{top:calc(162px + env(safe-area-inset-top,0px));left:8px;width:calc(100vw - 16px);padding:7px 10px}
   .tracker h4{margin-bottom:2px}.tracker .tq{font-size:13px}.tracker .ts{font-size:12px}
   .tracker .req{display:none}
@@ -258,7 +259,7 @@ table.t td.n{font-family:var(--mono);text-align:right;font-variant-numeric:tabul
       <button class="btn ghost" id="bCont">Continue</button>
       <button class="btn ghost" id="bImport">Load a save code</button>
     </div>
-    <div class="foot">Walk with <kbd>WASD</kbd> or arrow keys, or tap the floor. <kbd>E</kbd> talks or uses things. <kbd>C</kbd> dispatch console, <kbd>M</kbd> world map, <kbd>P</kbd> people, <kbd>G</kbd> goals, <kbd>Space</kbd> pauses.</div>
+    <div class="foot">Walk with <kbd>WASD</kbd> or arrow keys, or tap the floor. <kbd>E</kbd> talks or uses things. <kbd>C</kbd> dispatch console, <kbd>M</kbd> world map, <kbd>P</kbd> people, <kbd>G</kbd> goals, <kbd>N</kbd> inbox, <kbd>K</kbd> company, <kbd>Space</kbd> pauses.</div>
     <div class="stripe"></div>
   </div>
 </div>
@@ -478,6 +479,8 @@ const ICON={
  self:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-5 4-7 8-7s8 2 8 7"/></svg>',
  menu:'<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
  sound:'<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9c1.5 1.5 1.5 4.5 0 6M19 6c3 3 3 9 0 12"/></svg>',
+ mail:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg>',
+ chart:'<svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>',
  alert:'<svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>',
 };
 
@@ -693,6 +696,7 @@ function quote(mode,c,noLock){
  let cost=c.units*(M.perKm*r.km*(1-M.fuel+M.fuel*G.fuel)+M.fixed);
  const own=fleetFree(mode)>0;if(own)cost*=.75;
  if(G.buffs.cheap>G.t)cost*=.85;
+ if(G.flags.green)cost*=1.04;
  cost*=1-G.skills.logistics/1000;
  let risk=M.risk*(1+travel/1440);if(zones.pirate&&mode==='ship')risk+=.06;if(zones.storm)risk+=.05;if(zones.snow&&mode==='truck')risk+=.05;
  const L=LADDER[G.tier];let lock=null;
@@ -712,13 +716,14 @@ function genContract(start){
   let from=(G.co.hubs.length&&Math.random()<.3)?pick(G.co.hubs):pick(pool);
   const boom=G.events.find(e=>e.kind==='boom');if(boom&&Math.random()<.25)from=boom.city;
   if(local&&CITIES[from].land!==home)from=pick(pool);
+  let acct=null;const AK=Object.keys(G.accounts||{});if(AK.length&&Math.random()<.22){const k=pick(AK);if(!local||CITIES[k].land===home){from=k;acct=G.accounts[k];}}
   const to=pick(pool.filter(k=>k!==from));if(!to)continue;
   const dkm=hav(CITIES[from].lo,CITIES[from].la,CITIES[to].lo,CITIES[to].la);if(dkm<280)continue;
   if(local&&dkm>[2000,4200,7000,99999][Math.min(3,G.tier)]&&tries<36)continue;
   const cargo=pick(CARGO.flatMap(c=>Array(c.w).fill(c)));
   let units=ri(1,Math.max(1,Math.min(L.units,cargo.hv?Math.ceil(L.units/3):L.units)));
   if(!start&&Math.random()<.14)units=Math.min(60,L.units+ri(1,Math.max(2,L.units)));
-  const c={id:'c'+(G.seq++),client:pick(CLIENTS),cargo:cargo.k,from,to,units};
+  const c={id:'c'+(G.seq++),client:acct?acct.client:pick(CLIENTS),cargo:cargo.k,from,to,units};
   const qs=ALLM.map(m=>quote(m,c,true)).filter(q=>q.ok);if(!qs.length)continue;
   const allowed=qs.filter(q=>L.modes.includes(q.mode));
   let target=(allowed.length&&Math.random()<.85)?pick(allowed):pick(qs);
@@ -729,6 +734,7 @@ function genContract(start){
   const mg={truck:[1.22,1.45],rail:[1.2,1.45],ship:[1.22,1.5],air:[1.08,1.2]}[bq.mode];
   let pay=base*rnd(mg[0],mg[1])*(1+G.co.rep/250)*eventMult(from,to)+units*180;
   if(cargo.urgent)pay*=1.3;
+  if(acct){c.vip=1;c.acct=1;pay*=1.18;}
   const cl=G.clients[c.client];if(cl&&cl.ok>=3&&cl.ok>cl.bad*3&&Math.random()<.5){c.vip=1;pay*=1.15;}
   c.pay=Math.round(pay/10)*10;c.value=cargo.v*units;c.exp=G.t+Math.round(rnd(10,28)*60);c.haggled=0;
   return c;
@@ -747,7 +753,7 @@ function dispatch(c,mode,ins){
  const s={id:'s'+(G.seq++),c,mode,pts:unwrap(q.pts),km:q.km,via:q.via,start:G.t,deadlineAt:G.t+c.deadline,cost:q.cost,insCost,ins:!!ins,own:q.own,
   phase:'load',until:G.t+q.h1,h2:q.h2,d:0,hold:0,slow:1,extra:0,damage:0,lost:0,nextRoll:G.t+ri(40,120),inc:[]};
  G.ships.push(s);G.contracts=G.contracts.filter(x=>x.id!==c.id);
- G.kpi.dispatched++;gain('logistics',.35);if(c.haggled)gain('negotiation',.2);
+ G.kpi.dispatched++;(G.stats.modes=G.stats.modes||{})[mode]=1;gain('logistics',.35);if(c.haggled)gain('negotiation',.2);
  log(`Dispatched ${c.units}× ${cargoN(c.cargo).toLowerCase()} ${CITIES[c.from].n} → ${CITIES[c.to].n} by ${MODES[mode].n.toLowerCase()}. ETA ${durStr(etaOf(s)-G.t)}.`,'info');
  sfx(mode==='ship'?'horn':mode==='air'?'jet':'go');
  return s;
@@ -819,7 +825,7 @@ function raiseIncident(s,type){
  if(typeof onIncident==='function')onIncident(inc);
 }
 function resolveIncident(inc,k,auto){
- const s=G.ships.find(x=>x.id===inc.sid);G.incidents=G.incidents.filter(i=>i.id!==inc.id);if(!s)return'';
+ const s=G.ships.find(x=>x.id===inc.sid);G.incidents=G.incidents.filter(i=>i.id!==inc.id);if(!s)return'';G.stats.incidents=(G.stats.incidents||0)+1;
  const pay=v=>{s.extra+=v;G.co.cash-=v;};const H=h=>{s.hold+=h*60;};let msg='';const U=s.c.units;
  switch(inc.type){
   case'breakdown':if(k===0){pay(500*U);H(1);msg='A replacement truck picks up the load.';}else{H(5);msg='The mechanic arrives eventually.';}break;
@@ -844,7 +850,7 @@ function incidentTimeouts(){G.incidents.slice().forEach(i=>{if(G.t>=i.until)reso
 function deliver(s){
  s.phase='done';G.ships=G.ships.filter(x=>x!==s);
  const c=s.c;const late=G.t-s.deadlineAt;let got=c.pay;let tag='good',msg;
- const cl=G.clients[c.client]=G.clients[c.client]||{ok:0,bad:0};
+ const cl=G.clients[c.client]=G.clients[c.client]||{ok:0,bad:0};(G.stats.cities=G.stats.cities||{})[c.to]=1;
  if(s.lost){got=s.ins?0:-Math.round(c.value*.3);G.kpi.lost++;coRep(-3);repAdd(-4);cl.bad+=2;stress(10);tag='bad';
   msg=s.ins?`${c.client}’s cargo was lost. Insurance covers the claim, but the client is furious.`:`${c.client}’s cargo was lost, uninsured. Meridian pays ${fmt$(-got)} in liability.`;}
  else{
@@ -901,11 +907,13 @@ function eventOver(e){return{suez:'Suez Canal reopens. A backlog of ships begins
    The passing of time
    ===================================================================== */
 function simStep(dt){
- const d0=dayNo(G.t);G.t+=dt;
+ const d0=dayNo(G.t),h0=Math.floor(G.t/60);G.t+=dt;
  G.ships.slice().forEach(s=>stepShip(s,dt));
  incidentTimeouts();eventsTick();refreshBoard(dt);
  if(!G.home){energy(-dt/60*2.4*(G.apt>=2?.85:1));stress(-dt/60*.25);}
  if(dayNo(G.t)!==d0)newDay();
+ if(Math.floor(G.t/60)!==h0)hourly();
+ officeEventTick();
 }
 function advance(min){let m=min;while(m>0){const s=Math.min(10,m);simStep(s);m-=s;}hudUpdate();}
 function newDay(){
@@ -924,6 +932,7 @@ function newDay(){
  if(G.day%7===1&&G.day>1){const sal=LADDER[G.tier].sal;G.money+=sal;r.lines.push(`Payday: ${fmt$(sal)} salary.`);if(G.apt){const rent=[0,250,900,2600][G.apt];G.money-=rent;r.lines.push(`Rent: ${fmt$(rent)}.`);}}
  if(G.day%28===1&&G.day>1)quarterReview(r);
  botsDaily(r);
+ dailyExtra(r);
  G.day0={profit:0,deliv:0,late:0};
  G.lastReport=r;
 }
@@ -1089,6 +1098,7 @@ function botsUpdate(dt,gm){
   if(n.wait>0)return;
   if(n.st==='away'){n.st='toSeat';const s=DESKS[seatOf(id)].seat;npGo(n,s[0],s[1]);return;}
   // choose an errand
+  const ov=officeEventSpot(id);if(ov){if(npGo(n,ov[0],ov[1])){n.st='away';n.wait=G.oe.start+G.oe.dur-G.t+rnd(2,10);}else n.wait=10;return;}
   const r=Math.random();let spot=null;const tier=G.bots[id].tier;
   if(id==='rosa'||id==='gus'){if(r<.3)spot=pick([SPOTS.coffee,SPOTS.cooler,SPOTS.printer,SPOTS.elev]);}
   else if(r<.2)spot=[SPOTS.coffee[0]+ri(0,2),SPOTS.coffee[1]+ri(0,2)];
@@ -1145,6 +1155,7 @@ function interactables(){
  add('elev',24.5,32,'Take the elevator',()=>openElevator(),70);
  add('nap',4,29,'Nap on a bean bag',napAction,46);
  add('train',44,30,'Training courses',()=>openTraining(),60);
+ if(oeActive('cake')||oeActive('pizza'))add('slice',40,19,oeActive('cake')?'Have a slice of birthday cake':'Grab a slice of pizza',()=>{if(G.oe.slice){log('You already had some. Leave some for the others.');return;}G.oe.slice=1;energy(8);stress(-5);advance(10);if(G.oe.who&&G.bots[G.oe.who])rel(G.oe.who,2);sfx('click');log(oeActive('cake')?'Excellent cake. Someone sings, badly.':'Pepperoni. Correct choice.','good');},50);
  return L;
 }
 function nearest(){
@@ -1167,7 +1178,7 @@ addEventListener('keydown',e=>{
  if(k===' '){setSpeed(G.spd?0:(G.lastSpd||1));e.preventDefault();}
  if(k==='m'){$('#mapview').classList.contains('hidden')?openMap():closeMap();}
  if(!$('#mapview').classList.contains('hidden'))return;
- if(k==='c')openConsole();if(k==='p')openPeople();if(k==='g')openGoals();if(k==='i')openSelf();
+ if(k==='c')openConsole();if(k==='p')openPeople();if(k==='g')openGoals();if(k==='i')openSelf();if(k==='n')openInbox();if(k==='k')openCompany();
  if(['arrowup','arrowdown','arrowleft','arrowright'].includes(k))e.preventDefault();
 });
 addEventListener('keyup',e=>{KEYS[e.key.toLowerCase()]=false;});
@@ -1303,7 +1314,7 @@ function renderOffice(){
  // windows along the north wall: the sky follows the clock
  const m=mins(G.t),day=m>=420&&m<1140;const sky=day?(m<480||m>1080?'#e2a464':'#8fc3e3'):'#14223a';
  for(let i=1;i<OW-1;i+=2){if(GRID[gi(i,0)]!==1)continue;c.fillStyle=sky;c.fillRect(i*TS+4,4,TS*2-8,10);c.fillStyle='rgba(255,255,255,.25)';c.fillRect(i*TS+4,4,TS*2-8,2);}
- drawOpsWall(c);
+ drawOpsWall(c);drawOfficeEvent(c);
  // monitors glow on occupied desks
  Object.keys(DESKS).forEach(k=>{const d=DESKS[k];const o=deskOwner(k);const on=o==='player'||(o&&NP[o]);if(!on)return;c.fillStyle=`rgba(120,200,255,${.55+.15*Math.sin(performance.now()/300+d.x)})`;c.fillRect((d.x+d.w/2)*TS-13,d.y*TS+7,26,8);});
  if(Math.sin(performance.now()/400)>0){c.fillStyle='rgba(255,255,255,.35)';c.beginPath();c.arc(35.5*TS,13*TS+2-((performance.now()/40)%10),3,0,7);c.fill();}
@@ -1318,7 +1329,7 @@ function renderOffice(){
  drawBubbles(c);
  if(P.path&&P.path.length){const e=P.path[P.path.length-1];c.strokeStyle='rgba(240,185,46,.8)';c.lineWidth=2;c.beginPath();c.arc(e[0],e[1],8+Math.sin(performance.now()/150)*2,0,7);c.stroke();}
  // evening light
- if(!day){c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle='rgba(8,16,34,.38)';c.fillRect(0,0,W,H);}
+ c.setTransform(dpr,0,0,dpr,0,0);if(!day){c.fillStyle='rgba(8,16,34,.38)';c.fillRect(0,0,W,H);}drawOfficeOverlay(c,W,H);
 }
 
 /* =====================================================================
@@ -1340,11 +1351,12 @@ function hudUpdate(){
  const s=`${bar('Energy',G.energy,'var(--hazard)')}${bar('Stress',G.stress,'var(--rust)')}${bar('Standing',G.rep,'var(--moss)')}${bar('On time',ontimeRate()*100,'var(--sea)',G.kpi.delivered?pct(ontimeRate()):'–')}`;
  if($('#hStats').dataset.h!==s){$('#hStats').innerHTML=s;$('#hStats').dataset.h=s;}
  const inc=G.incidents.length;const b=$('#mConsole .badge');if(b){b.textContent=inc||G.ships.length;b.style.background=inc?'var(--rust)':'var(--sea)';b.classList.toggle('hidden',!inc&&!G.ships.length);}
+ const ib=$('#mInbox .badge');if(ib){const u=unreadMail();ib.textContent=u;ib.classList.toggle('hidden',!u);}
  trackerUpdate();
 }
 function buildMenu(){
- const B=[['mConsole','desk','Console','C',()=>openConsole()],['mMap','map','Map','M',()=>openMap()],['mPeople','people','People','P',()=>openPeople()],['mGoals','goals','Goals','G',()=>openGoals()],['mSelf','self','You','I',()=>openSelf()],['mMenu','menu','Menu','',()=>openMenu()]];
- $('#hMenu').innerHTML=B.map(([id,ic,l,k])=>`<button class="mbtn" id="${id}">${ICON[ic]}<span>${l}</span>${k?`<kbd>${k}</kbd>`:''}${id==='mConsole'?'<span class="badge hidden">0</span>':''}</button>`).join('');
+ const B=[['mConsole','desk','Console','C',()=>openConsole()],['mMap','map','Map','M',()=>openMap()],['mPeople','people','People','P',()=>openPeople()],['mInbox','mail','Inbox','N',()=>openInbox()],['mCompany','chart','Company','K',()=>openCompany()],['mGoals','goals','Goals','G',()=>openGoals()],['mSelf','self','You','I',()=>openSelf()],['mMenu','menu','Menu','',()=>openMenu()]];
+ $('#hMenu').innerHTML=B.map(([id,ic,l,k])=>`<button class="mbtn" id="${id}">${ICON[ic]}<span class="ll">${l}</span><span class="sl">${{Console:'Desk',Company:'Firm'}[l]||l}</span>${k?`<kbd>${k}</kbd>`:''}${id==='mConsole'||id==='mInbox'?'<span class="badge hidden">0</span>':''}</button>`).join('');
  B.forEach(([id,,,,fn])=>$('#'+id).onclick=()=>{sfx('click');fn();});
  $$('#hSpeed button').forEach(b=>b.onclick=()=>{setSpeed(+b.dataset.s);sfx('click');});
 }
@@ -1454,6 +1466,7 @@ function openTraining(){
 let PLAN=null;
 function riskLabel(r){return r<.04?['Low','g']:r<.1?['Medium','y']:['High','r'];}
 function openConsole(tab){
+ if(oeActive('outage')){const b=openModal({mk:'!',title:'Systems down',cls:'narrow',sub:'The booking system is offline. Your shipments keep moving; you just can\u2019t see or book anything.',body:`<p>Gus is crawling under desks with a cable in his teeth. ${G.skills.logistics>=20?'You know the backup procedure.':''}</p><div class="mfoot"><button class="btn ghost" id="ouHelp">Help Gus</button><button class="btn" id="ouOk">Wait</button></div>`});$('#ouOk').onclick=closeModal;$('#ouHelp').onclick=()=>{advance(20);rel('gus',3);if(Math.random()<.5+G.skills.logistics/100){G.oe.dur=G.t-G.oe.start;log('You find the unplugged switch. Gus pretends he was about to.','good');gain('logistics',.4);}else log('You hold the torch. It helps, emotionally.');closeModal();};return;}
  G.flags.console=1;checkQuest();tab=tab||(G.incidents.length?'incidents':'contracts');const L=LADDER[G.tier];
  const tabs=[['contracts',`Contracts (${G.contracts.length})`],['ships',`In transit (${G.ships.length})`],['incidents',`Incidents (${G.incidents.length})`],['fleet','Fleet & hubs']];
  let body='';
@@ -1544,7 +1557,7 @@ function openHaggle(c,back){
   $('#hQuit').onclick=()=>{c.haggled=1;back();};
   if($('#hTake'))$('#hTake').onclick=()=>{c.pay=H.lastCounter;c.haggled=1;gain('negotiation',.8);sfx('coin');back();};
   $('#hOffer').onclick=()=>{H.msgs.push('You: We can do it for '+fmt$(H.offer,false)+'.');
-   if(H.offer<=H.ceil){c.pay=H.offer;c.haggled=1;gain('negotiation',1.2+(H.offer/c.pay-1)*4);sfx('coin');H.msgs.push(pick(['“Fine. Deal. Don’t make me regret it.”','“Deal. Send the booking confirmation.”','“...Okay. You drive a hard bargain.”']));log(`Negotiated ${c.client} up to ${fmt$(c.pay,false)}.`,'good');render();setTimeout(back,900);return;}
+   if(H.offer<=H.ceil){G.stats.haggles=(G.stats.haggles||0)+1;c.pay=H.offer;c.haggled=1;gain('negotiation',1.2+(H.offer/c.pay-1)*4);sfx('coin');H.msgs.push(pick(['“Fine. Deal. Don’t make me regret it.”','“Deal. Send the booking confirmation.”','“...Okay. You drive a hard bargain.”']));log(`Negotiated ${c.client} up to ${fmt$(c.pay,false)}.`,'good');render();setTimeout(back,900);return;}
    H.pat--;H.ceil*=.985;sfx('bad');
    if(H.pat<=0){H.msgs.push('“We’ll take this elsewhere. Goodbye.”');G.contracts=G.contracts.filter(x=>x!==c);coRep(-.4);gain('negotiation',.4);log(`${c.client} hung up. The tender is gone.`,'bad');render();$('#hOffer').disabled=true;$('#hQuit').textContent='Back to the board';$('#hQuit').onclick=()=>{PLAN=null;openConsole('contracts');};if($('#hTake'))$('#hTake').remove();return;}
    H.lastCounter=Math.round(lerp(c.pay,H.ceil,rnd(.55,.9))/10)*10;H.msgs.push(pick([`“That’s too rich. We could stretch to ${fmt$(H.lastCounter,false)}.”`,`“Come on. ${fmt$(H.lastCounter,false)}, final-ish offer.”`,`“My boss will kill me. ${fmt$(H.lastCounter,false)}?”`]));render();};
@@ -1701,7 +1714,8 @@ function openPeople(){
  const rows=ids.map(id=>{const b=G.bots[id],d=BOTD[id];const here=!!NP[id];return`<tr><td><b>${d.name}</b>${bossId()===id?' <span class="pill y">Boss</span>':''}${b.team?' <span class="pill b">Team</span>':''}<br><small>${botTitle(id)} · ${PERS[d.pers].label}</small></td><td><span class="relbar"><i style="width:${clamp((b.f+100)/2,0,100)}%;background:${b.f<0?'var(--rust)':'var(--moss)'}"></i></span><br><small>${relWord(b.f)}</small></td><td>${here?'In the office':`<small>Out (${hhmm(d.arrive)}–${hhmm(d.leave)})</small>`}</td><td>${here?`<button class="btn sm ghost" data-w="${id}">Find</button>`:''}</td></tr>`;}).join('');
  const gone=Object.keys(G.bots).filter(id=>G.bots[id].gone).map(id=>BOTD[id].name);
  const L=LADDER[G.tier];
- const b=openModal({mk:'ORG',title:'People',sub:`${L.team?`Your team: ${teamIds().length}/${L.team}. `:''}Friendship opens doors: favours, team invitations, honest advice.`,cls:'wide',body:`<div class="tw"><table class="t"><thead><tr><th>Name</th><th>Friendship</th><th>Where</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${gone.length?`<p style="margin-top:10px"><small>No longer at headquarters: ${gone.join(', ')}.</small></p>`:''}`});
+ const b=openModal({mk:'ORG',title:'People',sub:`${L.team?`Your team: ${teamIds().length}/${L.team}. `:''}Friendship opens doors: favours, team invitations, honest advice.`,cls:'wide',body:`<div class="tw"><table class="t"><thead><tr><th>Name</th><th>Friendship</th><th>Where</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>${gone.length?`<p style="margin-top:10px"><small>No longer at headquarters: ${gone.join(', ')}.</small></p>`:''}${G.tier>=3?'<div class="mfoot"><span class="grow">Empty desks on the floor? Fill them.</span><button class="btn" id="pHire">Hire staff</button></div>':''}`});
+ if($('#pHire'))$('#pHire').onclick=openHiring;
  b.querySelectorAll('[data-w]').forEach(x=>x.onclick=()=>{const n=NP[x.dataset.w];if(!n)return;closeModal();const[sx,sy]=tileOf(P.x,P.y),[tx,ty]=tileOf(n.x,n.y);const p=astar(sx,sy,tx,ty);if(p){P.path=p;P.act={bot:n.id,x:n.x,y:n.y};}});
 }
 function openGoals(){
@@ -1709,6 +1723,7 @@ function openGoals(){
  let body=`<h3>First week</h3>${done}${cur?`<div class="act"><div><h4>${cur.t}</h4><p>${cur.s}</p></div></div>`:''}`;
  body+=`<h3>The ladder</h3><div class="tw"><table class="t"><thead><tr><th>Title</th><th>Salary</th><th>Unlocks</th></tr></thead><tbody>${LADDER.map((L,i)=>`<tr style="${i===G.tier?'background:#f0e6c8':''}"><td>${i<G.tier?'✓ ':i===G.tier?'▶ ':''}<b>${L.t}</b></td><td class="n">${fmt$(L.sal)}/wk</td><td><small>${L.modes.map(m=>MODES[m].n).join(', ')} · ${L.units} FEU · ${L.slots} slots${L.team?` · team ${L.team}`:''}</small></td></tr>`).join('')}</tbody></table></div>`;
  if(G.tier<7){const R=reqList(G.tier+1);body+=`<h3>Requirements for ${LADDER[G.tier+1].t}</h3>`+R.map(r=>`<div class="ctr ${r.ok?'':'lock'}" style="border-left-color:${r.ok?'var(--moss)':'var(--rust)'}"><div>${r.label}</div><div class="pay">${r.txt}</div></div>`).join('');}
+ G.ach=G.ach||{};body+=`<h3>Achievements (${Object.keys(G.ach).length}/${ACH.length})</h3><div class="modes">${ACH.map(([k,n,d])=>`<div class="mode ${G.ach[k]?'on':''}" style="${G.ach[k]?'':'opacity:.55'}"><span class="mh" style="font-size:14px">${G.ach[k]?'\u2605':'\u2606'} ${n}</span><span style="font:400 12.5px var(--body);color:var(--ink-soft)">${d}${G.ach[k]?` Day ${G.ach[k]}.`:''}</span></div>`).join('')}</div>`;
  body+=`<h3>Endgame</h3><p>Become CEO, then make Meridian the biggest logistics company in the world. Buy out Atlas, Kestrel and Northwind from the boardroom.</p>`;
  openModal({mk:'GO',title:'Goals',sub:'Climb from the dispatch floor to the corner office.',body});
 }
@@ -1738,7 +1753,7 @@ function openMenu(){
  <div class="act"><div><h4>Sound</h4><p>Effects ${SND.on?'on':'off'}, music ${SND.musicOn?'on':'off'}.</p></div><div class="side"><button class="btn sm ghost" id="muSfx">Effects</button><button class="btn sm ghost" id="muMus">Music</button></div></div>
  <div class="act"><div><h4>Save code</h4><p>Copy your whole career as text, to move it to another device.</p></div><div class="side"><button class="btn sm ghost" id="muExp">Show</button></div></div>
  <div id="muCode"></div>
- <div class="act"><div><h4>Controls</h4><p>WASD or arrows to walk, or tap the floor. E to talk or use. C console, M map, P people, G goals, I yourself. Space pauses.</p></div></div>
+ <div class="act"><div><h4>Controls</h4><p>WASD or arrows to walk, or tap the floor. E to talk or use. C console, M map, P people, N inbox, K company, G goals, I yourself. Space pauses.</p></div></div>
  <div class="act"><div><h4>Quit to title</h4><p>Your progress is saved first.</p></div><div class="side"><button class="btn sm red" id="muQuit">Quit</button></div></div>`});
  $('#muSave').onclick=()=>{saveGame();log('Saved.','good');closeModal();};
  $('#muSfx').onclick=()=>{SND.on=!SND.on;sndApply();openMenu();};$('#muMus').onclick=()=>{SND.musicOn=!SND.musicOn;sndApply();openMenu();};
@@ -1767,6 +1782,259 @@ function approachArrive(n){
  const b=openModal({portrait:id,title:`${first(d.name)} stops by your desk`,cls:'narrow',body:`<div class="result q">“${esc(line)}”</div><div class="mfoot"><button class="btn ghost" id="aNo">I’m busy</button><button class="btn" id="aYes">Chat for a minute</button></div>`});
  $('#aYes').onclick=()=>{rel(id,2.5);advance(5);talkTo(id,pick(['Anyway, I’ll let you get back to it.','Okay, back to the grind.','That’s all. Carry on!']));};
  $('#aNo').onclick=()=>{rel(id,-1);closeModal();};
+}
+
+/* =====================================================================
+   Inbox: dilemmas that land on your desk
+   ===================================================================== */
+const presentBot=()=>{const ids=Object.keys(NP).filter(id=>BOTD[id].tier>=0||id==='rosa'||id==='gus');return ids.length?pick(ids):pick(Object.keys(G.bots).filter(id=>!G.bots[id].gone));};
+const MAIL={
+ bribe:{cd:6,cond:()=>G.ships.find(s=>CITIES[s.c.from].land!==CITIES[s.c.to].land&&s.phase!=='done'),make:s=>({sid:s.id,city:s.c.to}),
+  from:d=>`Customs broker, ${CITIES[d.city].n}`,subj:'About your inbound container',
+  body:d=>`A customs officer in ${CITIES[d.city].n} let it be known that your container "could be processed much faster" for a $2,000 cash "handling fee". Otherwise it may need a full inspection.`,
+  opts:d=>[['Pay the fee yourself','$2,000 from your wallet. Fast, and not exactly legal.',G.money>=2000],['Refuse politely','The container may be held for inspection.'],['Report it to compliance','The right thing. Slower.']],
+  fx:(d,k)=>{const s=G.ships.find(x=>x.id===d.sid);if(k===0){G.money-=2000;if(s)s.hold=0;if(!G.scandalAt&&Math.random()<.35)G.scandalAt=G.t+ri(2,6)*1440;return'The container clears customs within the hour. Nobody writes anything down. Probably.';}
+   if(k===1){if(s)s.hold+=360;return'The officer shrugs. Your container goes to the back of the inspection queue: six hours.';}
+   if(s)s.hold+=720;repAdd(2);coRep(1);G.flags.reported=1;return'Compliance thanks you. The officer is reassigned. Your container is inspected properly, which takes half a day.';}},
+ scandal:{cd:999,cond:()=>false,from:()=>'Compliance department',subj:'Investigation: facilitation payments',
+  body:()=>'An audit of customs clearances found a cash payment linked to one of your shipments. Compliance wants an explanation before the end of the day.',
+  opts:()=>[['Accept responsibility','A fine, a warning on your file, but honesty counts.'],['Deny everything','Maybe they can’t prove it.']],
+  fx:(d,k)=>{const b=bossId();if(k===0){G.money=Math.max(0,G.money-5000);repAdd(-8);if(b)rel(b,-4);return'You pay a $5,000 fine and get a formal warning. Your boss is disappointed, but says they respect that you owned it.';}
+   if(Math.random()<.5)return'The trail goes cold. You got away with it. This time.';repAdd(-16);if(b)rel(b,-12);gossip(`${G.name} got caught bribing customs and lied about it.`);return'They can prove it. Lying makes it far worse. Everyone on the floor knows by lunchtime.';}},
+ overweight:{cd:8,cond:()=>G.tier>=1,make:()=>({client:pick(CLIENTS)}),from:d=>d.client,subj:'Small favour on the paperwork',
+  body:d=>`${d.client} asks you to declare their next containers at a lower weight than they really are. "Everyone does it. It saves us both fees."`,
+  opts:()=>[['Refuse','Overweight containers have tipped trucks and sunk stacks.'],['Go along with it','+$3,000 for Meridian. If the port weighs it, a big fine.'],['Re-weigh and bill it properly','Tell them nicely, then charge the real rate.']],
+  fx:(d,k)=>{if(k===0)return'They grumble, then send correct numbers.';if(k===1){if(Math.random()<.3){G.co.cash-=20000;coRep(-3);repAdd(-3);return'The port weighs the container. Meridian is fined $20,000 and named in the trade press.';}G.co.cash+=3000;return'Nobody checks. You feel slightly worse about yourself.';}gain('negotiation',1);G.co.cash+=1500;return'You re-weigh, bill the real rate, and the client respects the straight answer.';}},
+ headhunter:{cd:20,cond:()=>G.tier>=2,make:()=>({}),from:()=>'Atlas Maritime talent team',subj:'A confidential opportunity',
+  body:()=>`A recruiter from Atlas Maritime writes: "We’ve been watching your numbers. We’d love to talk about a role with us, with a significantly better package."`,
+  opts:()=>[['Ignore it','Loyalty is underrated.'],['Use it to ask for a raise','Your boss might match it. Or resent it.'],['Take the meeting','Good for your confidence, risky if word gets out.']],
+  fx:(d,k)=>{const b=bossId();if(k===0){if(b)rel(b,1);return'You archive the email.';}if(k===1){if(b&&G.bots[b].f>=20){G.salBonus=(G.salBonus||0)+.12;return`Your boss grits their teeth and matches part of it: +12%. ${fmt$(salary())} a week.`;}if(b)rel(b,-8);return'Your boss tells you to take the job if you want it so much. Awkward silence.';}
+   gain('charisma',1.5);if(Math.random()<.3){repAdd(-2);gossip(`Someone saw ${G.name} having lunch with the Atlas recruiter.`);return'The lunch is flattering. Unfortunately, Priya was at the next table.';}return'The lunch is flattering. You now know exactly what you’re worth.';}},
+ journalist:{cd:8,cond:()=>G.tier>=4,make:()=>({}),from:()=>'Freight Weekly',subj:'Request for comment',
+  body:()=>`A reporter is writing about ${G.events[0]?G.events[0].t.toLowerCase().replace(/\.$/,''):'rising freight rates'} and wants a quote from Meridian.`,
+  opts:()=>[['Give an interview','Charisma decides whether you sound like a leader or a hostage.'],['No comment','Safe and forgettable.'],['Talk up our green credentials',G.flags.green?'True, since you switched to biofuel.':'Not really true. Yet.']],
+  fx:(d,k)=>{if(k===0){if(Math.random()<.4+G.skills.charisma/100){coRep(3);repAdd(2);news(`${G.name} of Meridian quoted in Freight Weekly.`);return'The quote is sharp and the photo is good. Eleanor forwards it to the board.';}coRep(-3);return'You ramble. The headline uses your worst sentence.';}if(k===1)return'The article runs without you.';if(G.flags.green){coRep(4);return'The story calls Meridian "a quiet leader on emissions".';}coRep(-3);return'A rival points out Meridian burns more fuel than anyone. The word "greenwashing" appears.';}},
+ union:{cd:15,cond:()=>G.tier>=5,make:()=>({city:pick([G.hq,...G.co.hubs].filter(c=>CITIES[c].port).concat([G.hq]))}),from:d=>`Dockworkers’ union, ${CITIES[d.city].n}`,subj:'Our demands',
+  body:d=>`The dockworkers handling Meridian freight in ${CITIES[d.city].n} want a 9% raise and better night-shift safety. They are ready to strike.`,
+  opts:()=>[['Agree to their terms','$1.5M from company cash. Goodwill.'],['Negotiate','Your negotiation skill against theirs.'],['Refuse','They will walk out.']],
+  fx:(d,k)=>{const strike=()=>{G.events.push({k:'strike',kind:'strike',city:d.city,until:G.t+ri(2,4)*1440,t:`Dockworkers strike at the port of ${CITIES[d.city].n}.`});news('<b>BREAKING</b> Dockworkers walk out in '+CITIES[d.city].n+'.');};
+   if(k===0){G.co.cash-=1.5e6;coRep(2);return'The union celebrates. Night shifts get better lighting.';}if(k===1){if(Math.random()<.35+G.skills.negotiation/100){G.co.cash-=6e5;gain('negotiation',2);return'Six hours at the table and a 5% deal. Both sides claim victory.';}strike();return'Talks collapse at 2 am. The port is on strike.';}strike();coRep(-2);return'They walk out the next morning.';}},
+ derekSteal:{cd:10,cond:()=>!G.bots.derek.gone&&G.tier<=3&&G.kpi.delivered>3,make:()=>({client:pick(Object.keys(G.clients).length?Object.keys(G.clients):CLIENTS)}),from:d=>d.client,subj:'Your colleague called us',
+  body:d=>`${d.client} writes: "Your colleague Derek called and offered to take over our account at a lower rate. Is that how Meridian works?"`,
+  opts:()=>[['Confront Derek','He’ll hate you for it. He already does.'],['Report it to your boss','Paper trail. Office politics.'],['Let it go','Not worth the stress. Or is it?']],
+  fx:(d,k)=>{const b=bossId();if(k===0){rel('derek',-8);if(Math.random()<.5){repAdd(1);return'Derek goes red and backs off. "Just trying to help," he says. Sure.';}return'Derek smirks. "Prove it."';}
+   if(k===1){if(b==='derek'){rel('derek',-5);return'You report Derek... to Derek, your boss. He thanks you for your feedback.';}if(b)rel(b,2);rel('derek',-15);G.bots.derek.score-=10;return'Your boss has a quiet word with Derek. The whole floor hears it anyway.';}stress(6);return'You let it go. It keeps you up at night.';}},
+ family:{cd:25,cond:()=>true,make:()=>({}),from:()=>'Your sister',subj:'Call me when you can',
+  body:()=>'"Mum fell and she’s at the hospital. She’s okay, but she keeps asking for you. Can you come?"',
+  opts:()=>[['Leave now','Four hours away from the desk. Family first.'],['Call her and stay at work','Your shipments need you. Don’t they?']],
+  fx:(d,k)=>{if(k===0){const b=bossId();if(mins(G.t)<900&&b)rel(b,-1);advance(240);stress(-14);return'You sit with her and eat terrible hospital jelly. She is fine. You feel lighter.';}stress(18);return'You call. She says it’s fine. It doesn’t sound fine.';}},
+ birthday:{cd:4,cond:()=>Object.keys(NP).length>2,make:()=>({id:presentBot()}),from:()=>'Rosa Delgado',subj:d=>`Card for ${first(BOTD[d.id].name)}!`,
+  body:d=>`It’s ${BOTD[d.id].name}’s birthday! There’s a card going round and a collection for a gift.`,
+  opts:()=>[['Chip in $20 and write something nice','',G.money>=20],['Just sign the card',''],['Ignore it','']],
+  fx:(d,k)=>{if(k===0){G.money-=20;rel(d.id,6);remember(d.id,`${first(G.name)} chipped in for their birthday`);return`${first(BOTD[d.id].name)} reads your message twice and smiles.`;}if(k===1){rel(d.id,1);return'You write "Happy birthday!" like everyone else.';}rel(d.id,-1);return'Nobody notices. Except Rosa.';}},
+ thanks:{cd:9,cond:()=>Object.values(G.clients).some(c=>c.ok>=3)&&Object.keys(G.accounts||{}).length<3+G.tier,make:()=>{const cl=Object.keys(G.clients).filter(k=>G.clients[k].ok>=3);return{client:pick(cl),city:pick([G.hq,...G.co.hubs])};},from:d=>d.client,subj:'Thank you, and a proposal',
+  body:d=>`${d.client} writes: "You’ve been reliable every single time. We’d like to make Meridian our main forwarder out of ${CITIES[d.city].n}."`,
+  opts:()=>[['Sign them as a key account','Regular, well-paid tenders from this client.'],['Thank them and keep it informal','']],
+  fx:(d,k)=>{if(k===0){addAccount(d.client,d.city);return`${d.client} is now a key account out of ${CITIES[d.city].n}.`;}return'They say the offer stands.';}},
+ green:{cd:999,cond:()=>G.tier>=4&&!G.flags.green&&!G.flags.greenNo,make:()=>({}),from:()=>'Aiko Tanaka, board member',subj:'Emissions',
+  body:()=>'"Our big clients are asking about emissions. I’d like Meridian to switch to biofuel blends where we can. It will cost a little more per booking."',
+  opts:()=>[['Switch to biofuel','Bookings cost 4% more. Reputation and the board go up.'],['Not now','Margins first.']],
+  fx:(d,k)=>{if(k===0){G.flags.green=1;coRep(5);G.board[4].lob+=6;news('Meridian commits to biofuel blends across its fleet.');return'The press release writes itself. Aiko sends a thank-you note.';}G.flags.greenNo=1;G.board[4].lob-=4;return'Aiko replies with one word: "Noted."';}},
+ cyber:{cd:20,cond:()=>G.tier>=3,make:()=>({city:pick(Object.keys(CITIES).filter(c=>CITIES[c].port))}),from:()=>'Gus Mbeki, IT',subj:'Ransomware at a port we use',
+  body:d=>`"The terminal operator in ${CITIES[d.city].n} got hit by ransomware. Their systems are down. We can pay a specialist team to route our boxes manually, or wait."`,
+  opts:()=>[['Pay the specialists','$400,000 of company cash.'],['Wait it out','Everything bound for that port is held.']],
+  fx:(d,k)=>{if(k===0){G.co.cash-=4e5;rel('gus',2);return'The specialists get your boxes moving by spreadsheet and phone.';}let n=0;G.ships.forEach(s=>{if(s.c.to===d.city){s.hold+=600;n++;}});return n?`${n} shipment${n>1?'s':''} held for ten hours.`:'Luckily nothing of yours is headed there right now.';}},
+ phish:{cd:18,cond:()=>G.tier>=2,make:()=>({}),from:()=>'Eleanor Vance (eleanor.vance@meridian-logistlcs.com)',subj:'URGENT wire needed today',
+  body:()=>'"I’m in a meeting and can’t talk. Please wire $250,000 to the account below for a confidential acquisition. Don’t tell anyone. Thanks, E."',
+  opts:()=>[['Wire the money','The CEO asked.'],['Forward it to Gus in IT','Something feels off.'],['Delete it','']],
+  fx:(d,k)=>{if(k===0){G.co.cash-=2.5e5;repAdd(-6);gossip(`${G.name} fell for the fake CEO email.`);return'The email address said "logistlcs". The money is gone. Gus looks at you with deep pity.';}if(k===1){rel('gus',4);gain('logistics',.6);return'"Phishing," says Gus. "Look at the spelling. Good catch." He blocks the domain.';}return'Deleted. You never find out what it was.';}},
+ gift:{cd:7,cond:()=>G.kpi.ontime>=4,make:()=>({client:pick(Object.keys(G.clients).length?Object.keys(G.clients):CLIENTS)}),from:d=>d.client,subj:'A small thank-you',
+  body:d=>`A courier drops off a case of very good wine from ${d.client}, with a note: "For the team that always delivers."`,
+  opts:()=>[['Take it home','Nice. Very nice.'],['Share it with the team','Friday drinks are on you.'],['Return it, with thanks','Company policy, technically.']],
+  fx:(d,k)=>{if(k===0){stress(-6);return'You open a bottle that evening. It is excellent.';}if(k===1){Object.keys(NP).forEach(id=>rel(id,2));return'The break room becomes a wine bar at five o’clock. People are fond of you.';}repAdd(1);return'Compliance notes your integrity. The client is a little hurt.';}},
+ charity:{cd:14,cond:()=>true,make:()=>({}),from:()=>'Sofia Lindqvist',subj:'Harbour 5k this Saturday!',
+  body:()=>'"Meridian is running the harbour charity 5k for the children’s hospital. Join the team? Or sponsor us?"',
+  opts:()=>[['Run it','Exhausting, wholesome, good for the soul.'],['Sponsor the team ($100)','',G.money>=100],['Skip it','']],
+  fx:(d,k)=>{if(k===0){energy(-25);stress(-12);['sofia','amara','mei','tomas'].forEach(id=>!G.bots[id].gone&&rel(id,3));gain('charisma',.8);return'You finish in a respectable time and get a medal shaped like a container.';}if(k===1){G.money-=100;repAdd(.5);rel('sofia',2);return'Sofia sends a photo of the team, sweaty and grateful.';}return'You sleep in on Saturday.';}},
+ mentor:{cd:999,cond:()=>G.tier>=3&&!G.bots.mei.gone&&!G.flags.mentee&&!G.flags.mentorNo,make:()=>({}),from:()=>'Mei Chen',subj:'Would you mentor me?',
+  body:()=>'"I know you’re busy. But you came up from the dispatch floor so fast, and I want to learn how. Could we meet once a week?"',
+  opts:()=>[['Say yes','An hour a week. You both grow.'],['Not right now','']],
+  fx:(d,k)=>{if(k===0){G.flags.mentee='mei';rel('mei',10);gain('leadership',1);return'Mei is thrilled. She shows up to the first session with a printed agenda.';}G.flags.mentorNo=1;rel('mei',-4);return'"Of course. I understand," she says. She doesn’t, quite.';}},
+};
+function spawnMail(force){
+ G.inbox=G.inbox||[];G.mailLast=G.mailLast||{};
+ if(G.scandalAt&&G.t>=G.scandalAt){G.scandalAt=null;pushMail('scandal',{});return;}
+ const keys=shuffle(Object.keys(MAIL)).filter(k=>k!=='scandal'&&(G.mailLast[k]??-1e9)+MAIL[k].cd*1440<=G.t);
+ for(const k of keys){const M=MAIL[k];const c=M.cond();if(!c)continue;pushMail(k,M.make?M.make(c):{});return;}
+}
+function pushMail(k,d){G.inbox.unshift({id:'m'+(G.seq++),k,d,t:G.t,read:0,done:0});G.inbox=G.inbox.slice(0,30);G.mailLast[k]=G.t;sfx('alert');const M=MAIL[k];toast('@',`New mail: ${typeof M.subj==='function'?M.subj(d):M.subj}`,`From ${M.from(d)}`);hudUpdate();}
+const unreadMail=()=>(G.inbox||[]).filter(m=>!m.done).length;
+function openInbox(mid){
+ G.inbox=G.inbox||[];const list=G.inbox;let body='';
+ if(mid){const m=list.find(x=>x.id===mid);if(!m)return openInbox();const M=MAIL[m.k];m.read=1;const subj=typeof M.subj==='function'?M.subj(m.d):M.subj;
+  body=`<div class="kv"><div><small>From</small><b style="font-size:15px">${esc(M.from(m.d))}</b></div><div><small>Received</small><b style="font-size:15px">Day ${dayNo(m.t)}, ${hhmm(m.t)}</b></div></div><p>${M.body(m.d)}</p>`;
+  if(m.done)body+=`<div class="result">${m.res||''}</div>`;
+  else body+=M.opts(m.d).map((o,i)=>`<div class="act ${o[2]===false?'lock':''}"><div><h4>${o[0]}</h4>${o[1]?`<p>${o[1]}</p>`:''}</div><div class="side"><button class="btn sm" data-o="${i}" ${o[2]===false?'disabled':''}>Choose</button></div></div>`).join('');
+  body+=`<div class="mfoot"><button class="btn ghost" id="ibBack">All mail</button></div>`;
+  const b=openModal({mk:'@',title:subj,body,cls:'narrow'});
+  b.querySelectorAll('[data-o]').forEach(x=>x.onclick=()=>{m.res=M.fx(m.d,+x.dataset.o);m.done=1;sfx('click');hudUpdate();openInbox(m.id);});
+  $('#ibBack').onclick=()=>openInbox();return;}
+ body=list.length?list.map(m=>{const M=MAIL[m.k];return`<div class="ctr" data-m="${m.id}" style="cursor:pointer;border-left-color:${m.done?'#a59c88':'var(--rust)'}"><div style="min-width:0"><div class="rt" style="font-size:16px">${m.done?'':'● '}${esc(typeof M.subj==='function'?M.subj(m.d):M.subj)}</div><div class="meta">${esc(M.from(m.d))}</div></div><div class="pay"><small>Day ${dayNo(m.t)} · ${hhmm(m.t)}</small>${m.done?'<span class="pill">Answered</span>':'<span class="pill r">Needs a reply</span>'}</div></div>`;}).join(''):'<p>Inbox zero. Enjoy it while it lasts.</p>';
+ const b=openModal({mk:'@',title:'Inbox',sub:`${unreadMail()} waiting for an answer. Every choice has consequences.`,body});
+ b.querySelectorAll('[data-m]').forEach(x=>x.onclick=()=>{sfx('click');openInbox(x.dataset.m);});
+}
+
+/* =====================================================================
+   Key accounts and business trips
+   ===================================================================== */
+function addAccount(client,city){G.accounts=G.accounts||{};G.accounts[city]={client,since:dayNo(G.t)};repAdd(2);coRep(1);news(`<b>${esc(client)}</b> names Meridian its main forwarder out of ${CITIES[city].n}.`);}
+function tripInfo(city){const A=CITIES[G.hq],B=CITIES[city];const km=hav(A.lo,A.la,B.lo,B.la);const fly=Math.round(km/60000*1440+180);return{km,fly,total:fly*2+180};}
+function openTrip(city){
+ const C=CITIES[city];const T=tripInfo(city);const cd=(G.tripT||-1e9)+4*1440>G.t;const acc=(G.accounts||{})[city];
+ const b=openModal({mk:'✈',title:`Business trip to ${C.n}`,cls:'narrow',sub:`${fmtN(T.km)} km from ${CITIES[G.hq].n}. About ${durStr(T.total)} away from the office, flights included.`,
+  body:`<p>${acc?`${esc(acc.client)} is already your key account here. A visit keeps them sweet and may bring a second one.`:'Meet a shipper face to face and try to win them as a key account: regular tenders out of this city, at better rates.'}</p><p>While you are away the team answers incidents with the safe option. You will come back tired.</p>
+  <h3>How will you pitch?</h3>
+  <div class="act"><div><h4>Data-driven pitch</h4><p>Lane-by-lane costs and transit times. Uses logistics (${Math.floor(G.skills.logistics)}).</p></div><div class="side"><button class="btn sm" data-p="logistics" ${cd?'disabled':''}>Go</button></div></div>
+  <div class="act"><div><h4>Dinner and charm</h4><p>Long dinner, good wine, better stories. Uses charisma (${Math.floor(G.skills.charisma)}).</p></div><div class="side"><button class="btn sm" data-p="charisma" ${cd?'disabled':''}>Go</button></div></div>
+  <div class="act"><div><h4>Aggressive rate offer</h4><p>Undercut whoever they use now. Uses negotiation (${Math.floor(G.skills.negotiation)}).</p></div><div class="side"><button class="btn sm" data-p="negotiation" ${cd?'disabled':''}>Go</button></div></div>
+  ${cd?`<p><small>You travelled recently. Next trip in ${durStr((G.tripT||0)+4*1440-G.t)}.</small></p>`:''}`});
+ b.querySelectorAll('[data-p]').forEach(x=>x.onclick=()=>{const sk=x.dataset.p;G.tripT=G.t;G.stats.trips=(G.stats.trips||0)+1;closeMap();
+  G.home=true;advance(T.total);G.home=false;energy(-28);G.energy=Math.max(12,G.energy);stress(6);gain(sk,1.2);
+  const p=.3+G.skills[sk]/110+(G.rep-40)/200+(acc?.15:0);const used=Object.values(G.accounts||{}).map(a=>a.client);const client=pick(CLIENTS.filter(c=>!used.includes(c)));
+  placePlayerAtElevator();syncBotsInstant();sfx('ding');
+  if(Math.random()<p&&Object.keys(G.accounts||{}).length<3+G.tier){addAccount(client,city);gain(sk,.8);sfx('fanfare');scene({k:'✈',title:'Deal signed',paras:[`In ${C.n} you meet the logistics team of ${client}. ${{logistics:'Your spreadsheet answers every question before they ask it.',charisma:'By dessert they are telling you about their kids.',negotiation:'Their current forwarder will be getting an uncomfortable phone call.'}[sk]}`,`<b>${client}</b> is now a key account out of ${C.n}. Expect regular, well-paid tenders from them.`,'You land back home with jet lag and a signed contract.']});}
+  else{scene({k:'✈',title:'No deal this time',paras:[`${client} in ${C.n} listen politely. ${{logistics:'The numbers are good, but they want to "circle back".',charisma:'Dinner is lovely. The contract stays unsigned.',negotiation:'Your rate is good, but their current forwarder matches it.'}[sk]}`,'You still learned a lot. And you collected air miles.']});}});
+}
+
+/* =====================================================================
+   Hiring
+   ===================================================================== */
+const HIRE_PERS=['eager','friendly','joker','calm','grumpy','slacker','gossip'];
+function registerHire(h){BOTD[h.id]=h;BOT_SEAT[h.id]=h.seat;}
+function freeDesks(){return Object.keys(DESKS).filter(k=>/^d\d+$/.test(k)&&!deskOwner(k));}
+function makeCandidate(){const g=pick(['f','m']);const sk=ri(28,78);return{name:pick(FIRSTS)+' '+pick(LASTS),g,pers:pick(HIRE_PERS),skill:sk,skin:ri(0,4),hair:pick(g==='f'?['long','bob','bun','pony','puff','curly','short']:['short','buzz','slick','messy','curly','bald']),hairC:pick(HAIRC),shirt:pick(SHIRTS),fee:15000+sk*450,wage:250+sk*6};}
+function openHiring(){
+ if(!G.cands||G.candDay!==dayNo(G.t)){G.cands=[makeCandidate(),makeCandidate(),makeCandidate()];G.candDay=dayNo(G.t);}
+ const desks=freeDesks();const max=G.tier>=5?7:G.tier>=4?5:3;const n=(G.hires||[]).length;
+ const b=openModal({mk:'HR',title:'Hire staff',sub:`Free desks: ${desks.length}. You can hire up to ${max} people at your level (${n} so far). New candidates every day.`,cls:'narrow',body:G.cands.map((c,i)=>`<div class="act ${c.taken?'lock':''}"><div><h4>${esc(c.name)} <span class="pill">${PERS[c.pers].label}</span></h4><p>Skill ${c.skill} · signing fee ${fmt$(c.fee)} · ${fmt$(c.wage)}/day from company cash</p></div><div class="side"><button class="btn sm" data-h="${i}" ${c.taken||!desks.length||n>=max||G.co.cash<c.fee?'disabled':''}>${c.taken?'Hired':'Hire'}</button></div></div>`).join('')+`<p><small>New hires start as Junior Dispatchers and like you from day one. Invite them to your team from the People list.</small></p>`});
+ b.querySelectorAll('[data-h]').forEach(x=>x.onclick=()=>{const c=G.cands[+x.dataset.h];const seat=freeDesks()[0];if(!seat)return;c.taken=1;G.co.cash-=c.fee;
+  const id='h'+(G.seq++);const h={id,name:c.name,tier:0,pers:c.pers,g:c.g,skin:c.skin,hair:c.hair,hairC:c.hairC,shirt:c.shirt,arrive:ri(470,530),leave:ri(1040,1110),skill:c.skill,seat,wage:c.wage,hire:1};
+  (G.hires=G.hires||[]).push(h);registerHire(h);G.bots[id]={f:22,talk:0,last:-9999,mem:[`was hired by ${first(G.name)}`],team:0,gone:0,tier:0,score:0,help:-9999,coffee:-9999,drink:-9999,praised:-9999,learn:{}};
+  buildStatic();sfx('coin');news(`${G.name} hires ${c.name} as a Junior Dispatcher.`);log(`${c.name} joins Meridian. Their desk is ready.`,'good');gain('leadership',.8);openHiring();});
+}
+
+/* =====================================================================
+   Office life: all-hands, fire drills, cake, outages
+   ===================================================================== */
+const OEV={
+ allhands:{n:'All-hands meeting',t:'Eleanor speaks at the operations wall. Be there.',dur:60,hour:[10,10]},
+ drill:{n:'Fire drill',t:'Alarm! Everyone to the lobby.',dur:30,hour:[9,16]},
+ cake:{n:'Birthday cake',t:'There’s cake in the break room.',dur:150,hour:[13,15]},
+ pizza:{n:'Pizza Friday',t:'Pizza in the break room!',dur:120,hour:[12,12]},
+ outage:{n:'IT outage',t:'The booking system is down. Gus is on it.',dur:90,hour:[9,15]},
+};
+function rollOfficeEvent(){
+ if(Math.random()>.45){G.oe=null;return;}const d=dayNo(G.t);let k=pick(['allhands','drill','cake','outage','cake']);if(d%7===5)k='pizza';
+ const E=OEV[k];const h=ri(E.hour[0],E.hour[1]);G.oe={k,start:(d-1)*1440+h*60+(k==='allhands'||k==='pizza'?0:ri(0,50)),dur:E.dur,who:k==='cake'?presentBotFallback():null,att:0,began:0,slice:0};
+}
+function presentBotFallback(){return pick(Object.keys(G.bots).filter(id=>!G.bots[id].gone&&BOTD[id].tier>=0));}
+const oeActive=k=>G&&G.oe&&(!k||G.oe.k===k)&&G.t>=G.oe.start&&G.t<G.oe.start+G.oe.dur;
+function officeEventTick(){
+ const e=G.oe;if(!e||G.home)return;
+ if(!e.began&&G.t>=e.start){e.began=1;const E=OEV[e.k];const msg=e.k==='cake'?`It’s ${first(BOTD[e.who].name)}’s birthday. ${E.t}`:E.t;log(`${E.n}: ${msg}`,'gold');toast('!',E.n,msg);
+  if(e.k==='drill')sfx('alert');if(['allhands','drill'].includes(e.k))Object.values(NP).forEach(n=>{if(n.st!=='approach'&&n.st!=='leave'){n.st='seat';n.wait=0;n.path=[];}});}
+ if(e.began&&!e.over){
+  if(e.k==='allhands'&&Math.hypot(P.x-15.5*TS,P.y-10*TS)<230)e.att=1;
+  if(e.k==='drill'&&P.y>25.5*TS&&P.x>14*TS&&P.x<36*TS)e.att=1;
+  if(e.k==='allhands'&&NP.eleanor&&!NP.eleanor.bub&&Math.random()<.02)say(NP.eleanor,pick([`We moved ${G.kpi.delivered+ri(400,900)} containers this month. Thank you.`,`Market share is ${G.co.share.toFixed(1)}%. Atlas is at ${G.rivals[0].share.toFixed(1)}%. You know what to do.`,'Reliability is our brand. Every late box costs us a client.',`Fuel is at ${Math.round(G.fuel*100)}. Book smart.`,'Questions? No? Good. Back to work.']),4.5);
+  if(e.k==='drill'&&Math.random()<.01)sfx('alert');
+  if(G.t>=e.start+e.dur){e.over=1;
+   if(e.k==='allhands'){if(e.att){repAdd(2);if(!G.bots.eleanor.gone)rel('eleanor',2);log('Eleanor noticed you at the all-hands. Standing up.','good');}else{repAdd(-1);log('You missed the all-hands. People noticed.','bad');}}
+   if(e.k==='drill'){if(e.att){log('Fire drill done. Everyone accounted for.','good');}else{repAdd(-1);rel('gus',-2);log('Gus marks you as "presumed toast" on the fire drill sheet.','bad');}}
+   if(e.k==='outage')log('Systems are back up. Gus gets a round of applause.','good');}}
+}
+function officeEventSpot(id){
+ if(!oeActive())return null;const k=G.oe.k;
+ if(k==='allhands')return id==='eleanor'?[15,9]:[ri(9,22),ri(9,11)];
+ if(k==='drill')return[ri(16,34),ri(26,28)];
+ if((k==='cake'||k==='pizza')&&Math.random()<.35)return[ri(37,43),ri(16,21)];
+ return null;
+}
+function drawOfficeEvent(c){
+ if(!oeActive())return;const k=G.oe.k;
+ if(k==='cake'||k==='pizza'){const x=40*TS,y=19*TS;if(k==='cake'){c.fillStyle='#f3d6e0';c.beginPath();c.arc(x,y,13,0,7);c.fill();c.fillStyle='#b8472f';c.beginPath();c.arc(x,y,8,0,7);c.fill();for(let i=0;i<5;i++){const a=i/5*Math.PI*2;c.fillStyle='#F0B92E';c.fillRect(x+Math.cos(a)*9-1,y+Math.sin(a)*9-6,2,6);}}
+  else{c.fillStyle='#d9a441';c.beginPath();c.arc(x,y,14,0,7);c.fill();c.fillStyle='#c0482c';for(let i=0;i<7;i++){const a=i/7*Math.PI*2;c.beginPath();c.arc(x+Math.cos(a)*8,y+Math.sin(a)*8,2.6,0,7);c.fill();}}}
+ if(k==='outage'){Object.keys(DESKS).forEach(key=>{const d=DESKS[key];c.fillStyle='rgba(184,71,47,.85)';c.fillRect((d.x+d.w/2)*TS-13,d.y*TS+7,26,8);});}
+}
+function drawOfficeOverlay(c,W,H){if(!oeActive('drill'))return;const a=.25+.2*Math.sin(performance.now()/120);c.strokeStyle=`rgba(184,71,47,${a})`;c.lineWidth=18;c.strokeRect(0,0,W,H);c.lineWidth=1;}
+
+/* =====================================================================
+   Achievements
+   ===================================================================== */
+const ACH=[
+ ['first','First booking','Dispatch your first shipment.',()=>G.kpi.dispatched>=1],
+ ['clock','Clockwork','Deliver 10 shipments on time.',()=>G.kpi.ontime>=10],
+ ['century','Century','Deliver 100 shipments.',()=>G.kpi.delivered>=100],
+ ['globe','Around the world','Deliver to 20 different cities.',()=>Object.keys(G.stats.cities||{}).length>=20],
+ ['modes','Every mode','Use truck, rail, ship and air.',()=>Object.keys(G.stats.modes||{}).length>=4],
+ ['bertha','Bertha’s favourite','Drink 50 coffees.',()=>G.stats.coffee>=50],
+ ['liked','Well liked','Five colleagues count you as a friend (friendship 50).',()=>Object.values(G.bots).filter(b=>!b.gone&&b.f>=50).length>=5],
+ ['nemesis','Nemesis','Make Derek truly hate you.',()=>G.bots.derek.f<=-50],
+ ['haggle','Hard bargain','Win 10 rate negotiations.',()=>(G.stats.haggles||0)>=10],
+ ['weather','Weathered','Handle 20 incidents.',()=>(G.stats.incidents||0)>=20],
+ ['mgmt','Management material','Become Operations Manager.',()=>G.tier>=3],
+ ['hub','Hub and spoke','Open three hubs.',()=>G.co.hubs.length>=3],
+ ['owner','Shipowner','Buy a ship.',()=>G.co.fleet.ship>=1],
+ ['flyer','Frequent flyer','Go on five business trips.',()=>(G.stats.trips||0)>=5],
+ ['accounts','Key accounts','Hold four key accounts.',()=>Object.keys(G.accounts||{}).length>=4],
+ ['scout','Talent scout','Hire three people.',()=>(G.hires||[]).length>=3],
+ ['clean','Clean hands','Report a bribe.',()=>!!G.flags.reported],
+ ['ceo','Corner office','Become CEO.',()=>G.tier>=7],
+ ['million','Millionaire','Have $1M in your own wallet.',()=>G.money>=1e6],
+ ['empire','Empire','Acquire all three rivals.',()=>!!G.flags.won],
+];
+function checkAch(){G.ach=G.ach||{};ACH.forEach(([k,n,d,c])=>{if(!G.ach[k]&&c()){G.ach[k]=dayNo(G.t);sfx('good');toast('★',`Achievement: ${n}`,d);news(`${G.name} unlocks "${n}".`);}});}
+
+/* =====================================================================
+   Company dashboard
+   ===================================================================== */
+function sparkSVG(vals){
+ const W=640,H=150,pl=8,pr=60,pt=12,pb=22;if(vals.length<2)return'<p><small>The chart fills in as the days pass.</small></p>';
+ const lo=Math.min(...vals)*.98,hi=Math.max(...vals)*1.02;const x=i=>pl+i/(vals.length-1)*(W-pl-pr),y=v=>pt+(1-(v-lo)/(hi-lo||1))*(H-pt-pb);
+ const line=vals.map((v,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('');const area=line+`L${x(vals.length-1)},${H-pb}L${x(0)},${H-pb}Z`;
+ const ticks=[lo,(lo+hi)/2,hi];const last=vals[vals.length-1];const day0=dayNo(G.t)-vals.length;
+ return`<div style="position:relative" id="spk"><svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block" role="img" aria-label="Company valuation over the last ${vals.length} days, now ${fmt$(last)}">
+ ${ticks.map(t=>`<line x1="${pl}" x2="${W-pr}" y1="${y(t)}" y2="${y(t)}" stroke="#c9c0aa" stroke-width="1" stroke-dasharray="2 3"/><text x="${W-pr+6}" y="${y(t)+4}" font-family="IBM Plex Mono,monospace" font-size="11" fill="#56636F">${fmt$(t)}</text>`).join('')}
+ <path d="${area}" fill="#2f6f92" fill-opacity=".12"/><path d="${line}" fill="none" stroke="#2f6f92" stroke-width="2" stroke-linejoin="round"/>
+ <circle cx="${x(vals.length-1)}" cy="${y(last)}" r="4.5" fill="#2f6f92" stroke="#F1ECE0" stroke-width="2"/>
+ <text x="${pl}" y="${H-6}" font-family="IBM Plex Mono,monospace" font-size="11" fill="#56636F">day ${Math.max(1,day0)}</text><text x="${W-pr}" y="${H-6}" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="11" fill="#56636F">today</text>
+ <line id="spkX" x1="0" x2="0" y1="${pt}" y2="${H-pb}" stroke="#1C2733" stroke-width="1" opacity="0"/></svg>
+ <div id="spkTip" style="position:absolute;pointer-events:none;background:var(--ink);color:var(--paper);font:500 12px var(--mono);padding:4px 7px;border-radius:3px;opacity:0;white-space:nowrap"></div></div>`;
+}
+function bindSpark(vals){const box=$('#spk');if(!box||vals.length<2)return;const svg=box.querySelector('svg');const W=640,pl=8,pr=60;const day0=dayNo(G.t)-vals.length;
+ box.onpointermove=e=>{const r=svg.getBoundingClientRect();const fx=(e.clientX-r.left)/r.width*W;const i=clamp(Math.round((fx-pl)/(W-pl-pr)*(vals.length-1)),0,vals.length-1);const xx=pl+i/(vals.length-1)*(W-pl-pr);
+  const ln=$('#spkX');ln.setAttribute('x1',xx);ln.setAttribute('x2',xx);ln.setAttribute('opacity',.35);const tip=$('#spkTip');tip.textContent=`Day ${day0+i+1}: ${fmt$(vals[i])}`;tip.style.opacity=1;tip.style.left=clamp(xx/W*r.width-60,0,r.width-140)+'px';tip.style.top='-6px';};
+ box.onpointerleave=()=>{$('#spkTip').style.opacity=0;$('#spkX').setAttribute('opacity',0);};}
+function openCompany(){
+ const vals=G.co.hist.concat([Math.round(valuation())]);const acc=Object.entries(G.accounts||{});const wages=(G.hires||[]).filter(h=>!G.bots[h.id].gone).reduce((a,h)=>a+h.wage,0);
+ const body=`<div class="kv"><div><small>Valuation</small><b>${fmt$(valuation())}</b></div><div><small>MRDN share</small><b>$${(valuation()/2e7).toFixed(2)}</b></div><div><small>Company cash</small><b>${fmt$(G.co.cash)}</b></div><div><small>Reputation</small><b>${Math.round(G.co.rep)}</b></div></div>
+ <h3>Valuation, last ${vals.length} days</h3>${sparkSVG(vals)}
+ <h3>Market share</h3><div class="tw"><table class="t"><tbody>${[{n:'Meridian',share:G.co.share,me:1},...G.rivals.map(r=>({...r,n:r.n+(r.owned?' (owned)':'')}))].sort((a,b)=>b.share-a.share).map(r=>`<tr><td>${r.me?'<b>Meridian</b>':esc(r.n)}</td><td class="n">${r.share.toFixed(1)}%</td><td style="width:45%"><div class="prog" style="margin:0"><i style="width:${clamp(r.share*1.4,0,100)}%;background:${r.me?'var(--rust)':'#a59c88'}"></i></div></td></tr>`).join('')}</tbody></table></div>
+ <h3>Key accounts (${acc.length})</h3>${acc.length?acc.map(([c,a])=>`<div class="act"><div><h4>${esc(a.client)}</h4><p>Main forwarder out of ${CITIES[c].n} since day ${a.since}. Their tenders pay 18% more.</p></div></div>`).join(''):'<p>None yet. Win them on business trips (open a city on the map), or by delivering reliably for the same client.</p>'}
+ <h3>Assets</h3><div class="kv"><div><small>Hubs</small><b>${G.co.hubs.length}</b></div><div><small>Truck fleets</small><b>${G.co.fleet.truck}</b></div><div><small>Ships</small><b>${G.co.fleet.ship}</b></div><div><small>Freighters</small><b>${G.co.fleet.air}</b></div><div><small>Staff you hired</small><b>${(G.hires||[]).length}</b></div><div><small>Their wages</small><b>${fmt$(wages)}/day</b></div></div>`;
+ openModal({mk:'CO',title:'Meridian Global Logistics',sub:`Headquarters: ${CITIES[G.hq].n}. ${G.flags.green?'Running on biofuel blends. ':''}Founded 1987 with two trucks and a loan.`,body,cls:'wide'});bindSpark(vals);
+}
+
+/* ---------- hooks called from the core loop ---------- */
+function hourly(){
+ G.inbox=G.inbox||[];const m=mins(G.t);
+ if(!G.home&&m>=480&&m<1140&&G.t>=(G.mailT||0)){G.mailT=G.t+Math.round(rnd(4,11)*60);if(unreadMail()<4)spawnMail();}
+ checkAch();
+}
+function dailyExtra(r){
+ const wages=(G.hires||[]).filter(h=>!G.bots[h.id].gone).reduce((a,h)=>a+h.wage,0);if(wages){G.co.cash-=wages;r.lines.push(`Wages for the staff you hired: ${fmt$(wages)}.`);}
+ if(G.flags.mentee&&G.day%7===0&&!G.bots[G.flags.mentee].gone){rel(G.flags.mentee,3);gain('leadership',1);BOTD[G.flags.mentee].skill=Math.min(85,BOTD[G.flags.mentee].skill+2);r.lines.push(`Weekly mentoring session with ${first(BOTD[G.flags.mentee].name)}.`);}
+ rollOfficeEvent();if(G.oe)r.lines.push(`Today: ${OEV[G.oe.k].n.toLowerCase()} around ${hhmm(G.oe.start)}.`);
 }
 
 /* =====================================================================
@@ -1829,6 +2097,7 @@ function mapSide(){
   h+=`<h3>${C.n}</h3><div class="ms" style="cursor:default">${REGION_OF[C.land]} · ${C.port?'Seaport, airport, road and rail':'Airport, road and rail'}${G.hq===C.id?'<br><b>Meridian headquarters</b>':''}${ev.map(e=>`<br><span style="color:#e7907b">${e.t}</span>`).join('')}</div>`;
   h+=hub?`<div class="ms" style="cursor:default">Meridian hub · earns ${fmt$(HUB_INCOME(C.id))}/day</div>`:`<div class="ms" style="cursor:default">Hub: ${fmt$(HUB_COST(C.id))} · ${fmt$(HUB_INCOME(C.id))}/day<br>${G.tier>=4?`<button class="btn sm" id="msHub" style="margin-top:6px" ${G.co.cash<HUB_COST(C.id)?'disabled':''}>Build a hub here</button>`:'<small>Regional Directors and up can open hubs.</small>'}</div>`;
   if(from.length)h+=`<h3>Open tenders here</h3>`+from.map(c=>`<div class="ms" data-c="${c.id}">${CITIES[c.from].n} → ${CITIES[c.to].n}<br><small>${c.units}× ${cargoN(c.cargo).toLowerCase()} · ${fmt$(c.pay)}</small></div>`).join('');
+  if(C.id!==G.hq)h+=`<div class="ms" style="cursor:default">${(G.accounts||{})[C.id]?`Key account: <b>${esc(G.accounts[C.id].client)}</b><br>`:''}${G.tier>=2?`<button class="btn sm" id="msTrip">Business trip here</button>`:'<small>Business trips open at Senior Dispatcher.</small>'}</div>`;
   h+=`<button class="btn sm ghost" id="msBack" style="margin-top:8px;color:var(--chalk)">All operations</button>`;}
  else{
   h+=`<h3>In transit (${G.ships.length})</h3>`;if(!G.ships.length)h+='<div class="ms" style="cursor:default"><small>Nothing moving. Book freight at your desk.</small></div>';
@@ -1841,6 +2110,7 @@ function mapSide(){
  el.querySelectorAll('[data-s]').forEach(x=>x.onclick=()=>{const s=G.ships.find(z=>z.id===x.dataset.s);if(!s)return;MV.sel={ship:s.id};const p=shipPos(s);MV.cx=p[0];MV.cy=p[1];const inc=G.incidents.find(i=>i.sid===s.id);if(inc)openIncident(inc);mapSide();});
  el.querySelectorAll('[data-c]').forEach(x=>x.onclick=()=>{openPlan(x.dataset.c);});
  if($('#msBack'))$('#msBack').onclick=()=>{MV.sel=null;mapSide();};
+ if($('#msTrip'))$('#msTrip').onclick=()=>openTrip(MV.sel.city);
  if($('#msHub'))$('#msHub').onclick=()=>buyHub(MV.sel.city,mapSide);
 }
 function mapInput(){
@@ -1943,7 +2213,7 @@ function renderCreator(){
    ===================================================================== */
 let GAME_ON=false,last=performance.now(),saveT=0,hudT=0;const RATE=3;
 function startGame(g,fresh){
- G=g;GAME_ON=true;
+ G=g;GAME_ON=true;G.stats=G.stats||{};G.inbox=G.inbox||[];(G.hires||[]).forEach(registerHire);
  $('#title').classList.add('hidden');$('#creator').classList.add('hidden');$('#hud').classList.remove('hidden');
  buildOffice();buildStatic();buildMenu();setSpeed(G.spd??1);
  if(fresh){placePlayerAtElevator();G.approach.push({id:'hana',k:'welcome'});}else placePlayerAtDesk();
