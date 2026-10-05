@@ -319,7 +319,7 @@ function loadLife(s){s.owners.forEach((o,i)=>{if(DISTRICTS[i])DISTRICTS[i].owner
   if(P.x==null||!inb(tx(P.x),tx(P.y))||SOLID_FOOT[tileAt(tx(P.x),tx(P.y))]){const sp=arrivalSpot('bus');P.x=sp.x;P.y=sp.y}
   (s.decor||[]).filter(d=>!d.map||d.map===MAP.id).forEach(d=>DECOR.push(d));spawnStartVehicles();startGame(false)}
 function startGame(isNew){refreshOverlay();$('#title').classList.add('hidden');$('#creator').classList.add('hidden');$('#hud').classList.remove('hidden');
-  if(matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
+  if(IS_PHONE||matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
   running=true;WINTER=null;seasonCheck();setTimeout(()=>{syncCrew();syncDog()},50);LASTCITY=MAP.id;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
   if(isNew){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls);const sch=FACTIONS[P.school];
     const intro={6:`Tomorrow is your first day at ${sch.name}. Mum already bought the flowers for the teacher. Today the yard is yours: bottles to collect, a taromatas that pays 10 cents each, and an ice cream van somewhere.`,

@@ -6,7 +6,7 @@ const cv=$('#world'),ctx=cv.getContext('2d');
 let VW=0,VH=0,DPR=1,ZOOM=1,ZMUL=1;
 const cam={x:0,y:0};
 const dark=document.createElement('canvas'),dctx=dark.getContext('2d');
-function resize(){DPR=Math.min(2,window.devicePixelRatio||1);VW=innerWidth;VH=innerHeight;ZOOM=(VW<700?.8:1)*ZMUL;
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);VW=innerWidth;VH=innerHeight;ZOOM=(Math.min(VW,VH)<500?.74:VW<700?.8:1)*ZMUL;
   cv.width=VW*DPR;cv.height=VH*DPR;dark.width=Math.ceil(VW/2);dark.height=Math.ceil(VH/2)}
 addEventListener('resize',resize);
 

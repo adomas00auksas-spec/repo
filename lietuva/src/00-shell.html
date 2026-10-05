@@ -2,7 +2,11 @@
 <html lang="lt">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#26343A">
 <title>Lietuvos Gyvenimas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -226,6 +230,101 @@ input[type=text]{font-family:var(--sans);font-size:15px;padding:9px 10px;border:
   #prompt{bottom:calc(128px + env(safe-area-inset-bottom))}
   #hud.inside .tracker,#hud.inside #log{display:none}
 }
+/* ---------- phone version: body.phone + .port / .land ---------- */
+#title .foot.ph,#tbMenu{display:none}
+body.phone #title .foot.ph{display:block}body.phone #title .foot.pc{display:none}
+body.phone{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.phone input{-webkit-user-select:text;user-select:text}
+body.phone #title .card{padding:24px 20px 18px;max-height:100%;overflow:auto}
+body.phone .logo{font-size:clamp(48px,14vw,76px)}
+body.phone .tagline{font-size:13.5px}
+/* compact HUD cards */
+body.phone .plaque{top:calc(8px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));padding:6px 10px;min-width:0;max-width:none;width:auto}
+body.phone .plaque .date{font-size:14px}
+body.phone .plaque .hour{font-size:11px;margin-top:0}
+body.phone .plaque .money{font-size:19px;margin-top:2px}
+body.phone .plaque .money small,body.phone .plaque .role{display:none}
+body.phone .sundial{margin-top:4px;height:3px}
+body.phone .stats{top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));width:128px;padding:6px 8px}
+body.phone .bar{grid-template-columns:50px 1fr;font-size:9.5px;margin:1px 0;gap:5px}
+body.phone .bar .tr{height:5px}
+body.phone .stars{margin-top:2px}body.phone .stars i{font-size:12px}
+body.phone #minimap{bottom:auto;top:calc(88px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));width:104px;padding:3px}
+body.phone #minimap .mt{font-size:10px;margin:0 0 2px 2px}
+body.phone .tracker{bottom:auto;padding:6px 10px}
+body.phone .tracker .qs,body.phone .tracker .qd{display:none}
+body.phone .tracker .qh{font-size:9px}body.phone .tracker .qt{font-size:14px;margin:1px 0 0}
+body.phone .zone{display:none}
+body.phone #hud.inside .zone{display:flex;top:auto;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom));font-size:11px;padding:4px 10px}
+body.phone #hud.inside #hotbar{display:none}
+body.phone #log{bottom:auto;gap:3px}
+body.phone #log div{font-size:11.5px;padding:4px 8px}
+body.phone #log div:nth-last-child(n+3){display:none}
+body.phone #hud.inside #log{display:flex}
+body.phone #prompt{font-size:13px;padding:6px 14px 6px 6px;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;z-index:5}
+body.phone #prompt kbd{width:24px;height:24px;font-size:12px}
+body.phone #hotbar{bottom:calc(8px + env(safe-area-inset-bottom));padding:4px;gap:3px}
+body.phone .slot{width:36px;height:36px;font-size:17px}
+body.phone #speedo{padding:5px 10px;min-width:0}
+body.phone #speedo .sp{font-size:26px}body.phone #speedo .cn{font-size:10px}body.phone #speedo .dr{font-size:13px;min-height:0}
+/* menu becomes a popover behind ☰ */
+body.phone .menu{display:none}
+body.phone .menu.open{display:grid;grid-template-columns:repeat(4,60px);gap:6px;position:fixed;left:auto;top:auto;right:calc(8px + env(safe-area-inset-right));bottom:calc(62px + env(safe-area-inset-bottom));padding:8px;z-index:7}
+body.phone .menu.open .mbtn{width:60px;height:56px;font-size:20px}body.phone .menu.open .mbtn span{font-size:9px}
+body.phone #tbMenu{display:block;position:absolute;right:calc(8px + env(safe-area-inset-right));bottom:calc(8px + env(safe-area-inset-bottom));width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(#f3f5f0,#dde3da);font-size:22px;color:var(--ink);pointer-events:auto;touch-action:manipulation}
+body.phone.menuopen #joy,body.phone.menuopen #tbtns{visibility:hidden}
+/* thumb controls */
+body.phone #joy{left:calc(16px + env(safe-area-inset-left));bottom:calc(60px + env(safe-area-inset-bottom));width:124px;height:124px}
+body.phone #joy i{left:37px;top:37px}
+body.phone #tbtns{display:block;right:calc(10px + env(safe-area-inset-right));bottom:calc(62px + env(safe-area-inset-bottom));width:210px;height:150px;pointer-events:none}
+body.phone #tbtns button{position:absolute;width:56px;height:56px;font-size:11px;letter-spacing:.02em;pointer-events:auto;display:none;padding:0}
+body.phone #tbtns button.on{display:block}
+body.phone #tbE{right:0;bottom:0;width:78px!important;height:78px!important;font-size:26px!important;background:rgba(29,39,36,.55)}
+body.phone #tbE.ready{background:var(--amber);color:var(--ink);border-color:#fff;box-shadow:0 0 0 4px rgba(226,161,27,.35)}
+body.phone #tbF{right:88px;bottom:0;background:rgba(30,107,74,.8)}
+body.phone #tbJ,body.phone #tbSp{right:11px;bottom:88px}
+body.phone #tbJ{background:rgba(181,51,43,.75)}
+body.phone #tbH{right:74px;bottom:74px}
+body.phone #tbR{right:150px;bottom:62px}
+/* portrait */
+body.phone.port .plaque{max-width:calc(100% - 152px)}
+body.phone.port .tracker{top:calc(84px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));width:calc(100% - 136px)}
+body.phone.port #log{top:auto;bottom:calc(250px + env(safe-area-inset-bottom));left:8px;width:calc(100% - 16px)}
+body.phone.port #prompt{bottom:calc(218px + env(safe-area-inset-bottom))}
+body.phone.port #speedo{left:calc(16px + env(safe-area-inset-left));bottom:calc(196px + env(safe-area-inset-bottom))}
+/* landscape */
+body.phone.land .plaque{max-width:220px}
+body.phone.land .stats{right:calc(120px + env(safe-area-inset-right))}
+body.phone.land #minimap{top:calc(8px + env(safe-area-inset-top))}
+body.phone.land .tracker{top:calc(84px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));width:230px}
+body.phone.land #log{top:calc(150px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));width:260px}
+body.phone.land #joy{bottom:calc(14px + env(safe-area-inset-bottom))}
+body.phone.land #tbtns{bottom:calc(10px + env(safe-area-inset-bottom))}
+body.phone.land #tbMenu{bottom:auto;top:calc(8px + env(safe-area-inset-top));right:calc(256px + env(safe-area-inset-right))}
+body.phone.land .menu.open{bottom:auto;top:calc(60px + env(safe-area-inset-top));right:calc(120px + env(safe-area-inset-right))}
+body.phone.land #prompt{bottom:calc(58px + env(safe-area-inset-bottom))}
+body.phone.land #speedo{left:calc(150px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom))}body.phone.land #speedo .cn{display:none}
+body.phone.land #log div:nth-last-child(n+2){display:none}
+/* sheets */
+body.phone #modal{padding:0;place-items:end center}
+body.phone #mcard{width:100%;max-height:calc(100dvh - 16px - env(safe-area-inset-top));border-radius:14px 14px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+body.phone.land #mcard{width:min(760px,100%);max-height:100dvh}
+body.phone .mhead{padding:12px 16px;gap:12px}
+body.phone .mhead h2{font-size:22px}body.phone .mhead p{font-size:12px}
+body.phone .mhead .gl{font-size:22px;min-width:44px;padding:5px 8px}
+body.phone .mhead .x{font-size:26px;top:6px;padding:6px 10px}
+body.phone .mbody{padding:12px 14px;-webkit-overflow-scrolling:touch}
+body.phone .mfoot{padding:10px 14px 12px}
+body.phone.land .mhead{padding:8px 14px}body.phone.land .mhead p{display:none}
+/* creator */
+body.phone.land #creator{grid-template-columns:210px 1fr;grid-template-rows:none}
+body.phone.land #creator .preview{flex-direction:column;padding:10px;border-bottom:0;border-right:1px solid rgba(38,52,58,.2)}
+body.phone.land #pcan{width:130px}
+body.phone.land #creator .preview h2{font-size:20px}
+body.phone.land .summary{font-size:11.5px}
+body.phone.land #creator .opts{padding:12px 16px 90px}
+body.phone .cbar{padding:8px 12px calc(8px + env(safe-area-inset-bottom));gap:8px}
+body.phone .cbar .btn{padding:10px 14px;font-size:14px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -237,12 +336,13 @@ input[type=text]{font-family:var(--sans);font-size:15px;padding:9px 10px;border:
     <h1 class="logo">Lietuva</h1>
     <div class="logo-sub">Lietuvos gyvenimas</div>
     <div class="flag"><i></i><i></i><i></i></div>
-    <p class="tagline">Grow up anywhere from Vilnius to the dunes of Nida. Go to school, chase bottle money, join a drift club, or climb the street ranks from <i>pacanas</i> to <i>gangsteris</i>. Eight towns, one open country.</p>
+    <p class="tagline">Grow up anywhere from Vilnius to the dunes of Nida. Go to school, chase bottle money, join a drift club, or climb the street ranks from <i>pacanas</i> to <i>gangsteris</i>. Eight towns, fast travel between them.</p>
     <div class="stack">
       <button class="btn amber" id="bNew">Pradėti naują gyvenimą · New life</button>
       <button class="btn ghost" id="bCont">Tęsti · Continue</button>
     </div>
-    <div class="foot">WASD or arrows to move. <b>E</b> talk and enter, <b>F</b> get in a car, <b>J</b> or click to punch, <b>Space</b> handbrake. <b>M</b> map, <b>Q</b> quests, <b>T</b> phone.</div>
+    <div class="foot ph">Kairėje vairalazdė (stumk iki galo, kad bėgtum). Didysis <b>E</b> mygtukas kalbina ir atidaro duris. Paspausk užrašą virš mygtukų. <b>☰</b> atidaro meniu, du pirštai priartina.</div>
+    <div class="foot pc">WASD or arrows to move. <b>E</b> talk and enter, <b>F</b> get in a car, <b>J</b> or click to punch, <b>Space</b> handbrake. <b>M</b> map, <b>Q</b> quests, <b>T</b> phone.</div>
   </div>
 </div>
 
@@ -304,6 +404,6 @@ input[type=text]{font-family:var(--sans);font-size:15px;padding:9px 10px;border:
 </div>
 <div id="toast" class="card"><div class="tk" id="toastK">LT</div><div><div class="tt" id="toastT"></div><div class="ts" id="toastS"></div></div></div>
 <div id="modal" class="hidden"><div class="card" id="mcard"></div></div>
-<div id="touch" class="hidden"><div id="joy"><i></i></div><div id="tbtns"><button data-k="KeyF">AUTO</button><button data-k="KeyE">E</button><button data-k="Space">STAB.</button><button data-k="KeyJ">SMŪGIS</button></div></div>
+<div id="touch" class="hidden"><div id="joy"><i></i></div><div id="tbtns"><button id="tbE" data-k="KeyE">E</button><button id="tbF" data-k="KeyF">SĖSTI</button><button id="tbJ" data-k="KeyJ">SMŪGIS</button><button id="tbSp" data-k="Space">STAB.</button><button id="tbH" data-k="KeyH">PYP</button><button id="tbR" data-k="KeyR">RADIJAS</button></div><button id="tbMenu" aria-label="Meniu">☰</button></div>
 
 <script>

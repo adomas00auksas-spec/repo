@@ -2,7 +2,11 @@
 <html lang="lt">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#26343A">
 <title>Lietuvos Gyvenimas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -226,6 +230,101 @@ input[type=text]{font-family:var(--sans);font-size:15px;padding:9px 10px;border:
   #prompt{bottom:calc(128px + env(safe-area-inset-bottom))}
   #hud.inside .tracker,#hud.inside #log{display:none}
 }
+/* ---------- phone version: body.phone + .port / .land ---------- */
+#title .foot.ph,#tbMenu{display:none}
+body.phone #title .foot.ph{display:block}body.phone #title .foot.pc{display:none}
+body.phone{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body.phone input{-webkit-user-select:text;user-select:text}
+body.phone #title .card{padding:24px 20px 18px;max-height:100%;overflow:auto}
+body.phone .logo{font-size:clamp(48px,14vw,76px)}
+body.phone .tagline{font-size:13.5px}
+/* compact HUD cards */
+body.phone .plaque{top:calc(8px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));padding:6px 10px;min-width:0;max-width:none;width:auto}
+body.phone .plaque .date{font-size:14px}
+body.phone .plaque .hour{font-size:11px;margin-top:0}
+body.phone .plaque .money{font-size:19px;margin-top:2px}
+body.phone .plaque .money small,body.phone .plaque .role{display:none}
+body.phone .sundial{margin-top:4px;height:3px}
+body.phone .stats{top:calc(8px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));width:128px;padding:6px 8px}
+body.phone .bar{grid-template-columns:50px 1fr;font-size:9.5px;margin:1px 0;gap:5px}
+body.phone .bar .tr{height:5px}
+body.phone .stars{margin-top:2px}body.phone .stars i{font-size:12px}
+body.phone #minimap{bottom:auto;top:calc(88px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));width:104px;padding:3px}
+body.phone #minimap .mt{font-size:10px;margin:0 0 2px 2px}
+body.phone .tracker{bottom:auto;padding:6px 10px}
+body.phone .tracker .qs,body.phone .tracker .qd{display:none}
+body.phone .tracker .qh{font-size:9px}body.phone .tracker .qt{font-size:14px;margin:1px 0 0}
+body.phone .zone{display:none}
+body.phone #hud.inside .zone{display:flex;top:auto;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom));font-size:11px;padding:4px 10px}
+body.phone #hud.inside #hotbar{display:none}
+body.phone #log{bottom:auto;gap:3px}
+body.phone #log div{font-size:11.5px;padding:4px 8px}
+body.phone #log div:nth-last-child(n+3){display:none}
+body.phone #hud.inside #log{display:flex}
+body.phone #prompt{font-size:13px;padding:6px 14px 6px 6px;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;z-index:5}
+body.phone #prompt kbd{width:24px;height:24px;font-size:12px}
+body.phone #hotbar{bottom:calc(8px + env(safe-area-inset-bottom));padding:4px;gap:3px}
+body.phone .slot{width:36px;height:36px;font-size:17px}
+body.phone #speedo{padding:5px 10px;min-width:0}
+body.phone #speedo .sp{font-size:26px}body.phone #speedo .cn{font-size:10px}body.phone #speedo .dr{font-size:13px;min-height:0}
+/* menu becomes a popover behind ☰ */
+body.phone .menu{display:none}
+body.phone .menu.open{display:grid;grid-template-columns:repeat(4,60px);gap:6px;position:fixed;left:auto;top:auto;right:calc(8px + env(safe-area-inset-right));bottom:calc(62px + env(safe-area-inset-bottom));padding:8px;z-index:7}
+body.phone .menu.open .mbtn{width:60px;height:56px;font-size:20px}body.phone .menu.open .mbtn span{font-size:9px}
+body.phone #tbMenu{display:block;position:absolute;right:calc(8px + env(safe-area-inset-right));bottom:calc(8px + env(safe-area-inset-bottom));width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:linear-gradient(#f3f5f0,#dde3da);font-size:22px;color:var(--ink);pointer-events:auto;touch-action:manipulation}
+body.phone.menuopen #joy,body.phone.menuopen #tbtns{visibility:hidden}
+/* thumb controls */
+body.phone #joy{left:calc(16px + env(safe-area-inset-left));bottom:calc(60px + env(safe-area-inset-bottom));width:124px;height:124px}
+body.phone #joy i{left:37px;top:37px}
+body.phone #tbtns{display:block;right:calc(10px + env(safe-area-inset-right));bottom:calc(62px + env(safe-area-inset-bottom));width:210px;height:150px;pointer-events:none}
+body.phone #tbtns button{position:absolute;width:56px;height:56px;font-size:11px;letter-spacing:.02em;pointer-events:auto;display:none;padding:0}
+body.phone #tbtns button.on{display:block}
+body.phone #tbE{right:0;bottom:0;width:78px!important;height:78px!important;font-size:26px!important;background:rgba(29,39,36,.55)}
+body.phone #tbE.ready{background:var(--amber);color:var(--ink);border-color:#fff;box-shadow:0 0 0 4px rgba(226,161,27,.35)}
+body.phone #tbF{right:88px;bottom:0;background:rgba(30,107,74,.8)}
+body.phone #tbJ,body.phone #tbSp{right:11px;bottom:88px}
+body.phone #tbJ{background:rgba(181,51,43,.75)}
+body.phone #tbH{right:74px;bottom:74px}
+body.phone #tbR{right:150px;bottom:62px}
+/* portrait */
+body.phone.port .plaque{max-width:calc(100% - 152px)}
+body.phone.port .tracker{top:calc(84px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));width:calc(100% - 136px)}
+body.phone.port #log{top:auto;bottom:calc(250px + env(safe-area-inset-bottom));left:8px;width:calc(100% - 16px)}
+body.phone.port #prompt{bottom:calc(218px + env(safe-area-inset-bottom))}
+body.phone.port #speedo{left:calc(16px + env(safe-area-inset-left));bottom:calc(196px + env(safe-area-inset-bottom))}
+/* landscape */
+body.phone.land .plaque{max-width:220px}
+body.phone.land .stats{right:calc(120px + env(safe-area-inset-right))}
+body.phone.land #minimap{top:calc(8px + env(safe-area-inset-top))}
+body.phone.land .tracker{top:calc(84px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));width:230px}
+body.phone.land #log{top:calc(150px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));width:260px}
+body.phone.land #joy{bottom:calc(14px + env(safe-area-inset-bottom))}
+body.phone.land #tbtns{bottom:calc(10px + env(safe-area-inset-bottom))}
+body.phone.land #tbMenu{bottom:auto;top:calc(8px + env(safe-area-inset-top));right:calc(256px + env(safe-area-inset-right))}
+body.phone.land .menu.open{bottom:auto;top:calc(60px + env(safe-area-inset-top));right:calc(120px + env(safe-area-inset-right))}
+body.phone.land #prompt{bottom:calc(58px + env(safe-area-inset-bottom))}
+body.phone.land #speedo{left:calc(150px + env(safe-area-inset-left));bottom:calc(10px + env(safe-area-inset-bottom))}body.phone.land #speedo .cn{display:none}
+body.phone.land #log div:nth-last-child(n+2){display:none}
+/* sheets */
+body.phone #modal{padding:0;place-items:end center}
+body.phone #mcard{width:100%;max-height:calc(100dvh - 16px - env(safe-area-inset-top));border-radius:14px 14px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+body.phone.land #mcard{width:min(760px,100%);max-height:100dvh}
+body.phone .mhead{padding:12px 16px;gap:12px}
+body.phone .mhead h2{font-size:22px}body.phone .mhead p{font-size:12px}
+body.phone .mhead .gl{font-size:22px;min-width:44px;padding:5px 8px}
+body.phone .mhead .x{font-size:26px;top:6px;padding:6px 10px}
+body.phone .mbody{padding:12px 14px;-webkit-overflow-scrolling:touch}
+body.phone .mfoot{padding:10px 14px 12px}
+body.phone.land .mhead{padding:8px 14px}body.phone.land .mhead p{display:none}
+/* creator */
+body.phone.land #creator{grid-template-columns:210px 1fr;grid-template-rows:none}
+body.phone.land #creator .preview{flex-direction:column;padding:10px;border-bottom:0;border-right:1px solid rgba(38,52,58,.2)}
+body.phone.land #pcan{width:130px}
+body.phone.land #creator .preview h2{font-size:20px}
+body.phone.land .summary{font-size:11.5px}
+body.phone.land #creator .opts{padding:12px 16px 90px}
+body.phone .cbar{padding:8px 12px calc(8px + env(safe-area-inset-bottom));gap:8px}
+body.phone .cbar .btn{padding:10px 14px;font-size:14px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -237,12 +336,13 @@ input[type=text]{font-family:var(--sans);font-size:15px;padding:9px 10px;border:
     <h1 class="logo">Lietuva</h1>
     <div class="logo-sub">Lietuvos gyvenimas</div>
     <div class="flag"><i></i><i></i><i></i></div>
-    <p class="tagline">Grow up anywhere from Vilnius to the dunes of Nida. Go to school, chase bottle money, join a drift club, or climb the street ranks from <i>pacanas</i> to <i>gangsteris</i>. Eight towns, one open country.</p>
+    <p class="tagline">Grow up anywhere from Vilnius to the dunes of Nida. Go to school, chase bottle money, join a drift club, or climb the street ranks from <i>pacanas</i> to <i>gangsteris</i>. Eight towns, fast travel between them.</p>
     <div class="stack">
       <button class="btn amber" id="bNew">Pradėti naują gyvenimą · New life</button>
       <button class="btn ghost" id="bCont">Tęsti · Continue</button>
     </div>
-    <div class="foot">WASD or arrows to move. <b>E</b> talk and enter, <b>F</b> get in a car, <b>J</b> or click to punch, <b>Space</b> handbrake. <b>M</b> map, <b>Q</b> quests, <b>T</b> phone.</div>
+    <div class="foot ph">Kairėje vairalazdė (stumk iki galo, kad bėgtum). Didysis <b>E</b> mygtukas kalbina ir atidaro duris. Paspausk užrašą virš mygtukų. <b>☰</b> atidaro meniu, du pirštai priartina.</div>
+    <div class="foot pc">WASD or arrows to move. <b>E</b> talk and enter, <b>F</b> get in a car, <b>J</b> or click to punch, <b>Space</b> handbrake. <b>M</b> map, <b>Q</b> quests, <b>T</b> phone.</div>
   </div>
 </div>
 
@@ -304,7 +404,7 @@ input[type=text]{font-family:var(--sans);font-size:15px;padding:9px 10px;border:
 </div>
 <div id="toast" class="card"><div class="tk" id="toastK">LT</div><div><div class="tt" id="toastT"></div><div class="ts" id="toastS"></div></div></div>
 <div id="modal" class="hidden"><div class="card" id="mcard"></div></div>
-<div id="touch" class="hidden"><div id="joy"><i></i></div><div id="tbtns"><button data-k="KeyF">AUTO</button><button data-k="KeyE">E</button><button data-k="Space">STAB.</button><button data-k="KeyJ">SMŪGIS</button></div></div>
+<div id="touch" class="hidden"><div id="joy"><i></i></div><div id="tbtns"><button id="tbE" data-k="KeyE">E</button><button id="tbF" data-k="KeyF">SĖSTI</button><button id="tbJ" data-k="KeyJ">SMŪGIS</button><button id="tbSp" data-k="Space">STAB.</button><button id="tbH" data-k="KeyH">PYP</button><button id="tbR" data-k="KeyR">RADIJAS</button></div><button id="tbMenu" aria-label="Meniu">☰</button></div>
 
 <script>
 
@@ -1086,7 +1186,7 @@ const cv=$('#world'),ctx=cv.getContext('2d');
 let VW=0,VH=0,DPR=1,ZOOM=1,ZMUL=1;
 const cam={x:0,y:0};
 const dark=document.createElement('canvas'),dctx=dark.getContext('2d');
-function resize(){DPR=Math.min(2,window.devicePixelRatio||1);VW=innerWidth;VH=innerHeight;ZOOM=(VW<700?.8:1)*ZMUL;
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);VW=innerWidth;VH=innerHeight;ZOOM=(Math.min(VW,VH)<500?.74:VW<700?.8:1)*ZMUL;
   cv.width=VW*DPR;cv.height=VH*DPR;dark.width=Math.ceil(VW/2);dark.height=Math.ceil(VH/2)}
 addEventListener('resize',resize);
 
@@ -2125,7 +2225,7 @@ function loadLife(s){s.owners.forEach((o,i)=>{if(DISTRICTS[i])DISTRICTS[i].owner
   if(P.x==null||!inb(tx(P.x),tx(P.y))||SOLID_FOOT[tileAt(tx(P.x),tx(P.y))]){const sp=arrivalSpot('bus');P.x=sp.x;P.y=sp.y}
   (s.decor||[]).filter(d=>!d.map||d.map===MAP.id).forEach(d=>DECOR.push(d));spawnStartVehicles();startGame(false)}
 function startGame(isNew){refreshOverlay();$('#title').classList.add('hidden');$('#creator').classList.add('hidden');$('#hud').classList.remove('hidden');
-  if(matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
+  if(IS_PHONE||matchMedia('(pointer:coarse)').matches)$('#touch').classList.remove('hidden');
   running=true;WINTER=null;seasonCheck();setTimeout(()=>{syncCrew();syncDog()},50);LASTCITY=MAP.id;P.visited[P.city]=true;renderHotbar();hudUpdate();cam.x=P.x-VW/2/ZOOM;cam.y=P.y-VH/2/ZOOM;
   if(isNew){const c=cityById(P.city),cls=CLASSES.find(x=>x.id===P.cls);const sch=FACTIONS[P.school];
     const intro={6:`Tomorrow is your first day at ${sch.name}. Mum already bought the flowers for the teacher. Today the yard is yours: bottles to collect, a taromatas that pays 10 cents each, and an ice cream van somewhere.`,
@@ -3315,13 +3415,56 @@ function drawFunDecor(g,d){if(d.k==='cone'){g.fillStyle='#E2621B';g.beginPath();
 function funTalkDecor(){for(const d of DECOR){if(d.k==='fstall'&&dist(d.x+15,d.y,P.x,P.y)<36)return{key:'E',text:'Kaziuko mugės prekystalis',fn:festStallTalk};if(d.k==='chess'&&dist(d.x+13,d.y,P.x,P.y)<40)return{key:'E',text:'Šachmatai su pensininkais',fn:chessPuzzle}}return null}
 function placeChess(){const D=CITYDATA[MAP.id];if(!D||!D.chess||MAP.chessPlaced)return;MAP.chessPlaced=true;const[x,y]=MAP.pr.p(D.chess);const t=nearestTile(Math.round(x),Math.round(y),t=>t===T.PARK||WALKABLE[t]);if(!t)return;
   DECOR.push({k:'chess',x:t[0]*TS,y:t[1]*TS+10});for(let k=0;k<2;k++){const e=spawnPed('elder',t[0]*TS+(k?44:-14),t[1]*TS+18,null,{keep:true,name:k?'Pensininkas Algirdas':'Pensininkas Vytautas',idle:true,special:'chessman'});e.lk.cap='#3B3F45'}}
+/* ---------- phone version: compact HUD, context buttons, pinch zoom, fullscreen ---------- */
+const IS_PHONE=matchMedia('(pointer:coarse)').matches||('ontouchstart' in window&&Math.min(screen.width,screen.height)<900)||/[?&]phone/.test(location.search);
+function phoneOrient(){const land=innerWidth>innerHeight;document.body.classList.toggle('land',land);document.body.classList.toggle('port',!land)}
+function phoneMenu(open){const m=$('.menu');const o=open===undefined?!m.classList.contains('open'):open;m.classList.toggle('open',o);document.body.classList.toggle('menuopen',o);$('#tbMenu').textContent=o?'✕':'☰'}
+function goFull(){if(!IS_PHONE)return;const d=document.documentElement;try{const r=(d.requestFullscreen||d.webkitRequestFullscreen||(()=>{})).call(d);if(r&&r.catch)r.catch(()=>{})}catch(e){}}
+// in a car the stick points where you want to go; the game turns it into throttle and steering
+function phoneDrive(){const c=P&&P.inCar;if(!c||!JOY.on)return;['KeyW','KeyA','KeyS','KeyD'].forEach(k=>keys.delete(k));const m=Math.hypot(JOY.x,JOY.y);if(m<.25)return;
+  const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a)),tgt=Math.atan2(JOY.y,JOY.x),d=wrap(tgt-c.ang);
+  if(Math.abs(d)<2.4){keys.add('KeyW');if(Math.abs(d)>.1)keys.add(d>0?'KeyD':'KeyA')}
+  else{keys.add('KeyS');const d2=wrap(tgt-c.ang-Math.PI);if(Math.abs(d2)>.1)keys.add(d2>0?'KeyA':'KeyD')}}
+// show only the buttons that make sense right now
+const PB={};
+function phoneButtons(){if(!running)return;const inCar=!!P.inCar,inside=!!SCENE;
+  const set=(id,on,txt)=>{const b=PB[id]||(PB[id]=$('#'+id));b.classList.toggle('on',on);if(txt&&b.textContent!==txt)b.textContent=txt};
+  const pr=PROMPT&&!paused?PROMPT:null;const ready=!!(pr&&(pr.fn||pr.hold||pr.key==='↓'));
+  set('tbE',true);PB.tbE.classList.toggle('ready',ready);
+  const car=!inside&&!inCar?nearestCar(40):null;
+  set('tbF',!inside&&(inCar||!!car),inCar?'IŠLIPTI':car&&car.owned===undefined&&CARS[car.model].kind!=='bike'?'VOGTI':'SĖSTI');
+  set('tbJ',!inCar);set('tbSp',inCar);set('tbH',inCar);set('tbR',inCar,P.radio?'📻 '+RADIO[P.radio].n.split(' ')[0]:'RADIJAS');
+  const pe=$('#prompt');if(pr&&pr.key==='F')pe.classList.add('hidden')}
+function phoneSetup(){if(!IS_PHONE)return;document.body.classList.add('phone');phoneOrient();addEventListener('resize',phoneOrient);
+  addEventListener('orientationchange',()=>setTimeout(()=>{phoneOrient();resize()},200));
+  $('#tbMenu').addEventListener('click',e=>{e.stopPropagation();phoneMenu()});
+  $$('.menu .mbtn').forEach(b=>b.addEventListener('click',()=>phoneMenu(false)));
+  // tap HUD cards to open their panels
+  $('.plaque').addEventListener('click',()=>running&&openSelf());$('#hStats').addEventListener('click',()=>running&&openSelf());
+  $('#minimap').addEventListener('click',()=>running&&openMap());$('#hTrack').addEventListener('click',()=>running&&openQuests());
+  // the prompt pill is a button too: tap = E, press and hold = hold action, ↓ = walk out
+  const pe=$('#prompt');
+  pe.addEventListener('pointerdown',e=>{e.preventDefault();if(!PROMPT)return;if(PROMPT.key==='↓'){if(SCENE)leaveScene();return}if(PROMPT.key==='F'){keyAction('KeyF');return}keyAction('KeyE');keys.add('KeyE')});
+  const up=()=>{keys.delete('KeyE');HOLD.lock=false};pe.addEventListener('pointerup',up);pe.addEventListener('pointerleave',up);pe.addEventListener('pointercancel',up);
+  // the big E button also walks you out of a building
+  $('#tbE').addEventListener('pointerdown',()=>{if(PROMPT&&PROMPT.key==='↓'&&SCENE)leaveScene()});
+  // pinch to zoom on the world, no stray taps
+  const cv=$('#world');let pinch=null;
+  cv.addEventListener('touchstart',e=>{e.preventDefault();if(e.touches.length===2){const[a,b]=e.touches;pinch={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),z:ZMUL}}},{passive:false});
+  cv.addEventListener('touchmove',e=>{e.preventDefault();if(pinch&&e.touches.length===2){const[a,b]=e.touches;const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);ZMUL=clamp(pinch.z*d/pinch.d,.55,1.7);resize()}},{passive:false});
+  cv.addEventListener('touchend',e=>{if(e.touches.length<2)pinch=null});
+  // stop iOS double-tap zoom and rubber-band scrolling on HUD
+  document.addEventListener('dblclick',e=>e.preventDefault());
+  document.addEventListener('gesturestart',e=>e.preventDefault());
+  ['#bNew','#bCont','#cStart'].forEach(s=>{const b=$(s);if(b)b.addEventListener('click',goFull)});
+  setInterval(phoneButtons,150);resize()}
 
 /* =====================================================================
    MAIN LOOP
    ===================================================================== */
 let acc1=0,acc2=0,acc3=0,lastT=performance.now();
 function update(dt){
-  if(!running||paused)return;
+  if(!running||paused)return;if(IS_PHONE)phoneDrive();
   if(SCENE){updateInterior(dt);return}
   tickTime(dt);updatePlayer(dt);
   for(const c of ENT.cars){if(c===P.inCar)continue;
@@ -3345,7 +3488,7 @@ function update(dt){
   else{HOLD.t=0;$('#hold').classList.add('hidden')}
   if(P.inCar){const sp=Math.hypot(P.inCar.vx,P.inCar.vy);$('#spV').innerHTML=`${Math.round(sp*.34)}<small>km/h</small>`;$('#spD').textContent=DRIFT.cur>100?`ŠONINIS ${Math.round(DRIFT.cur)}`:(G.mission&&G.mission.type==='driftc'?`${Math.round(G.mission.got)}/${G.mission.need}`:(P.radio?'📻 '+RADIO[P.radio].n:''))}
 }
-function showPrompt(){const el=$('#prompt');if(!PROMPT||paused){el.classList.add('hidden');return}el.classList.remove('hidden');el.querySelector('kbd').textContent=PROMPT.key;$('#promptTxt').textContent=PROMPT.text}
+function showPrompt(){const el=$('#prompt');if(!PROMPT||paused||IS_PHONE&&PROMPT.key==='F'){el.classList.add('hidden');return}el.classList.remove('hidden');el.querySelector('kbd').textContent=PROMPT.key;$('#promptTxt').textContent=PROMPT.text}
 
 /* ---------- render ---------- */
 let titlePan=0;
@@ -3461,11 +3604,11 @@ addEventListener('keydown',e=>{if(e.target&&e.target.tagName==='INPUT')return;if
   if(!e.repeat)keyAction(e.code);if(running&&$('#modal').classList.contains('hidden'))keys.add(e.code)});
 addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='KeyE')HOLD.lock=false});
 addEventListener('blur',()=>keys.clear());
-cv.addEventListener('mousedown',e=>{if(!running||paused)return;if(e.button===0)playerPunch()});
+cv.addEventListener('mousedown',e=>{if(!running||paused||IS_PHONE)return;if(e.button===0)playerPunch()});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
 cv.addEventListener('wheel',e=>{if(!running)return;e.preventDefault();ZMUL=clamp(ZMUL*(e.deltaY>0?.9:1.1),.55,1.7);resize()},{passive:false});
 (function touchSetup(){const joy=$('#joy'),knob=joy.querySelector('i');let pid=null;
-  const setKeys=()=>{['KeyW','KeyA','KeyS','KeyD'].forEach(k=>keys.delete(k));if(!JOY.on||!P||!P.inCar)return;if(JOY.y<-.3)keys.add('KeyW');if(JOY.y>.3)keys.add('KeyS');if(JOY.x<-.3)keys.add('KeyA');if(JOY.x>.3)keys.add('KeyD')};
+  const setKeys=()=>{['KeyW','KeyA','KeyS','KeyD','ShiftLeft'].forEach(k=>keys.delete(k));if(JOY.on&&P&&!P.inCar&&Math.hypot(JOY.x,JOY.y)>.92)keys.add('ShiftLeft');if(!JOY.on||!P||!P.inCar||IS_PHONE)return;if(JOY.y<-.3)keys.add('KeyW');if(JOY.y>.3)keys.add('KeyS');if(JOY.x<-.3)keys.add('KeyA');if(JOY.x>.3)keys.add('KeyD')};
   const mv=e=>{const r=joy.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);const L=Math.hypot(x,y);if(L>1){x/=L;y/=L}JOY.x=x;JOY.y=y;knob.style.transform=`translate(${x*40}px,${y*40}px)`;setKeys()};
   joy.addEventListener('pointerdown',e=>{pid=e.pointerId;joy.setPointerCapture(pid);JOY.on=true;mv(e)});joy.addEventListener('pointermove',e=>{if(e.pointerId===pid)mv(e)});
   const end=()=>{JOY.on=false;JOY.x=JOY.y=0;knob.style.transform='';setKeys();pid=null};joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
@@ -3484,7 +3627,7 @@ $('#cBack').onclick=()=>{$('#creator').classList.add('hidden');$('#title').class
 $('#cRand').onclick=()=>{CR.sex=pick(['m','f']);CR.name=pick(NAMES[CR.sex]);CR.sur=ri(0,SURN.length-1);CR.surname=SURN[CR.sur][CR.sex==='f'?1:0];CR.age=pick(AGES).a;CR.city=pick(CITIES).id;CR.cls=pick(CLASSES).id;CR.parent=pick(PARENTS).id;
   CR.skin=pick(SKINS);CR.hair=pick(HAIRS);CR.outfit=pick(OUTFITS).id;CR.cap=Math.random()<.5;renderCreator()};
 $('#cStart').onclick=()=>{SND.init();SND.on=true;newLife()};
-resize();loadMap('vilnius');
+resize();loadMap('vilnius');phoneSetup();
 if(!loadSaved()){$('#bCont').disabled=true}
 requestAnimationFrame(frame);
 window.claude?.hot?.snapshot?.(()=>{saveGame(true);return{}});

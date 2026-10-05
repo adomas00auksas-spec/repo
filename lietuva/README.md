@@ -123,7 +123,12 @@ The playable file `index.html` is generated. Edit the parts in `src/` and run `.
 WASD / arrows move · Shift sprint (turbo in tuned cars) · **E** talk, enter, hold to tag ·
 **F** get in/out of a vehicle · **J** or click punch · **Space** handbrake · H horn ·
 R car radio · M map · Q quests · T phone (jobs) · C character · I items · L dictionary · 1–6 hotbar.
-On phones: joystick plus on-screen buttons.
+
+**Phone version.** Open the same file on a phone and it switches to a touch layout (portrait or landscape):
+compact HUD cards (tap them for character, map and quests), a joystick (push all the way to sprint),
+context buttons that appear only when they make sense (E glows amber when something can be used; get in / steal / get out;
+handbrake, horn and radio in a car), the prompt text is tappable too, ☰ opens the menu, pinch to zoom, and full screen on start.
+In a car, point the stick where you want to go and the game handles throttle and steering. Add `?phone` to the URL to force it on a desktop.
 
 ## Ideas for next versions
 
