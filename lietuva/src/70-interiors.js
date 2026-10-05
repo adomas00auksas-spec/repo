@@ -73,7 +73,7 @@ function tplHome(p){const cls=P.cls,big={low:[10,8],mid:[13,9],upper:[15,10],ric
 function tplShop(p){const s=mkRoom(15,11,{floor:'shop',wall:'#E9EDE6',title:p.name,sub:'Parduotuvė'});
   R.add(s,'fridgeShop',1,2,4,1);R.add(s,'fridgeShop',6,2,4,1);R.add(s,'fridgeShop',11,2,3,1);
   [[2,4],[8,4],[2,6],[8,6]].forEach(([x,y],i)=>R.add(s,'shelf',x,y,4,1,{seed:i}));
-  R.add(s,'counter',2,8,3,1,{reg:true,act:()=>poiMenu(p),label:'Kasa · checkout'});R.ped(s,'staff',3,7,{name:'Kasininkė',lk:staffLook('#C1272D',{female:true}),lines:[line('Laba diena! Ar turite „Maksi“ kortelę?','Good day! Do you have a Maksi card?'),line('Maišelio reikia?','Need a bag?')],act:()=>poiMenu(p)});
+  R.add(s,'counter',2,8,3,1,{reg:true,act:()=>{if(!queueEvent(p))poiMenu(p)},label:'Kasa · checkout'});R.ped(s,'staff',3,7,{name:'Kasininkė',lk:staffLook('#C1272D',{female:true}),lines:[line('Laba diena! Ar turite „Maksi“ kortelę?','Good day! Do you have a Maksi card?'),line('Maišelio reikia?','Need a bag?')],act:()=>poiMenu(p)});
   R.add(s,'taromatas',12,8,1,1,{act:returnBottles,label:'Taromatas · return bottles'});R.deco(s,'sign',6,1,3,{txt:'MAKSI',col:'#C1272D'});
   R.ped(s,'staff',10,9,{name:'Apsaugininkas',lk:staffLook('#1D2724',{female:false,cap:'#1D2724'}),lines:[line('Kuprinę parodyk.','Show me your backpack.'),line('Čia nevaikščiok su ledais.','No ice cream in here.')]});
   return s}

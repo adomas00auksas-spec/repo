@@ -15,7 +15,7 @@ function update(dt){
   if(!P.inCar){for(const c of ENT.cars){const sp=Math.hypot(c.vx,c.vy)||(c.cur||0);if(sp<130)continue;if(dist(c.x,c.y,P.x,P.y)<20&&P.inv_t<=0){hurtPlayer(sp/18,c);P.inv_t=.8;shake(6)}}}
   for(const f of ENT.fx){f.life-=dt;if(f.k==='spark'){f.x+=f.vx*dt;f.y+=f.vy*dt;f.vy+=300*dt}else{f.r+=dt*14}}ENT.fx=ENT.fx.filter(f=>f.life>0);
   for(const b of ENT.bubbles)b.life-=dt;ENT.bubbles=ENT.bubbles.filter(b=>b.life>0);
-  updateHeat(dt);tickMission(dt);
+  updateHeat(dt);tickMission(dt);tickCustomMission(dt);specialsTick(dt);angryTick(dt);viceTick(dt);
   acc1+=dt;acc2+=dt;acc3+=dt;
   if(acc1>.25){acc1=0;populate();PROMPT=findPrompt();showPrompt()}
   musicTick(dt);brawlTick(dt);
@@ -39,7 +39,7 @@ function render(){
   else{titlePan+=.15;const lm=POIS.find(p=>p.kind==='landmark')||{x:W*TS/2,y:H*TS/2};fx=lm.x+Math.sin(titlePan/200)*700;fy=lm.y+Math.cos(titlePan/260)*400}
   const tx0=fx-VW/2/Z,ty0=fy-VH/2/Z;cam.x=lerp(cam.x,tx0,running?.12:1);cam.y=lerp(cam.y,ty0,running?.12:1);
   if(!isFinite(cam.x)){cam.x=tx0;cam.y=ty0}
-  let sx=0,sy=0;if(SHAKE>0){sx=rnd(-SHAKE,SHAKE);sy=rnd(-SHAKE,SHAKE);SHAKE*=.88;if(SHAKE<.3)SHAKE=0}
+  let sx=0,sy=0;if(running&&P&&P.drunk>0){const t=performance.now()/700;sx+=Math.sin(t)*P.drunk*.25;sy+=Math.cos(t*1.3)*P.drunk*.15}if(SHAKE>0){sx=rnd(-SHAKE,SHAKE);sy=rnd(-SHAKE,SHAKE);SHAKE*=.88;if(SHAKE<.3)SHAKE=0}
   ctx.setTransform(DPR*Z,0,0,DPR*Z,(-cam.x+sx)*DPR*Z,(-cam.y+sy)*DPR*Z);
   const vx0=cam.x,vy0=cam.y,vx1=cam.x+VW/Z,vy1=cam.y+VH/Z;
   const c0=Math.floor(vx0/CHPX),c1=Math.floor(vx1/CHPX),r0=Math.floor(vy0/CHPX),r1=Math.floor(vy1/CHPX);
@@ -71,7 +71,7 @@ function render(){
   D.sort((a,b)=>a.y-b.y);const night=running&&G?nightLevel()>.25:false;
   for(const o of D){if(o.b)drawBuilding(ctx,o.b,night);else if(o.t)drawTree(ctx,o.t);else if(o.d){if(o.d.k==='tag')drawTag(o.d);else drawDecor(ctx,o.d)}
     else if(o.e&&o.e.pet){drawPet(o.e)}
-    else if(o.e){const e=o.e;drawPerson(ctx,e.x,e.y,e.lk,e.dir,e.anim,{ko:e.ko>0,punch:e.punch>0,badge:e.kind==='gang'||e.kind==='school'||e.kind==='crew'?(e.hostile?'#FF3B2F':FACTIONS[e.fac].color):e.kind==='police'?'#2F6BFF':null})}
+    else if(o.e){const e=o.e;drawPerson(ctx,e.x,e.y,e.lk,e.dir,e.anim,{ko:e.ko>0,punch:e.punch>0,badge:e.kind==='gang'||e.kind==='school'||e.kind==='crew'?(e.hostile?'#FF3B2F':FACTIONS[e.fac].color):e.kind==='police'?'#2F6BFF':null,squat:e.squat&&!e.hostile&&!e.angry&&!e.approach})}
     else if(o.c){drawCar(ctx,o.c);if(o.c===(P&&P.inCar)&&CARS[o.c.model].kind==='bike')drawPerson(ctx,o.c.x,o.c.y+4,playerLook(),dirFromAng(o.c.ang),0,{})}
     else if(o.p){drawPerson(ctx,P.x,P.y,playerLook(),P.dir,P.anim,{punch:P.punchT>0,item:P.gear.bat&&P.age>=16?'bat':null});
       ctx.fillStyle='#E2A11B';ctx.beginPath();ctx.moveTo(P.x-5,P.y-58*(playerLook().scale));ctx.lineTo(P.x+5,P.y-58*(playerLook().scale));ctx.lineTo(P.x,P.y-52*(playerLook().scale));ctx.fill()}}

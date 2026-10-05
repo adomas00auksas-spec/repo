@@ -230,6 +230,7 @@ const SHOPS={
  shop:{name:'Parduotuvė „Maksi“',items:['kibinas','kepta','gira','energ','ledai','saltibarsciai','bandage','spray']},
  kebab:{name:'Kebabinė',items:['kebabas','gira','kepta']},
  cafe:{name:'Kavinė',items:['cepelinai','saltibarsciai','kibinas','sakotis']},
+ kiosk:{name:'Spaudos kioskas',items:['laikrastis','kramtomoji','energ','gira','ledai']},
  market:{name:'Turgus',items:['kibinas','saltibarsciai','sakotis','spray','bat','bandage']},
 };
 

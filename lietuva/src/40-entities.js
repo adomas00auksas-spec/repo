@@ -34,8 +34,8 @@ function randomLook(kind,fac){
   if(kind==='boss'){const f=FACTIONS[fac];lk.outfit=f.type==='auto'?'#1D1F22':f.color;lk.vest=f.type==='auto'?f.color:null;lk.stripe=f.type==='gang';lk.cap=f.type==='gang'?'#111':null;lk.female=/Laura|Agnė|Ugnė/.test(f.boss)}
   return lk}
 function playerLook(){const p=P,o=OUTFITS.find(o=>o.id===p.look.outfit)||OUTFITS[0];const f=myFac();
-  return {skin:p.look.skin,hair:p.look.hair,female:p.sex==='f',outfit:p.look.color||o.col,stripe:o.stripe,cap:p.look.cap?'#141414':null,pants:o.id==='suit'?'#2A3140':'#2C3440',
-    scale:p.age<10?.74:p.age<15?.88:1,vest:f&&f.type!=='gang'&&p.look.outfit!=='zalgiris'?f.color:null,bag:p.age<16?'#2D5DA8':null,glasses:p.look.glasses,chain:p.look.chain,jersey:o.jersey}}
+  return applyStyle({skin:p.look.skin,hair:p.look.hair,female:p.sex==='f',outfit:p.look.color||o.col,stripe:o.stripe,cap:p.look.cap?'#141414':null,pants:o.id==='suit'?'#2A3140':'#2C3440',
+    scale:p.age<10?.74:p.age<15?.88:1,vest:f&&f.type!=='gang'&&p.look.outfit!=='zalgiris'?f.color:null,bag:p.age<16?'#2D5DA8':null,glasses:p.look.glasses,chain:p.look.chain,jersey:o.jersey,smoke:P.smokeT>0})}
 
 /* ---------- spawning ---------- */
 function randomTileNear(px,py,rmin,rmax,test){for(let k=0;k<30;k++){const a=rnd(Math.PI*2),r=rnd(rmin,rmax),x=tx(px)+Math.round(Math.cos(a)*r),y=tx(py)+Math.round(Math.sin(a)*r);
