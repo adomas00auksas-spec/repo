@@ -6400,7 +6400,7 @@ requestAnimationFrame(loop);
       if(G.season!==x.lastSeason){x.lastSeason=G.season;const h=composeHaiku();x.haiku.push(h);if(x.haiku.length>80)x.haiku.shift();lines.push(`You write in your journal: "${h.lines.join(' / ')}"`);}
       // weekly bounties
       if(!x.week||G.totalDays>=x.week.end){const unfinished=x.week&&x.week.goals.some(g=>!g.done);newWeek();lines.push(unfinished?'A new week. Last week’s bounties expired; fresh ones are posted (K).':'A new week, and new bounties are posted (K).');}
-      rivalDay(lines);letterDay(lines);seasonalDay(lines);
+      rivalDay(lines);letterDay(lines);seasonalDay(lines);eventsDay(lines);
       // ledger
       x.ledger.push({d:G.totalDays,m:Math.round(G.money),r:Math.round(G.rep),o:Math.round(G.mood)});if(x.ledger.length>240)x.ledger.shift();
     }catch(e){console.warn('expansion day hook',e);}
@@ -6545,7 +6545,7 @@ requestAnimationFrame(loop);
     requestAnimationFrame(ffTick);
     const dt=Math.min(.05,(now-ffLast)/1000||0);ffLast=now;
     const h=G?(G.t/60)%24:12;
-    const want=screen==='game'&&G&&!G.inside&&G.season===1&&G.weather!=='rain'&&(h>=19.5||h<4.5)&&!document.hidden;
+    const want=SET.fireflies&&screen==='game'&&G&&!G.inside&&G.season===1&&G.weather!=='rain'&&(h>=19.5||h<4.5)&&!document.hidden;
     if(!want){if(ffOn){fg.clearRect(0,0,ff.width,ff.height);ffOn=false;}return;}
     const dpr=Math.min(2,devicePixelRatio||1),W=innerWidth,H=innerHeight;
     if(ff.width!==Math.round(W*dpr)){ff.width=Math.round(W*dpr);ff.height=Math.round(H*dpr);}
@@ -6565,9 +6565,81 @@ requestAnimationFrame(loop);
   /* ---------- point new players at the journal ---------- */
   function hintOnce(){const x=X();if(x&&!x.hinted&&G.totalDays<=3){x.hinted=true;setTimeout(()=>toast('功','Deeds & journal','Achievements, weekly bounties, fortunes and more. Tap 功 Deeds or press K.'),9000);}}
 
+  /* ---------- settings ---------- */
+  const SET_KEY='ukiyo-settings';
+  let SET={scale:1,fireflies:true,calls:true};try{Object.assign(SET,JSON.parse(localStorage.getItem(SET_KEY)||'{}'));}catch(e){}
+  function applySettings(){const hud=document.getElementById('hud');if(hud)hud.style.zoom=SET.scale;const m=document.getElementById('mcard');if(m)m.style.zoom=SET.scale;try{localStorage.setItem(SET_KEY,JSON.stringify(SET));}catch(e){}}
+  applySettings();
+
+  /* ---------- legacy: hall of fame and a head start for new lives ---------- */
+  function recordLife(){
+    const L=legacy();L.lives=L.lives||{};const x=X();
+    L.lives[G.seed+'_'+(G.generation||1)]={name:`${G.given} ${G.family||''}`.trim(),rank:(RANKS[G.rank]||{name:G.rank}).name,gen:G.generation||1,peak:Math.round(x.peakMoney||G.money),deeds:Object.keys(x.deeds).length,age:G.ageY,days:G.totalDays};
+    const keys=Object.keys(L.lives);if(keys.length>40){keys.sort((a,b)=>L.lives[a].peak-L.lives[b].peak);delete L.lives[keys[0]];}
+    saveLegacy(L);
+  }
+  const _newGame=newGame;
+  newGame=function(c){
+    const r=_newGame.apply(this,arguments);
+    try{const n=Object.keys(legacy().deeds||{}).length;const bonus=Math.min(5000,n*100);
+      if(bonus>0&&r&&typeof r==='object'){r.money+=bonus;r.legacyBonus=bonus;setTimeout(()=>toast('継','Legacy of past lives',`Deeds from earlier lives leave you ${fmt(bonus)} mon to start.`),2500);}}catch(e){}
+    return r;
+  };
+
+  /* ---------- world events: earthquakes, debt collectors, New Year, vendors ---------- */
+  function eventsDay(lines){
+    const x=X();
+    if(Math.random()<.012){const loss=Math.min(400,Math.max(0,Math.round(G.money*.05)));G.money-=loss;G.mood=clamp(G.mood-5,0,100);
+      lines.push(`An earthquake shook the ward before dawn. Tiles fell and a shelf came down${loss?`; repairs cost ${fmt(loss)} mon`:''}.`);
+      document.body.animate([{transform:'translate(0,0)'},{transform:'translate(-6px,3px)'},{transform:'translate(5px,-4px)'},{transform:'translate(-3px,2px)'},{transform:'translate(0,0)'}],{duration:700,iterations:2});}
+    if(G.money<-2000){x.debtDays=(x.debtDays||0)+1;if(x.debtDays%7===0){G.rep=clamp(G.rep-3,0,100);G.mood=clamp(G.mood-6,0,100);lines.push(`A debt collector hammered on your door at dawn, loud enough for the whole lane to hear. You owe ${fmt(-G.money)} mon.`);}}else x.debtDays=0;
+    if(G.season===0&&G.day===1&&x.lastHatsu!==G.year){x.lastHatsu=G.year;G.luck+=.2;G.mood=clamp(G.mood+6,0,100);lines.push('Hatsumōde: the first shrine visit of the year. You ring the bell, clap twice and pray. Luck is with you today.');}
+    recordLife();
+  }
+  const CALLS=['A tofu seller calls: "Tōfu! Fresh tōfu!"','"Kingyo-e, kingyo! Goldfish!" a peddler sings.','A medicine seller rattles his box: "For every ache!"','"Yaki-imo! Hot roasted sweet potatoes!"','A fortune-teller beckons from under her umbrella.','"Fans! Paper fans for the heat!"','A blind masseur passes, playing his reed flute.','"Fresh fish from Nihonbashi! Fresh fish!"'];
+  setInterval(()=>{try{if(SET.calls&&screen==='game'&&G&&!G.inside&&!modalOpen()){const h=(G.t/60)%24;if(h>7&&h<19&&Math.random()<.6)log(pick(CALLS));}}catch(e){}},45000);
+
+  /* ---------- a shareable life card ---------- */
+  function lifeCard(){
+    const x=X();const W=1080,H=1350;const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');const F=SERIF||'serif';
+    g.fillStyle='#efe2c4';g.fillRect(0,0,W,H);
+    for(let i=0;i<12000;i++){g.fillStyle=`rgba(${Math.random()<.5?'80,55,30':'255,250,235'},${Math.random()*.07})`;g.fillRect(Math.random()*W,Math.random()*H,2,2);}
+    g.strokeStyle='#3b2b1f';g.lineWidth=5;g.strokeRect(40,40,W-80,H-80);g.lineWidth=1.5;g.strokeRect(56,56,W-112,H-112);
+    g.fillStyle='#a8432e';g.beginPath();g.arc(W/2,190,80,0,6.283);g.fill();g.fillStyle='#f6ecd6';g.font=`800 80px ${F}`;g.textAlign='center';g.textBaseline='middle';g.fillText('浮世',W/2,192);
+    g.textBaseline='alphabetic';g.fillStyle='#3b2b1f';g.font=`800 64px ${F}`;g.fillText(`${G.given} ${G.family||''}`.trim(),W/2,350);
+    g.font=`500 32px ${F}`;g.fillStyle='#6f5946';g.fillText(`${(RANKS[G.rank]||{name:''}).name} · ${tierName()} · age ${G.ageY} · generation ${G.generation||1}`,W/2,405);
+    const best=Object.entries(G.skills||{}).sort((a,b)=>b[1]-a[1])[0]||['none',0];
+    const rows=[['Days lived',fmt(G.totalDays)],['Most money held',fmt(Math.round(x.peakMoney||G.money))+' mon'],['Deeds earned',`${Object.keys(x.deeds).length} of ${DEEDS.length}`],['Best skill',`${best[0]} ${Math.round(best[1])}`],['Quests completed',fmt(S('quests'))],['Cities visited',`${citiesN()} of ${Object.keys(CITY).length}`],['Shrine seals',fmt(stampsN())]];
+    g.font=`500 34px ${F}`;rows.forEach(([a,b],i)=>{const y=500+i*62;g.textAlign='left';g.fillStyle='#6f5946';g.fillText(a,150,y);g.textAlign='right';g.fillStyle='#3b2b1f';g.fillText(b,W-150,y);g.strokeStyle='rgba(139,101,68,.3)';g.beginPath();g.moveTo(150,y+20);g.lineTo(W-150,y+20);g.stroke();});
+    const h=x.haiku[x.haiku.length-1];
+    if(h){g.textAlign='center';g.fillStyle='#3b2b1f';g.font=`italic 500 38px ${F}`;h.lines.forEach((l,i)=>g.fillText(l,W/2,1000+i*56));g.font=`500 24px ${F}`;g.fillStyle='#6f5946';g.fillText(`${SEASONS[h.season]} of year ${h.year}`,W/2,1180);}
+    g.textAlign='center';g.font=`500 24px ${F}`;g.fillStyle='#8b6544';g.fillText('Ukiyo: a life in old Edo',W/2,H-80);
+    const url=c.toDataURL('image/png');
+    openModal(`<div class="mhead"><div class="kanji">伝</div><div><h2>Your life card</h2><p>A keepsake of this life to save or share.</p></div></div><div class="mbody xp-photo"><img src="${url}" alt="Life summary card" style="max-width:420px;margin:0 auto"></div><div class="mfoot"><a class="btn" href="${url}" download="ukiyo-life-${(G.given||'').replace(/\s+/g,'')}.png" style="text-decoration:none">Save card</a><button class="btn ghost" data-close>Close</button></div>`,'xp');
+    $('#mcard').querySelector('[data-close]').onclick=closeModal;
+  }
+
+  /* ---------- extra hub tabs ---------- */
+  function almanacTab(){
+    const left=(s,d)=>{const now=G.season*SEASON_LEN+G.day,t=s*SEASON_LEN+d;let n=t-now;if(n<0)n+=4*SEASON_LEN;return n;};
+    const ev=[[0,1,'Hatsumōde','New Year: visit a shrine for luck'],[1,5,'Kanda festival','A mikoshi parade through the streets'],[2,Math.ceil(SEASON_LEN/2),'Tsukimi','Moon viewing night'],[1,1,'Summer begins','A new haiku for your journal'],[2,1,'Autumn begins','A new haiku for your journal'],[3,1,'Winter begins','A new haiku for your journal']];
+    const wk=X().week?Math.max(0,X().week.end-G.totalDays):0;
+    const list=ev.map(e=>({n:left(e[0],e[1]),s:e[0],d:e[1],name:e[2],desc:e[3]})).sort((a,b)=>a.n-b.n);
+    return`<p style="font-size:13px;color:var(--ink-soft);margin:0 0 10px">Each season lasts ${SEASON_LEN} days. Today is ${SEASONS[G.season]}, day ${G.day}. New bounties in ${wk} day${wk===1?'':'s'}.</p>`+list.map(e=>`<div class="xp-bounty"><h4><span>${esc(e.name)}</span><span>${e.n===0?'Today':`in ${e.n} day${e.n===1?'':'s'}`}</span></h4><small>${SEASONS[e.s]}, day ${e.d} · ${esc(e.desc)}</small></div>`).join('');
+  }
+  function fameTab(){
+    recordLife();const lives=Object.values(legacy().lives||{}).sort((a,b)=>b.peak-a.peak).slice(0,10);
+    return`<p style="font-size:13px;color:var(--ink-soft);margin:0 0 10px">Your greatest lives, across every save on this device. Each deed earned in any life gives a new life 100 mon to start (up to 5,000).</p><table class="xp-table">${lives.map((l,i)=>`<tr><td><b>${i+1}. ${esc(l.name)}</b><br><small style="color:var(--ink-soft)">${esc(l.rank)}, generation ${l.gen}, ${l.deeds} deeds, ${fmt(l.days)} days</small></td><td>${fmt(l.peak)} mon</td></tr>`).join('')}</table><p style="margin-top:14px"><button class="btn" data-xcard>伝 Make a life card</button></p>`;
+  }
+  function settingsTab(){
+    const opt=(k,label)=>`<label style="display:flex;gap:10px;align-items:center;margin:10px 0;font-size:14px"><input type="checkbox" data-xset="${k}" ${SET[k]?'checked':''}> ${label}</label>`;
+    return`<h4 style="margin:0 0 6px">Interface size</h4><div class="xp-tabs">${[[.85,'Small'],[1,'Normal'],[1.15,'Large'],[1.3,'Huge']].map(([v,n])=>`<button class="chip${SET.scale===v?' on':''}" data-xscale="${v}">${n}</button>`).join('')}</div>${opt('fireflies','Fireflies on summer nights')}${opt('calls','Street vendors calling out')}
+    <h4 style="margin:16px 0 6px">Keys</h4><table class="xp-table">${[['WASD / arrows','Walk'],['E or Space','Enter, talk, act'],['Q','Quests'],['M','Map'],['C','Your character'],['I','Belongings'],['J','Goals'],['K','Deeds & journal'],['P','Make a woodblock print'],['1 to 6','Use hotbar item'],['?','This list'],['Esc','Menu / close']].map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table>`;
+  }
+
   /* ---------- the hub panel ---------- */
   let TAB='deeds';
-  const TABS=[['deeds','Deeds'],['week','Bounties'],['rival','Rival'],['fortune','Fortune'],['haiku','Haiku'],['letters','Letters'],['stamps','Seals'],['album','Album'],['ledger','Ledger']];
+  const TABS=[['deeds','Deeds'],['week','Bounties'],['rival','Rival'],['fortune','Fortune'],['haiku','Haiku'],['letters','Letters'],['stamps','Seals'],['album','Album'],['ledger','Ledger'],['almanac','Almanac'],['fame','Hall of fame'],['settings','Settings']];
   function deedsTab(){
     const x=X();const got=DEEDS.filter(d=>x.deeds[d.id]).length;const L=legacy();const ever=Object.keys(L.deeds||{}).length;
     let h=`<div class="xp-sum"><div><b>${got}/${DEEDS.length}</b>this life</div><div><b>${ever}/${DEEDS.length}</b>across all lives</div><div><b>${fmt(DEEDS.filter(d=>x.deeds[d.id]).reduce((a,d)=>a+d.reward,0))}</b>mon earned from deeds</div></div><div class="xp-grid">`;
@@ -6641,7 +6713,7 @@ requestAnimationFrame(loop);
   }
   function openHub(tab){
     if(!G)return;if(tab)TAB=tab;X();checkDeeds();checkBounties();
-    const body={deeds:deedsTab,week:weekTab,rival:rivalTab,fortune:fortuneTab,haiku:haikuTab,letters:lettersTab,stamps:stampsTab,album:albumTab,ledger:ledgerTab}[TAB]();
+    const body={deeds:deedsTab,week:weekTab,rival:rivalTab,fortune:fortuneTab,haiku:haikuTab,letters:lettersTab,stamps:stampsTab,album:albumTab,ledger:ledgerTab,almanac:almanacTab,fame:fameTab,settings:settingsTab}[TAB]();
     openModal(`<div class="mhead"><div class="kanji">功</div><div><h2>Deeds &amp; journal</h2><p>Your accomplishments, bounties, fortunes and poems. Press K anytime, P to make a print.</p></div></div>
       <div class="mbody"><div class="xp-tabs">${TABS.map(([k,n])=>`<button class="chip${TAB===k?' on':''}" data-xtab="${k}">${n}</button>`).join('')}<button class="chip" data-xphoto>絵 Make a print</button></div>${body}</div>
       <div class="mfoot"><button class="btn ghost" data-close>Close</button></div>`,'xp');
@@ -6649,6 +6721,10 @@ requestAnimationFrame(loop);
     card.querySelectorAll('[data-xtab]').forEach(b=>b.onclick=()=>openHub(b.dataset.xtab));
     card.querySelector('[data-xphoto]').onclick=()=>{closeModal();setTimeout(photo,60);};
     card.querySelector('[data-close]').onclick=closeModal;
+    card.querySelectorAll('[data-xscale]').forEach(b=>b.onclick=()=>{SET.scale=+b.dataset.xscale;applySettings();openHub('settings');});
+    card.querySelectorAll('[data-xset]').forEach(b=>b.onchange=()=>{SET[b.dataset.xset]=b.checked;applySettings();});
+    const lc=card.querySelector('[data-xcard]');if(lc)lc.onclick=()=>{closeModal();setTimeout(lifeCard,60);};
+    applySettings();
   }
 
   /* ---------- menu button, keys and timers ---------- */
@@ -6664,6 +6740,7 @@ requestAnimationFrame(loop);
     if(modalOpen()){if(MODAL_KIND==='xp'&&k==='k')closeModal();return;}
     if(k==='k')openHub();
     if(k==='p')photo();
+    if(e.key==='?')openHub('settings');
   });
   setInterval(()=>{try{if(screen==='game'&&G){X();hintOnce();checkDeeds();checkBounties();}}catch(e){console.warn('expansion tick',e);}},2000);
 
